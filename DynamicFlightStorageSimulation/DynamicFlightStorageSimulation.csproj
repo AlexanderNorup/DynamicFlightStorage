@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="MQTTnet" Version="4.3.7.1207" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\DynamicFlightStorageDTOs\DynamicFlightStorageDTOs.csproj" />
   </ItemGroup>
 
