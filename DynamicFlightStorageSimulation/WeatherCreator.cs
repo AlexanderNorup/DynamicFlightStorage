@@ -21,46 +21,105 @@ public static class WeatherCreator
         {
             if (taf is not null)
             {
-                weatherList.AddRange(HandleTaf(taf));
+                weatherList.AddRange(HandleJsonWeather(taf));
             }
         }
         
         return weatherList;
     }
 
-    private static List<Weather> HandleTaf(JsonNode taf)
+    private static List<Weather> HandleJsonWeather(JsonNode data)
     {
         var weatherList = new List<Weather>();
         
-        var tafText = taf["Text"]?.ToString();
-        if (string.IsNullOrEmpty(tafText))
+        // Check for full metar/taf text
+        var fullText = data["Text"]?.ToString();
+        if (string.IsNullOrEmpty(fullText))
         {
-            Console.WriteLine("TAF text is empty.");
+            Console.WriteLine("Full text is empty.");
+            return weatherList;
+        }
+        var identifier = fullText.Substring(0, 12);
+        
+        // Check for airport identifier
+        var airportId = data["Ident"]?.ToString();
+        if (string.IsNullOrEmpty(airportId))
+        {
+            Console.WriteLine($"Airport identifier is empty for {identifier}");
             return weatherList;
         }
         
-        var tafIdentifier = taf["Ident"]?.ToString();
-        if (string.IsNullOrEmpty(tafIdentifier))
+        var conditions = data["Conditions"]?.AsArray();
+        
+        // Handle metar
+        if (conditions is null)
         {
-            Console.WriteLine($"TAF identifier is empty for TAF: {tafIdentifier}");
+            if (!Enum.TryParse(data["FlightRules"]?.ToString(), out WeatherCategory category))
+            {
+                Console.WriteLine($"Invalid weather category in METAR {identifier}");
+                return weatherList;
+            }
+            
+            // Check for valid period
+            DateTime dateIssued;
+            try
+            {
+                dateIssued = ParseDate(data["DateIssued"], identifier);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Invalid date in METAR {identifier}: {e.Message}");
+                return weatherList;
+            }
+            
+            weatherList.Add(new Weather()
+            {
+                ValidFrom = dateIssued,
+                ValidTo = dateIssued,
+                Airport = airportId,
+                WeatherLevel = category
+            });
             return weatherList;
         }
         
-        
-        
-        if (!Enum.TryParse(taf["Conditions"]?[0]?["FlightRules"]?.ToString(), out WeatherCategory baseline))
+        // Handle taf
+        if (conditions.Count > 1)
         {
-            Console.WriteLine($"Invalid weather category in TAF: {tafText}");
+            // Check for valid period
+            JsonNode? validPeriod = data["Period"];
+            if (validPeriod is null)
+            {
+                Console.WriteLine($"Period does not exist for TAF {identifier}");
+                return weatherList;
+            }
+        
+            DateTime validTo;
+            try
+            {
+                validTo = ParseDate(validPeriod["DateEnd"], identifier);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Invalid period in TAF {identifier}: {e.Message}");
+                return weatherList;
+            }
+            
+            return HandleTaf(conditions, identifier, validTo, airportId);
+        }
+        return weatherList;
+    }
+
+    private static List<Weather> HandleTaf(JsonArray conditions, string identifier, DateTime validTo, string airportId)
+    {
+        var weatherList = new List<Weather>();
+        
+        if (!Enum.TryParse(conditions[0]?["FlightRules"]?.ToString(), out WeatherCategory baseline))
+        {
+            Console.WriteLine($"Invalid weather category in TAF {identifier}");
             return weatherList;
         }
         
         DateTime previousEnd  = DateTime.MaxValue;
-        
-        JsonArray? conditions = taf["Conditions"]?.AsArray();
-        if (conditions is null || conditions.Count < 1)
-        {
-            return weatherList;
-        }
         
         // Loop that goes through each time period and creates weather from that. 
         // For each condition, go from start to end and add the weather in that condition. 
@@ -74,10 +133,27 @@ public static class WeatherCreator
             JsonNode? period = condition?["Period"];
             if (period is null)
             {
+                Console.WriteLine($"No period in TAF {identifier}");
+                continue;
+            }
+
+            DateTime dateStart, dateEnd;
+            try
+            {
+                dateStart = ParseDate(period["DateStart"], identifier);
+                dateEnd = ParseDate(period["DateEnd"], identifier);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Invalid period in TAF {identifier}: {e.Message}");
                 continue;
             }
             
-            (DateTime dateStart, DateTime dateEnd) = ParsePeriod(period, tafIdentifier);
+            if (!Enum.TryParse(condition?["FlightRules"]?.ToString(), out WeatherCategory weatherCategory))
+            {
+                Console.WriteLine($"Invalid weather category in TAF {identifier}");
+                continue;
+            }
             
             // If there is a gap in the "timeline" fill it with the current baseline weather category
             if (previousEnd < dateStart)
@@ -86,23 +162,16 @@ public static class WeatherCreator
                 {
                     ValidFrom = previousEnd,
                     ValidTo = dateStart,
-                    Airport = tafIdentifier,
+                    Airport = airportId,
                     WeatherLevel = baseline
                 });
-                continue;
-            }
-            
-            if (!Enum.TryParse(condition?["FlightRules"]?.ToString(), out WeatherCategory weatherCategory))
-            {
-                Console.WriteLine($"Invalid weather category in TAF: {tafText}");
-                continue;
             }
             
             weatherList.Add(new Weather()
             {
                 ValidFrom = dateStart,
                 ValidTo = dateEnd,
-                Airport = tafIdentifier,
+                Airport = airportId,
                 WeatherLevel = weatherCategory
             });
             
@@ -116,32 +185,30 @@ public static class WeatherCreator
             previousEnd = dateEnd;
 
         }
+
+        if (previousEnd < validTo)
+        {
+            weatherList.Add(new Weather()
+            {
+                ValidFrom = previousEnd,
+                ValidTo = validTo,
+                Airport = airportId,
+                WeatherLevel = baseline
+            });
+        }
         
         return weatherList;
     }
-
-    private static (DateTime Start, DateTime End) ParsePeriod(JsonNode period, string identifier)
+    
+    
+    private static DateTime ParseDate(JsonNode? date, string identifier)
     {
-        var dateStartString = period["DateStart"]?.ToString();
-        var dateEndString = period["DateEnd"]?.ToString();
+        var dateString = date?.ToString();
+        if (string.IsNullOrEmpty(dateString))
+        {
+            throw new ArgumentException($"Invalid date for {identifier}");
+        }
         
-        if (dateEndString is null || dateStartString is null || dateEndString == "" || dateStartString == "")
-        {
-            throw new ArgumentException($"TAF does not contain a valid period. TAF: {identifier}");
-        }
-
-        DateTime dateStart = DateTime.MinValue;
-        DateTime dateEnd = DateTime.MinValue;
-        try
-        {
-            dateStart = DateTime.Parse(dateStartString);
-            dateEnd = DateTime.Parse(dateEndString);
-        }
-        catch (FormatException e)
-        {
-            Console.WriteLine($"Parsing TAF date unsuccessful: {e.Message}");
-        }
-
-        return (dateStart, dateEnd);
+        return DateTime.Parse(dateString);
     }
 }

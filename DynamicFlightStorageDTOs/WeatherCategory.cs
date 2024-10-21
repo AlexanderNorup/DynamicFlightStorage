@@ -9,7 +9,7 @@ namespace DynamicFlightStorageDTOs
         VFR = 0,
         MVFR = 1,
         IFR = 2,
-        MIFR = 3,
+        LIFR = 3,
         Undefined = -999 // Treated as best weather imagineable so it will be recalculated next time regardless to get a proper weather status
     }
 }

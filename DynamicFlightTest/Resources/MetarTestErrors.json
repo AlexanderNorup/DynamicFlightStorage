@@ -1,0 +1,246 @@
+[
+    {
+        "Ident": "KMMK",
+        "Autonomous": true,
+        "Wind": {
+            "SpeedKts": 7,
+            "GustSpeedKts": 20,
+            "Direction": 210
+        },
+        "Weather": [
+            "Thunderstorms, Heavy Rain"
+        ],
+        "VisibilityRangeMap": {},
+        "Visibility": {
+            "DistanceSm": 1.75,
+            "Distance": {
+                "Unit": 1,
+                "Value": 1.75
+            },
+            "DistanceQualifier": 0
+        },
+        "Turbulence": [],
+        "Text": "KMMK 032104Z AUTO 21007G20KT 180V240 1 3/4SM +TSRA SCT040 BKN050 OVC110 26/22 A2982 RMK AO2 VIS 1 1/4V4 LTG DSNT SW AND W PRESRR P0025 T02610217",
+        "TempC": 26,
+        "PressureHg": 29.82,
+        "Pressure": {
+            "Unit": 1,
+            "Value": 29.82
+        },
+        "Lon": -72.82947805826358,
+        "Lat": 41.50871503320697,
+        "Icing": [],
+        "FligRules": "IFR",
+        "DewpointC": 22,
+        "DateIssued": "2024-08-03T21:04:00Z",
+        "CloudLayers": [
+            {
+                "Coverage": "SCT",
+                "AltitudeFt": 4000
+            },
+            {
+                "Coverage": "BKN",
+                "AltitudeFt": 5000
+            },
+            {
+                "Coverage": "OVC",
+                "AltitudeFt": 11000
+            }
+        ]
+    },
+    {
+        "Ident": "VCRI",
+        "Wind": {
+            "SpeedKts": 3,
+            "Direction": 270
+        },
+        "Weather": [],
+        "VisibilityRangeMap": {},
+        "Visibility": {
+            "Unrestricted": true,
+            "DistanceSm": 6.21371192,
+            "Distance": {
+                "Unit": 3,
+                "Value": 10000
+            },
+            "DistanceQualifier": 1
+        },
+        "Turbulence": [],
+        "Text": "VCRI 032110Z 27003KT CAVOK 25/24 Q1008 NOSIG",
+        "TempC": 25,
+        "PressureHg": 29.76624,
+        "Pressure": {
+            "Unit": 2,
+            "Value": 1008
+        },
+        "Lon": 81.1241280648993,
+        "Lat": 6.284467005027573,
+        "Icing": [],
+        "FlightRules": "VFR",
+        "DewpointC": 24,
+        "DateIssued": "2024-08-03T21:10:00Z",
+        "CloudLayers": [
+            {
+                "Coverage": "CAVOK"
+            }
+        ]
+    },
+    {
+        "Ident": "KSXU",
+        "Autonomous": true,
+        "Wind": {
+            "SpeedKts": 11,
+            "Direction": 160
+        },
+        "Weather": [],
+        "VisibilityRangeMap": {},
+        "Visibility": {
+            "DistanceSm": 10,
+            "Distance": {
+                "Unit": 1,
+                "Value": 10
+            },
+            "DistanceQualifier": 0
+        },
+        "Turbulence": [],
+        "Text": "KSXU 032115Z AUTO 16011KT 10SM CLR 31/15 A3019 RMK AO2 T03140151 PWINO",
+        "TempC": 31,
+        "PressureHg": 30.19,
+        "Pressure": {
+            "Unit": 1,
+            "Value": 30.19
+        },
+        "Lon": -104.64256408371403,
+        "Lat": 34.935672027948534,
+        "Icing": [],
+        "FlightRules": "VFR",
+        "DewpointC": 15,
+        "DateIssued": "2024-08-03T21:15:00Z",
+        "CloudLayers": [
+            {
+                "Coverage": "CLR"
+            }
+        ]
+    },
+    {
+        "Ident": "SBIZ",
+        "Wind": {
+            "SpeedKts": 3,
+            "Direction": 130
+        },
+        "Weather": [],
+        "VisibilityRangeMap": {},
+        "Visibility": {
+            "Unrestricted": true,
+            "DistanceSm": 6.21371192,
+            "Distance": {
+                "Unit": 3,
+                "Value": 10000
+            },
+            "DistanceQualifier": 1
+        },
+        "Turbulence": [],
+        "Text": "SPECI SBIZ 032125Z 13003KT CAVOK 33/19 Q1011",
+        "TempC": 33,
+        "PressureHg": 29.85483,
+        "Pressure": {
+            "Unit": 2,
+            "Value": 1011
+        },
+        "Lon": -47.45833303796666,
+        "Lat": -5.530556004424445,
+        "Icing": [],
+        "FlightRules": "VFR",
+        "DewpointC": 19,
+        "DateIssued": "2024-08-03T21:25:00Z",
+        "CloudLayers": [
+            {
+                "Coverage": "CAVOK"
+            }
+        ]
+    },
+    {
+        "Ident": "VISP",
+        "Wind": {
+            "Variable": true,
+            "SpeedKts": 2
+        },
+        "Weather": [],
+        "VisibilityRangeMap": {},
+        "Visibility": {
+            "DistanceSm": 3.728227152,
+            "Distance": {
+                "Unit": 3,
+                "Value": 6000
+            }
+        },
+        "Turbulence": [],
+        "Text": "VISP 032130Z VRB02KT 6000 SCT025 BKN100 29/29 Q1002 NOSIG",
+        "TempC": 29,
+        "PressureHg": 29.58906,
+        "Pressure": {
+            "Unit": 2,
+            "Value": 1002
+        },
+        "Lon": 77.42531106194023,
+        "Lat": 29.993919023995137,
+        "Icing": [],
+        "FlightRules": "MVFR",
+        "DewpointC": 29,
+        "DateIssued": "2024-08-03T21:30:00Z",
+        "CloudLayers": [
+            {
+                "Coverage": "SCT",
+                "AltitudeFt": 2500
+            },
+            {
+                "Coverage": "BKN",
+                "AltitudeFt": 10000
+            }
+        ]
+    },
+    {
+        "Ident": "VIUT",
+        "Wind": {
+            "SpeedKts": 4,
+            "Direction": 170
+        },
+        "Weather": [],
+        "VisibilityRangeMap": {},
+        "Visibility": {
+            "DistanceSm": 3.728227152,
+            "Distance": {
+                "Unit": 3,
+                "Value": 6000
+            }
+        },
+        "Turbulence": [],
+        "Text": "VIUT 032130Z 17004KT 6000 SCT010 SCT015 BKN080 27/27 Q0999 TEMPO 4000 RABR BKN012",
+        "TempC": 27,
+        "PressureHg": 29.50047,
+        "Pressure": {
+            "Unit": 2,
+            "Value": 999
+        },
+        "Lon": 71.48277805718621,
+        "Lat": 25.81166702064933,
+        "Icing": [],
+        "FlightRules": "MVFR",
+        "DewpointC": 27,
+        "DateIssued": "203T210:00Z",
+        "CloudLayers": [
+            {
+                "Coverage": "SCT",
+                "AltitudeFt": 1000
+            },
+            {
+                "Coverage": "SCT",
+                "AltitudeFt": 1500
+            },
+            {
+                "Coverage": "BKN",
+                "AltitudeFt": 8000
+            }
+        ]
+    }
+]
