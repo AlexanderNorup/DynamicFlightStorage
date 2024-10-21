@@ -19,7 +19,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BasicEventDataStore", "Even
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExperimentRunner", "ExperimentRunner\ExperimentRunner.csproj", "{EE572FBB-6F1F-4BD3-AF9E-F0382ADDA1E8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimulationTests", "SimulationTests\SimulationTests.csproj", "{F722C7DC-7782-4DCD-823A-02A07278356F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DynamicFlightTest", "DynamicFlightTest\DynamicFlightTest.csproj", "{F722C7DC-7782-4DCD-823A-02A07278356F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
