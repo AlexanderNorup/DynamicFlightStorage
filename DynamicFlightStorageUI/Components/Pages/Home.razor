@@ -6,7 +6,7 @@
 <PageTitle>Home</PageTitle>
 
 <h1>Prototyping Dashboard!</h1>
-<div class="container">
+<div class="container mb-2">
     <div class="row g-2">
         <div class="col-6 border rounded p-2">
             <h3>Publish Weather:</h3>
@@ -17,7 +17,19 @@
             <FlightBuilder OnFlightCreated="PublishFlight" />
         </div>
     </div>
+
+    <div class="row g-2">
+        <div class="col-12 border rounded p-2">
+            <h3>Consumer:</h3>
+            <p>The embedded consumer is enabled: @(consumer is not null)</p>
+            <button class="btn btn-success" disabled="@(consumer is not null)" @onclick="CreateConsumer">Enable embedded consumer?</button>
+            <button class="btn btn-danger" disabled="@(consumer is null)" @onclick="KillConsumer">Disable embedded consumer?</button>
+        </div>
+    </div>
 </div>
+
+
+
 
 <h2>Recalculation events:</h2>
 <table class="table table-striped">
@@ -56,9 +68,19 @@
 
         eventbus.SubscribeToRecalculationEvent(OnRecalculationEvent);
 
-        // consumer = new SimulationConsumer(eventbus, 
-        //     new BasicEventDataStore.BasicEventDataStore(new WeatherService(), eventbus), 
-        //     loggerFactory.CreateLogger<SimulationConsumer>());
+    }
+
+    private void CreateConsumer()
+    {
+        consumer = new SimulationConsumer(eventbus,
+            new BasicEventDataStore.BasicEventDataStore(new WeatherService(), eventbus),
+            loggerFactory.CreateLogger<SimulationConsumer>());
+    }
+
+    private void KillConsumer()
+    {
+        consumer?.Dispose();
+        consumer = null;
     }
 
     private async Task OnRecalculationEvent(DynamicFlightStorageSimulation.Events.FlightRecalculationEvent e)
