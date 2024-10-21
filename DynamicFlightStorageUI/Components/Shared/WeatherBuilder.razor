@@ -1,13 +1,13 @@
 ﻿<EditForm Model="weather" OnValidSubmit="(e) => OnWeatherCreated.InvokeAsync(weather)">
     <div class="row mb-3">
-        <label for="inputAirport" class="col-sm-2 col-form-label">Airport</label>
-        <div class="col-sm-10">
+        <label for="inputAirport" class="col-sm-4 col-form-label">Airport</label>
+        <div class="col-sm-8">
             <InputText @bind-Value="weather.Airport"  class="form-control" id="inputAirport" />
         </div>
     </div>
     <div class="row mb-3">
-        <label for="weatherLevel" class="col-sm-2 col-form-label">WeatherLevel</label>
-        <div class="col-sm-10">
+        <label for="weatherLevel" class="col-sm-4 col-form-label">WeatherLevel</label>
+        <div class="col-sm-8">
             <InputSelect @bind-Value="weather.WeatherLevel" class="form-select" id="weatherLevel">
                 @foreach(var category in Enum.GetValues<WeatherCategory>()){
                     <option value="@category">@category</option>
@@ -16,14 +16,14 @@
         </div>
     </div>
     <div class="row mb-3">
-        <label for="validFrom" class="col-sm-2 col-form-label">Valid from</label>
-        <div class="col-sm-10">
+        <label for="validFrom" class="col-sm-4 col-form-label">Valid from<sup class="text-muted">UTC</sup></label>
+        <div class="col-sm-8">
             <InputDate @bind-Value="weather.ValidFrom" Type="InputDateType.DateTimeLocal" class="form-control" id="validFrom" />
         </div>
     </div>
     <div class="row mb-3">
-        <label for="validTo" class="col-sm-2 col-form-label">Valid to</label>
-        <div class="col-sm-10">
+        <label for="validTo" class="col-sm-4 col-form-label">Valid to<sup class="text-muted">UTC</sup></label>
+        <div class="col-sm-8">
             <InputDate @bind-Value="weather.ValidTo" Type="InputDateType.DateTimeLocal" class="form-control" id="validTo" />
         </div>
     </div>

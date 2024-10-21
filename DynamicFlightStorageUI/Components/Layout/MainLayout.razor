@@ -7,7 +7,8 @@
 
     <main>
         <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            <span>UTC Now: @currentTime</span>
+            <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank">About</a>
         </div>
 
         <article class="content px-4">
@@ -21,3 +22,35 @@
     <a href="" class="reload">Reload</a>
     <a class="dismiss">🗙</a>
 </div>
+
+
+
+@code {
+    private string currentTime = DateTime.UtcNow.ToString("HH:mm tt");
+
+    private System.Timers.Timer? secondsTimer;
+
+    protected override void OnInitialized()
+    {
+        //one second interval
+        secondsTimer = new System.Timers.Timer(1000);
+        secondsTimer.Enabled = true;
+        secondsTimer.AutoReset = true;
+        secondsTimer.Elapsed += (sender, e) => UpdateTime();
+    }
+
+    private void UpdateTime()
+    {
+        var newTime = DateTime.UtcNow.ToString("HH:mm tt");
+        if(newTime != currentTime)
+        {
+            currentTime = newTime;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose()
+    {
+        secondsTimer?.Dispose();
+    }
+}
