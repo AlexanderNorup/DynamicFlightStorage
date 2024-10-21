@@ -56,9 +56,9 @@
 
         eventbus.SubscribeToRecalculationEvent(OnRecalculationEvent);
 
-        consumer = new SimulationConsumer(eventbus, 
-            new BasicEventDataStore.BasicEventDataStore(new WeatherService(), eventbus), 
-            loggerFactory.CreateLogger<SimulationConsumer>());
+        // consumer = new SimulationConsumer(eventbus, 
+        //     new BasicEventDataStore.BasicEventDataStore(new WeatherService(), eventbus), 
+        //     loggerFactory.CreateLogger<SimulationConsumer>());
     }
 
     private async Task OnRecalculationEvent(DynamicFlightStorageSimulation.Events.FlightRecalculationEvent e)

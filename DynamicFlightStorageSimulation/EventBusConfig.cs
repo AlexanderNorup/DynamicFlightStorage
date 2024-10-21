@@ -21,5 +21,18 @@ namespace DynamicFlightStorageSimulation
 
         [Required]
         public required string RecalculationTopic { get; set; }
+
+        public static EventBusConfig GetEmpty()
+        {
+            return new EventBusConfig()
+            {
+                Host = string.Empty,
+                Username = string.Empty,
+                Password = string.Empty,
+                FlightTopic = string.Empty,
+                WeatherTopic = string.Empty,
+                RecalculationTopic = string.Empty
+            };
+        }
     }
 }
