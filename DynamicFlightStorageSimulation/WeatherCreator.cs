@@ -33,16 +33,16 @@ public static class WeatherCreator
         var weatherList = new List<Weather>();
         
         var tafText = taf["Text"]?.ToString();
-        if (tafText is null || tafText == "")
+        if (string.IsNullOrEmpty(tafText))
         {
             Console.WriteLine("TAF text is empty.");
             return weatherList;
         }
         
         var tafIdentifier = taf["Ident"]?.ToString();
-        if (tafIdentifier is null || tafText == "")
+        if (string.IsNullOrEmpty(tafIdentifier))
         {
-            Console.WriteLine($"TAF identifier is empty for TAF: {tafText}");
+            Console.WriteLine($"TAF identifier is empty for TAF: {tafIdentifier}");
             return weatherList;
         }
         

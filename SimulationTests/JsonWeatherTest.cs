@@ -5,14 +5,14 @@ using DynamicFlightStorageSimulation;
 
 public class JsonWeatherTest
 {
-    private string jsonWeather;
-    private string filePath = "Resources/TafTest.json";
+    private string _jsonWeather;
+    private readonly string _filePath = Path.Combine(AppContext.BaseDirectory, "Resources", "TafTest.json");
     [SetUp]
     public void Setup()
     {
         try
         {
-            jsonWeather = File.ReadAllText(filePath);
+            _jsonWeather = File.ReadAllText(_filePath);
         }
         catch (Exception e)
         {
@@ -23,7 +23,7 @@ public class JsonWeatherTest
     [Test]
     public void JsonIsRead()
     {
-        List<Weather> weatherList = WeatherCreator.ReadWeatherJson(jsonWeather);
+        List<Weather> weatherList = WeatherCreator.ReadWeatherJson(_jsonWeather);
         
         Assert.That(weatherList[0].Airport, Is.EqualTo("KMUO"));
         Assert.That(weatherList[0].WeatherLevel, Is.EqualTo(WeatherCategory.VFR));
