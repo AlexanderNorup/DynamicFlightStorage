@@ -15,7 +15,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{FAAA
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "EventDataStores", "EventDataStores", "{F618F1D0-7CB1-442B-8CCA-C90FF84D66AE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BasicEventDataStore", "EventDataStores\BasicEventDataStore\BasicEventDataStore.csproj", "{6BE40818-4AF0-4587-A8CC-DCB14D7ADE4A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BasicEventDataStore", "EventDataStores\BasicEventDataStore\BasicEventDataStore.csproj", "{6BE40818-4AF0-4587-A8CC-DCB14D7ADE4A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

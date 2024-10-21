@@ -1,7 +1,86 @@
 ﻿@page "/"
+@inject SimulationEventBus eventbus
+@inject ILoggerFactory loggerFactory
+@implements IDisposable
 
 <PageTitle>Home</PageTitle>
 
 <h1>Hello, world!</h1>
+<div class="container">
+    <div class="row g-2">
+        <div class="col-6 border rounded p-2">
+            <h3>Publish Weather:</h3>
+            <WeatherBuilder OnWeatherCreated="PublishWeather" />
+        </div>
+        <div class="col-6 border rounded p-2">
+            <h3>Publish Flight:</h3>
+            <FlightBuilder OnFlightCreated="PublishFlight" />
+        </div>
+    </div>
+</div>
 
-Welcome to your new app.
+<h2>Recalculation events:</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Timestamp</th>
+            <th>Message</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if(logs.Any()){
+            @foreach(var log in logs)
+            {
+                <tr>
+                    <td>@log.Timestamp</td>
+                    <td>@log.Message</td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="2">No logs yet</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<LogEntry> logs = new List<LogEntry>();
+    private SimulationConsumer? consumer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await eventbus.ConnectAsync(true, true, true).ConfigureAwait(false);
+
+        eventbus.SubscribeToRecalculationEvent(OnRecalculationEvent);
+
+        consumer = new SimulationConsumer(eventbus, 
+            new BasicEventDataStore.BasicEventDataStore(new WeatherService(), eventbus), 
+            loggerFactory.CreateLogger<SimulationConsumer>());
+    }
+
+    private async Task OnRecalculationEvent(DynamicFlightStorageSimulation.Events.FlightRecalculationEvent e)
+    {
+        logs.Add(new(DateTime.UtcNow, e.Flight.ToString()));
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task PublishWeather(Weather weather)
+    {
+        await eventbus.PublishWeatherAsync(weather).ConfigureAwait(false);
+    }
+
+    private async Task PublishFlight(Flight flight)
+    {
+        await eventbus.PublishFlightAsync(flight).ConfigureAwait(false);
+    }
+
+    private record LogEntry(DateTime Timestamp, string Message);
+
+    public void Dispose()
+    {
+        consumer?.Dispose();   
+    }
+}

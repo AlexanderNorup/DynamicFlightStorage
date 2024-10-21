@@ -30,9 +30,14 @@ namespace DynamicFlightStorageDTOs
             return HashCode.Combine(FlightIdentification, DepartureAirport, DestinationAirport, OtherRelatedAirports, Route, ScheduledTimeOfDeparture, ScheduledTimeOfArrival);
         }
 
-        private string GetDebuggerDisplay()
+        public override string ToString()
         {
             return $"{DepartureAirport} - {DestinationAirport} @ {ScheduledTimeOfDeparture}";
+        }
+
+        private string GetDebuggerDisplay()
+        {
+            return ToString();
         }
     }
 }
