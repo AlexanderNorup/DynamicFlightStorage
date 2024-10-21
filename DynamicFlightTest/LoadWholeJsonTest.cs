@@ -19,6 +19,7 @@ public class LoadWholeJsonTest
         _metarWeatherList = WeatherCreator.ReadWeatherJson(jsonMetarWeather);
     }
 
+    [Ignore("Needs the metar/taf files")]
     [Test]
     public void test()
     {
