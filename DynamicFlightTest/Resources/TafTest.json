@@ -1,0 +1,662 @@
+[
+  {
+    "Ident": "KMUO",
+    "Text": "KMUO 030000Z 0300/0324 VRB06KT 9999 FEW230 QNH2995INS BECMG 0313/0314 VRB06KT 9999 VCSH FEW150 SCT170 BKN230 QNH2981INS TEMPO 0315/0320 13010G15KT 9000 -SHRA TX42/0300Z TN12/0312Z LAST NO AMDS AFT 0300 NEXT 0510",
+    "Period": {
+      "DateEnd": "2024-08-04T00:00:00Z",
+      "DateStart": "2024-08-03T00:00:00Z"
+    },
+    "Lon": -115.87243309269793,
+    "Lat": 43.043597034434875,
+    "DateIssued": "2024-08-03T00:00:00Z",
+    "Conditions": [
+      {
+        "Wind": {
+          "Variable": true,
+          "SpeedKts": 6
+        },
+        "Weather": [],
+        "VisibilityRangeMap": {},
+        "Visibility": {
+          "DistanceSm": 6.21371192,
+          "Distance": {
+            "Unit": 3,
+            "Value": 10000
+          },
+          "DistanceQualifier": 1
+        },
+        "Turbulence": [],
+        "Text": "TAF TAF AMD KMUO 030000Z 0300/0324 VRB06KT 9999 FEW230 QNH2995INS",
+        "PressureHg": 29.95,
+        "Pressure": {
+          "Unit": 1,
+          "Value": 29.95
+        },
+        "Period": {
+          "DateEnd": "2024-08-03T13:00:00Z",
+          "DateStart": "2024-08-03T00:00:00Z"
+        },
+        "Icing": [],
+        "FlightRules": "VFR",
+        "DateIssued": "2024-08-03T00:00:00Z",
+        "CloudLayers": [
+          {
+            "Coverage": "FEW",
+            "AltitudeFt": 23000
+          }
+        ]
+      },
+      {
+        "Wind": {
+          "Variable": true,
+          "SpeedKts": 6
+        },
+        "Weather": [
+          "Showers in vicinity"
+        ],
+        "VisibilityRangeMap": {},
+        "Visibility": {
+          "DistanceSm": 6.21371192,
+          "Distance": {
+            "Unit": 3,
+            "Value": 10000
+          },
+          "DistanceQualifier": 1
+        },
+        "Turbulence": [],
+        "Text": "BECMG 0313/0314 VRB06KT 9999 VCSH FEW150 SCT170 BKN230 QNH2981INS",
+        "PressureHg": 29.81,
+        "Pressure": {
+          "Unit": 1,
+          "Value": 29.81
+        },
+        "Period": {
+          "DateEnd": "2024-08-03T14:00:00Z",
+          "DateStart": "2024-08-03T13:00:00Z"
+        },
+        "Icing": [],
+        "FlightRules": "VFR",
+        "CloudLayers": [
+          {
+            "Coverage": "FEW",
+            "AltitudeFt": 15000
+          },
+          {
+            "Coverage": "SCT",
+            "AltitudeFt": 17000
+          },
+          {
+            "Coverage": "BKN",
+            "AltitudeFt": 23000
+          }
+        ],
+        "Change": "BECOMING"
+      },
+      {
+        "Wind": {
+          "SpeedKts": 10,
+          "GustSpeedKts": 15,
+          "Direction": 130
+        },
+        "Weather": [
+          "Light Rain Showers"
+        ],
+        "VisibilityRangeMap": {},
+        "Visibility": {
+          "DistanceSm": 5.592340728,
+          "Distance": {
+            "Unit": 3,
+            "Value": 9000
+          }
+        },
+        "Turbulence": [],
+        "Text": "TEMPO 0315/0320 13010G15KT 9000 -SHRA TX42/0300Z TN12/0312Z LAST NO AMDS AFT 0300 NEXT 0510",
+        "Period": {
+          "DateEnd": "2024-08-04T00:00:00Z",
+          "DateStart": "2024-08-03T15:00:00Z"
+        },
+        "Icing": [],
+        "FlightRules": "VFR",
+        "CloudLayers": [
+          {
+            "Coverage": "FEW",
+            "AltitudeFt": 23000
+          }
+        ],
+        "Change": "TEMPORARY"
+      }
+    ]
+  },
+  {
+    "Ident": "KWRB",
+    "Text": "KWRB 030000Z 0300/0406 22010KT 9999 FEW050 QNH2992INS TEMPO 0300/0302 21010G20KT BECMG 0308/0309 VRB04KT 8000 BR FEW009 SCT015 QNH2990INS BECMG 0312/0313 21006KT 9999 NSW SCT015 BKN040 QNH2994INS BECMG 0314/0315 22010G15KT 9999 VCSH SCT030 BKN040 QNH2992INS BECMG 0317/0318 23010G15KT 8000 -SHRA VCTS BKN030CB QNH2987INS TEMPO 0319/0321 23015G30KT 4800 TSRA BKN025CB BECMG 0400/0401 17006KT 9999 VCSH BKN030 QNH2991INS BECMG 0405/0406 VRB06KT 8000 BR SCT015 QNH2993INS TX35/0320Z TN25/0310Z LAST NO AMDS AFT 0300 NEXT 0508",
+    "Period": {
+      "DateEnd": "2024-08-04T06:00:00Z",
+      "DateStart": "2024-08-03T00:00:00Z"
+    },
+    "Lon": -83.59192106687352,
+    "Lat": 32.640171026112135,
+    "DateIssued": "2024-08-03T00:00:00Z",
+    "Conditions": [
+      {
+        "Wind": {
+          "SpeedKts": 10,
+          "Direction": 220
+        },
+        "Weather": [],
+        "VisibilityRangeMap": {},
+        "Visibility": {
+          "DistanceSm": 6.21371192,
+          "Distance": {
+            "Unit": 3,
+            "Value": 10000
+          },
+          "DistanceQualifier": 1
+        },
+        "Turbulence": [],
+        "Text": "TAF TAF KWRB 030000Z 0300/0406 22010KT 9999 FEW050 QNH2992INS",
+        "PressureHg": 29.92,
+        "Pressure": {
+          "Unit": 1,
+          "Value": 29.92
+        },
+        "Period": {
+          "DateEnd": "2024-08-03T00:00:00Z",
+          "DateStart": "2024-08-03T00:00:00Z"
+        },
+        "Icing": [],
+        "FlightRules": "VFR",
+        "DateIssued": "2024-08-03T00:00:00Z",
+        "CloudLayers": [
+          {
+            "Coverage": "FEW",
+            "AltitudeFt": 5000
+          }
+        ]
+      },
+      {
+        "Wind": {
+          "SpeedKts": 10,
+          "GustSpeedKts": 20,
+          "Direction": 210
+        },
+        "Weather": [],
+        "VisibilityRangeMap": {},
+        "Visibility": {
+          "DistanceSm": 6.21371192,
+          "Distance": {
+            "Unit": 3,
+            "Value": 10000
+          },
+          "DistanceQualifier": 1
+        },
+        "Turbulence": [],
+        "Text": "TEMPO 0300/0302 21010G20KT",
+        "Period": {
+          "DateEnd": "2024-08-03T02:00:00Z",
+          "DateStart": "2024-08-03T00:00:00Z"
+        },
+        "Icing": [],
+        "FlightRules": "VFR",
+        "CloudLayers": [
+          {
+            "Coverage": "FEW",
+            "AltitudeFt": 5000
+          }
+        ],
+        "Change": "TEMPORARY"
+      },
+      {
+        "Wind": {
+          "Variable": true,
+          "SpeedKts": 4
+        },
+        "Weather": [
+          "Mist"
+        ],
+        "VisibilityRangeMap": {},
+        "Visibility": {
+          "DistanceSm": 4.970969536,
+          "Distance": {
+            "Unit": 3,
+            "Value": 8000
+          }
+        },
+        "Turbulence": [],
+        "Text": "BECMG 0308/0309 VRB04KT 8000 BR FEW009 SCT015 QNH2990INS",
+        "PressureHg": 29.9,
+        "Pressure": {
+          "Unit": 1,
+          "Value": 29.9
+        },
+        "Period": {
+          "DateEnd": "2024-08-03T09:00:00Z",
+          "DateStart": "2024-08-03T08:00:00Z"
+        },
+        "Icing": [],
+        "FlightRules": "MVFR",
+        "CloudLayers": [
+          {
+            "Coverage": "FEW",
+            "AltitudeFt": 900
+          },
+          {
+            "Coverage": "SCT",
+            "AltitudeFt": 1500
+          }
+        ],
+        "Change": "BECOMING"
+      },
+      {
+        "Wind": {
+          "SpeedKts": 6,
+          "Direction": 210
+        },
+        "Weather": [],
+        "VisibilityRangeMap": {},
+        "Visibility": {
+          "DistanceSm": 6.21371192,
+          "Distance": {
+            "Unit": 3,
+            "Value": 10000
+          },
+          "DistanceQualifier": 1
+        },
+        "Turbulence": [],
+        "Text": "BECMG 0312/0313 21006KT 9999 NSW SCT015 BKN040 QNH2994INS",
+        "PressureHg": 29.94,
+        "Pressure": {
+          "Unit": 1,
+          "Value": 29.94
+        },
+        "Period": {
+          "DateEnd": "2024-08-03T13:00:00Z",
+          "DateStart": "2024-08-03T12:00:00Z"
+        },
+        "Icing": [],
+        "FlightRules": "VFR",
+        "CloudLayers": [
+          {
+            "Coverage": "SCT",
+            "AltitudeFt": 1500
+          },
+          {
+            "Coverage": "BKN",
+            "AltitudeFt": 4000
+          }
+        ],
+        "Change": "BECOMING"
+      },
+      {
+        "Wind": {
+          "SpeedKts": 10,
+          "GustSpeedKts": 15,
+          "Direction": 220
+        },
+        "Weather": [
+          "Showers in vicinity"
+        ],
+        "VisibilityRangeMap": {},
+        "Visibility": {
+          "DistanceSm": 6.21371192,
+          "Distance": {
+            "Unit": 3,
+            "Value": 10000
+          },
+          "DistanceQualifier": 1
+        },
+        "Turbulence": [],
+        "Text": "BECMG 0314/0315 22010G15KT 9999 VCSH SCT030 BKN040 QNH2992INS",
+        "PressureHg": 29.92,
+        "Pressure": {
+          "Unit": 1,
+          "Value": 29.92
+        },
+        "Period": {
+          "DateEnd": "2024-08-03T15:00:00Z",
+          "DateStart": "2024-08-03T14:00:00Z"
+        },
+        "Icing": [],
+        "FlightRules": "VFR",
+        "CloudLayers": [
+          {
+            "Coverage": "SCT",
+            "AltitudeFt": 3000
+          },
+          {
+            "Coverage": "BKN",
+            "AltitudeFt": 4000
+          }
+        ],
+        "Change": "BECOMING"
+      },
+      {
+        "Wind": {
+          "SpeedKts": 10,
+          "GustSpeedKts": 15,
+          "Direction": 230
+        },
+        "Weather": [
+          "Light Rain Showers",
+          "Thunderstorms in vicinity",
+          "Cumulonimbus"
+        ],
+        "VisibilityRangeMap": {},
+        "Visibility": {
+          "DistanceSm": 4.970969536,
+          "Distance": {
+            "Unit": 3,
+            "Value": 8000
+          }
+        },
+        "Turbulence": [],
+        "Text": "BECMG 0317/0318 23010G15KT 8000 -SHRA VCTS BKN030CB QNH2987INS",
+        "PressureHg": 29.87,
+        "Pressure": {
+          "Unit": 1,
+          "Value": 29.87
+        },
+        "Period": {
+          "DateEnd": "2024-08-03T18:00:00Z",
+          "DateStart": "2024-08-03T17:00:00Z"
+        },
+        "Icing": [],
+        "FlightRules": "MVFR",
+        "CloudLayers": [
+          {
+            "Coverage": "BKN",
+            "AltitudeFt": 3000
+          }
+        ],
+        "Change": "BECOMING"
+      },
+      {
+        "Wind": {
+          "SpeedKts": 15,
+          "GustSpeedKts": 30,
+          "Direction": 230
+        },
+        "Weather": [
+          "Thunderstorms, Rain",
+          "Cumulonimbus"
+        ],
+        "VisibilityRangeMap": {},
+        "Visibility": {
+          "DistanceSm": 2.9825817216,
+          "Distance": {
+            "Unit": 3,
+            "Value": 4800
+          }
+        },
+        "Turbulence": [],
+        "Text": "TEMPO 0319/0321 23015G30KT 4800 TSRA BKN025CB",
+        "Period": {
+          "DateEnd": "2024-08-03T21:00:00Z",
+          "DateStart": "2024-08-03T19:00:00Z"
+        },
+        "Icing": [],
+        "FlightRules": "IFR",
+        "CloudLayers": [
+          {
+            "Coverage": "BKN",
+            "AltitudeFt": 2500
+          }
+        ],
+        "Change": "TEMPORARY"
+      },
+      {
+        "Wind": {
+          "SpeedKts": 6,
+          "Direction": 170
+        },
+        "Weather": [
+          "Showers in vicinity"
+        ],
+        "VisibilityRangeMap": {},
+        "Visibility": {
+          "DistanceSm": 6.21371192,
+          "Distance": {
+            "Unit": 3,
+            "Value": 10000
+          },
+          "DistanceQualifier": 1
+        },
+        "Turbulence": [],
+        "Text": "BECMG 0400/0401 17006KT 9999 VCSH BKN030 QNH2991INS",
+        "PressureHg": 29.91,
+        "Pressure": {
+          "Unit": 1,
+          "Value": 29.91
+        },
+        "Period": {
+          "DateEnd": "2024-08-04T01:00:00Z",
+          "DateStart": "2024-08-04T00:00:00Z"
+        },
+        "Icing": [],
+        "FlightRules": "MVFR",
+        "CloudLayers": [
+          {
+            "Coverage": "BKN",
+            "AltitudeFt": 3000
+          }
+        ],
+        "Change": "BECOMING"
+      },
+      {
+        "Wind": {
+          "Variable": true,
+          "SpeedKts": 6
+        },
+        "Weather": [
+          "Mist"
+        ],
+        "VisibilityRangeMap": {},
+        "Visibility": {
+          "DistanceSm": 4.970969536,
+          "Distance": {
+            "Unit": 3,
+            "Value": 8000
+          }
+        },
+        "Turbulence": [],
+        "Text": "BECMG 0405/0406 VRB06KT 8000 BR SCT015 QNH2993INS TX35/0320Z TN25/0310Z LAST NO AMDS AFT 0300 NEXT 0508",
+        "PressureHg": 29.93,
+        "Pressure": {
+          "Unit": 1,
+          "Value": 29.93
+        },
+        "Period": {
+          "DateEnd": "2024-08-04T06:00:00Z",
+          "DateStart": "2024-08-04T05:00:00Z"
+        },
+        "Icing": [],
+        "FlightRules": "MVFR",
+        "CloudLayers": [
+          {
+            "Coverage": "SCT",
+            "AltitudeFt": 1500
+          }
+        ],
+        "Change": "BECOMING"
+      }
+    ]
+  },
+  {
+    "Ident": "KHMN",
+    "Text": "KHMN 030030Z 0300/0323 16010G20KT 9000 -SHRA VCTS BKN060 BKN200 QNH3015INS TS OMTNS TEMPO 0300/0301 VRB25G35KT 8000 -TSRA BKN040CB BECMG 0302/0303 VRB06KT 9999 NSW SCT060 BKN200 QNH3018INS BECMG 0316/0317 20010G15KT 9999 SCT100 SCT200 QNH3008INS TS OMTNS AFT 0319 TX32/0300Z TN23/0312Z LAST NO AMDS AFT 0300 NEXT 0609",
+    "Period": {
+      "DateEnd": "2024-08-03T23:00:00Z",
+      "DateStart": "2024-08-03T00:00:00Z"
+    },
+    "Lon": -106.10854208488682,
+    "Lat": 32.851858026281484,
+    "DateIssued": "2024-08-03T00:30:00Z",
+    "Conditions": [
+      {
+        "Wind": {
+          "SpeedKts": 10,
+          "GustSpeedKts": 20,
+          "Direction": 160
+        },
+        "Weather": [
+          "Light Rain Showers",
+          "Thunderstorms in vicinity",
+          "Thunderstorms"
+        ],
+        "VisibilityRangeMap": {},
+        "Visibility": {
+          "DistanceSm": 5.592340728,
+          "Distance": {
+            "Unit": 3,
+            "Value": 9000
+          }
+        },
+        "Turbulence": [],
+        "Text": "TAF TAF AMD KHMN 030030Z 0300/0323 16010G20KT 9000 -SHRA VCTS BKN060 BKN200 QNH3015INS TS OMTNS",
+        "PressureHg": 30.15,
+        "Pressure": {
+          "Unit": 1,
+          "Value": 30.15
+        },
+        "Period": {
+          "DateEnd": "2024-08-03T00:00:00Z",
+          "DateStart": "2024-08-03T00:00:00Z"
+        },
+        "Icing": [],
+        "FlightRules": "VFR",
+        "DateIssued": "2024-08-03T00:30:00Z",
+        "CloudLayers": [
+          {
+            "Coverage": "BKN",
+            "AltitudeFt": 6000
+          },
+          {
+            "Coverage": "BKN",
+            "AltitudeFt": 20000
+          }
+        ]
+      },
+      {
+        "Wind": {
+          "Variable": true,
+          "SpeedKts": 25,
+          "GustSpeedKts": 35
+        },
+        "Weather": [
+          "Thunderstorms, Light Rain",
+          "Cumulonimbus"
+        ],
+        "VisibilityRangeMap": {},
+        "Visibility": {
+          "DistanceSm": 4.970969536,
+          "Distance": {
+            "Unit": 3,
+            "Value": 8000
+          }
+        },
+        "Turbulence": [],
+        "Text": "TEMPO 0300/0301 VRB25G35KT 8000 -TSRA BKN040CB",
+        "Period": {
+          "DateEnd": "2024-08-03T01:00:00Z",
+          "DateStart": "2024-08-03T00:00:00Z"
+        },
+        "Icing": [],
+        "FlightRules": "MVFR",
+        "CloudLayers": [
+          {
+            "Coverage": "BKN",
+            "AltitudeFt": 4000
+          }
+        ],
+        "Change": "TEMPORARY"
+      },
+      {
+        "Wind": {
+          "Variable": true,
+          "SpeedKts": 6
+        },
+        "Weather": [
+          "Light Rain Showers",
+          "Thunderstorms in vicinity",
+          "Thunderstorms"
+        ],
+        "VisibilityRangeMap": {},
+        "Visibility": {
+          "DistanceSm": 6.21371192,
+          "Distance": {
+            "Unit": 3,
+            "Value": 10000
+          },
+          "DistanceQualifier": 1
+        },
+        "Turbulence": [],
+        "Text": "BECMG 0302/0303 VRB06KT 9999 NSW SCT060 BKN200 QNH3018INS",
+        "PressureHg": 30.18,
+        "Pressure": {
+          "Unit": 1,
+          "Value": 30.18
+        },
+        "Period": {
+          "DateEnd": "2024-08-03T03:00:00Z",
+          "DateStart": "2024-08-03T02:00:00Z"
+        },
+        "Icing": [],
+        "FlightRules": "VFR",
+        "CloudLayers": [
+          {
+            "Coverage": "SCT",
+            "AltitudeFt": 6000
+          },
+          {
+            "Coverage": "BKN",
+            "AltitudeFt": 20000
+          }
+        ],
+        "Change": "BECOMING"
+      },
+      {
+        "Wind": {
+          "SpeedKts": 10,
+          "GustSpeedKts": 15,
+          "Direction": 200
+        },
+        "Weather": [
+          "Thunderstorms"
+        ],
+        "VisibilityRangeMap": {},
+        "Visibility": {
+          "DistanceSm": 6.21371192,
+          "Distance": {
+            "Unit": 3,
+            "Value": 10000
+          },
+          "DistanceQualifier": 1
+        },
+        "Turbulence": [],
+        "Text": "BECMG 0316/0317 20010G15KT 9999 SCT100 SCT200 QNH3008INS TS OMTNS AFT 0319 TX32/0300Z TN23/0312Z LAST NO AMDS AFT 0300 NEXT 0609",
+        "PressureHg": 30.08,
+        "Pressure": {
+          "Unit": 1,
+          "Value": 30.08
+        },
+        "Period": {
+          "DateEnd": "2024-08-03T23:00:00Z",
+          "DateStart": "2024-08-03T16:00:00Z"
+        },
+        "Icing": [],
+        "FlightRules": "VFR",
+        "CloudLayers": [
+          {
+            "Coverage": "SCT",
+            "AltitudeFt": 10000
+          },
+          {
+            "Coverage": "SCT",
+            "AltitudeFt": 20000
+          }
+        ],
+        "Change": "BECOMING"
+      }
+    ]
+  }
+]

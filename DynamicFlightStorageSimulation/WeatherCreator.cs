@@ -1,0 +1,214 @@
+using DynamicFlightStorageDTOs;
+using System.Text.Json.Nodes;
+
+namespace DynamicFlightStorageSimulation;
+
+public static class WeatherCreator
+{
+    public static List<Weather> ReadWeatherJson(string jsonString)
+    {
+        var weatherList = new List<Weather>();
+        
+        JsonArray? tafs = JsonNode.Parse(jsonString)?.AsArray();
+        if (tafs is null || tafs.Count < 1)
+        {
+            Console.WriteLine("The JSON does not contain a valid array.");
+            return weatherList;
+        }
+        
+
+        foreach (JsonNode? taf in tafs)
+        {
+            if (taf is not null)
+            {
+                weatherList.AddRange(HandleJsonWeather(taf));
+            }
+        }
+        
+        return weatherList;
+    }
+
+    private static List<Weather> HandleJsonWeather(JsonNode data)
+    {
+        var weatherList = new List<Weather>();
+        
+        // Check for full metar/taf text
+        var fullText = data["Text"]?.ToString();
+        if (string.IsNullOrEmpty(fullText))
+        {
+            Console.WriteLine("Full text is empty.");
+            return weatherList;
+        }
+        var identifier = fullText.Substring(0, 12);
+        
+        // Check for airport identifier
+        var airportId = data["Ident"]?.ToString();
+        if (string.IsNullOrEmpty(airportId))
+        {
+            Console.WriteLine($"Airport identifier is empty for {identifier}");
+            return weatherList;
+        }
+        
+        var conditions = data["Conditions"]?.AsArray();
+        
+        // Handle metar
+        if (conditions is null)
+        {
+            if (!Enum.TryParse(data["FlightRules"]?.ToString(), out WeatherCategory category))
+            {
+                Console.WriteLine($"Invalid weather category in METAR {identifier}");
+                return weatherList;
+            }
+            
+            // Check for valid period
+            DateTime dateIssued;
+            try
+            {
+                dateIssued = ParseDate(data["DateIssued"], identifier);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Invalid date in METAR {identifier}: {e.Message}");
+                return weatherList;
+            }
+            
+            weatherList.Add(new Weather()
+            {
+                ValidFrom = dateIssued,
+                ValidTo = dateIssued,
+                Airport = airportId,
+                WeatherLevel = category
+            });
+            return weatherList;
+        }
+        
+        // Handle taf
+        if (conditions.Count > 1)
+        {
+            // Check for valid period
+            JsonNode? validPeriod = data["Period"];
+            if (validPeriod is null)
+            {
+                Console.WriteLine($"Period does not exist for TAF {identifier}");
+                return weatherList;
+            }
+        
+            DateTime validTo;
+            try
+            {
+                validTo = ParseDate(validPeriod["DateEnd"], identifier);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Invalid period in TAF {identifier}: {e.Message}");
+                return weatherList;
+            }
+            
+            return HandleTaf(conditions, identifier, validTo, airportId);
+        }
+        return weatherList;
+    }
+
+    private static List<Weather> HandleTaf(JsonArray conditions, string identifier, DateTime validTo, string airportId)
+    {
+        var weatherList = new List<Weather>();
+        
+        if (!Enum.TryParse(conditions[0]?["FlightRules"]?.ToString(), out WeatherCategory baseline))
+        {
+            Console.WriteLine($"Invalid weather category in TAF {identifier}");
+            return weatherList;
+        }
+        
+        DateTime previousEnd  = DateTime.MaxValue;
+        
+        // Loop that goes through each time period and creates weather from that. 
+        // For each condition, go from start to end and add the weather in that condition. 
+        // After handling one condition, if end of condition is not equal to start of next condition,
+        // create weather from end to start of next, with weather being baseline (first condition, or latest "becoming")
+
+        // Maybe adjust loop such that the first iteration only really does the first line of the loop,
+        // and then adds weather with baseline (as initial baseline is always the first condition
+        foreach (var condition in conditions)
+        {
+            JsonNode? period = condition?["Period"];
+            if (period is null)
+            {
+                Console.WriteLine($"No period in TAF {identifier}");
+                continue;
+            }
+
+            DateTime dateStart, dateEnd;
+            try
+            {
+                dateStart = ParseDate(period["DateStart"], identifier);
+                dateEnd = ParseDate(period["DateEnd"], identifier);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Invalid period in TAF {identifier}: {e.Message}");
+                continue;
+            }
+            
+            if (!Enum.TryParse(condition?["FlightRules"]?.ToString(), out WeatherCategory weatherCategory))
+            {
+                Console.WriteLine($"Invalid weather category in TAF {identifier}");
+                continue;
+            }
+            
+            // If there is a gap in the "timeline" fill it with the current baseline weather category
+            if (previousEnd < dateStart)
+            {
+                weatherList.Add(new Weather()
+                {
+                    ValidFrom = previousEnd,
+                    ValidTo = dateStart,
+                    Airport = airportId,
+                    WeatherLevel = baseline
+                });
+            }
+            
+            weatherList.Add(new Weather()
+            {
+                ValidFrom = dateStart,
+                ValidTo = dateEnd,
+                Airport = airportId,
+                WeatherLevel = weatherCategory
+            });
+            
+            var conditionChange = condition["Change"]?.ToString();
+
+            if (conditionChange == "BECOMING")
+            {
+                baseline = weatherCategory;
+            }
+
+            previousEnd = dateEnd;
+
+        }
+
+        if (previousEnd < validTo)
+        {
+            weatherList.Add(new Weather()
+            {
+                ValidFrom = previousEnd,
+                ValidTo = validTo,
+                Airport = airportId,
+                WeatherLevel = baseline
+            });
+        }
+        
+        return weatherList;
+    }
+    
+    
+    private static DateTime ParseDate(JsonNode? date, string identifier)
+    {
+        var dateString = date?.ToString();
+        if (string.IsNullOrEmpty(dateString))
+        {
+            throw new ArgumentException($"Invalid date for {identifier}");
+        }
+        
+        return DateTime.Parse(dateString);
+    }
+}
