@@ -7,4 +7,9 @@
     <UserSecretsId>b2fff469-c4f9-4a21-8dff-fa0ca57cbfce</UserSecretsId>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\DynamicFlightStorageSimulation\DynamicFlightStorageSimulation.csproj" />
+    <ProjectReference Include="..\EventDataStores\BasicEventDataStore\BasicEventDataStore.csproj" />
+  </ItemGroup>
+
 </Project>

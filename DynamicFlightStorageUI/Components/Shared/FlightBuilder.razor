@@ -1,0 +1,68 @@
+﻿<EditForm Model="flight" OnValidSubmit="SubmitFlight">
+    <div class="row mb-3">
+        <label for="departureAirport" class="col-sm-4 col-form-label">Departure</label>
+        <div class="col-sm-8">
+            <InputText @bind-Value="flight.DepartureAirport" class="form-control" id="departureAirport" />
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <label for="destinationAirport" class="col-sm-4 col-form-label">Destination</label>
+        <div class="col-sm-8">
+            <InputText @bind-Value="flight.DestinationAirport" class="form-control" id="destinationAirport" />
+        </div>
+    </div>
+    <div class="row mb-3">
+        <label for="flightIdent" class="col-sm-4 col-form-label">Identification <i class="bi bi-arrow-clockwise pointer-event" @onclick="() => flight.FlightIdentification = Guid.NewGuid().ToString()"></i></label>
+        <div class="col-sm-8">
+            <InputText @bind-Value="flight.FlightIdentification" class="form-control" id="flightIdent" />
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <label for="std" class="col-sm-4 col-form-label">STD<sup class="text-muted">UTC</sup></label>
+        <div class="col-sm-8">
+            <InputDate Type="InputDateType.DateTimeLocal" @bind-Value="flight.ScheduledTimeOfDeparture" class="form-control" id="std" />
+        </div>
+    </div>
+    <div class="row mb-3">
+        <label for="sta" class="col-sm-4 col-form-label">STA<sup class="text-muted">UTC</sup></label>
+        <div class="col-sm-8">
+            <InputDate Type="InputDateType.DateTimeLocal" @bind-Value="flight.ScheduledTimeOfArrival" class="form-control" id="sta" />
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Publish</button>
+    <button type="button" class="btn btn-warning" @onclick="ResetForm">Reset form</button>
+</EditForm>
+@code {
+    private Flight flight = new Flight()
+        {
+            DepartureAirport = "EKCH",
+            DestinationAirport = "EGLL",
+            FlightIdentification = Guid.NewGuid().ToString(),
+            ScheduledTimeOfDeparture = DateTime.UtcNow,
+            ScheduledTimeOfArrival = DateTime.UtcNow.AddHours(1)
+        };
+
+    [Parameter]
+    public EventCallback<Flight> OnFlightCreated{ get; set; }
+
+    public void SubmitFlight()
+    {
+        OnFlightCreated.InvokeAsync(flight);
+        flight.FlightIdentification = Guid.NewGuid().ToString();
+    }
+
+    private void ResetForm()
+    {
+        flight = new Flight()
+        {
+            DepartureAirport = "EKCH",
+            DestinationAirport = "EGLL",
+            FlightIdentification = Guid.NewGuid().ToString(),
+            ScheduledTimeOfDeparture = DateTime.UtcNow,
+            ScheduledTimeOfArrival = DateTime.UtcNow.AddHours(1)
+        };
+    }
+}

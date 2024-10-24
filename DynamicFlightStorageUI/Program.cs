@@ -1,4 +1,8 @@
+using BasicEventDataStore;
+using DynamicFlightStorageDTOs;
+using DynamicFlightStorageSimulation;
 using DynamicFlightStorageUI.Components;
+using Microsoft.Extensions.Options;
 
 namespace DynamicFlightStorageUI
 {
@@ -11,6 +15,16 @@ namespace DynamicFlightStorageUI
             // Add services to the container.
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents();
+
+            builder.Services.AddOptions<EventBusConfig>()
+                .Bind(builder.Configuration.GetSection("EventBusConfig"))
+                .ValidateDataAnnotations();
+
+            builder.Services.AddTransient((s) =>
+            {
+                var config = s.GetService<IOptions<EventBusConfig>>()!.Value;
+                return new SimulationEventBus(config, s.GetRequiredService<ILogger<SimulationEventBus>>());
+            });
 
             var app = builder.Build();
 

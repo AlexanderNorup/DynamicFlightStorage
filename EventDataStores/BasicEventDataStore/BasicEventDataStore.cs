@@ -6,9 +6,11 @@ namespace BasicEventDataStore
     {
         private readonly HashSet<FlightWrapper> _flights = new HashSet<FlightWrapper>();
         private readonly IWeatherService _weatherService;
-        public BasicEventDataStore(IWeatherService weatherService)
+        private readonly IRecalculateFlightEventPublisher _flightRecalculation;
+        public BasicEventDataStore(IWeatherService weatherService, IRecalculateFlightEventPublisher recalculateFlightEventPublisher)
         {
             _weatherService = weatherService ?? throw new ArgumentNullException(nameof(weatherService));
+            _flightRecalculation = recalculateFlightEventPublisher ?? throw new ArgumentNullException(nameof(recalculateFlightEventPublisher));
         }
 
         public Task AddOrUpdateFlightAsync(Flight flight)
@@ -31,13 +33,12 @@ namespace BasicEventDataStore
             return Task.CompletedTask;
         }
 
-        public Task AddWeatherAsync(Weather weather)
+        public async Task AddWeatherAsync(Weather weather)
         {
             foreach (var flightWrapper in _flights)
             {
                 var flight = flightWrapper.Flight;
-                if (flight.ScheduledTimeOfDeparture >= weather.ValidFrom
-                    && flight.ScheduledTimeOfArrival <= weather.ValidTo
+                if (WeatherOverlapsFlight(flight, weather)
                     && IsAirportInFlight(flight, weather.Airport))
                 {
                     // Check for airport last seen weather
@@ -46,10 +47,10 @@ namespace BasicEventDataStore
                     {
                         // We need to recalculate
                         Console.WriteLine($"Recalculate flight: {flight.FlightIdentification}");
+                        await _flightRecalculation.PublishRecalculationAsync(flight).ConfigureAwait(false);
                     }
                 }
             }
-            return Task.CompletedTask;
         }
 
         public Task DeleteFlightAsync(string id)
@@ -71,6 +72,18 @@ namespace BasicEventDataStore
                 weather.Add(airport, _weatherService.GetWeather(airport, timeMiddleOfFlight).WeatherLevel);
             }
             return weather;
+        }
+
+        private static bool WeatherOverlapsFlight(Flight flight, Weather weather)
+        {
+            // Check if the first range ends before the second range starts or
+            // if the second range ends before the first range starts
+            if (flight.ScheduledTimeOfArrival < weather.ValidFrom
+                || weather.ValidTo < flight.ScheduledTimeOfDeparture)
+            {
+                return false;
+            }
+            return true;
         }
 
         private static bool IsAirportInFlight(Flight flight, string airport)

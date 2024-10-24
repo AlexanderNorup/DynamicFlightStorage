@@ -15,7 +15,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{FAAA
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "EventDataStores", "EventDataStores", "{F618F1D0-7CB1-442B-8CCA-C90FF84D66AE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BasicEventDataStore", "EventDataStores\BasicEventDataStore\BasicEventDataStore.csproj", "{6BE40818-4AF0-4587-A8CC-DCB14D7ADE4A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BasicEventDataStore", "EventDataStores\BasicEventDataStore\BasicEventDataStore.csproj", "{6BE40818-4AF0-4587-A8CC-DCB14D7ADE4A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExperimentRunner", "ExperimentRunner\ExperimentRunner.csproj", "{EE572FBB-6F1F-4BD3-AF9E-F0382ADDA1E8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -43,6 +45,10 @@ Global
 		{6BE40818-4AF0-4587-A8CC-DCB14D7ADE4A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6BE40818-4AF0-4587-A8CC-DCB14D7ADE4A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6BE40818-4AF0-4587-A8CC-DCB14D7ADE4A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EE572FBB-6F1F-4BD3-AF9E-F0382ADDA1E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE572FBB-6F1F-4BD3-AF9E-F0382ADDA1E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EE572FBB-6F1F-4BD3-AF9E-F0382ADDA1E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EE572FBB-6F1F-4BD3-AF9E-F0382ADDA1E8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
