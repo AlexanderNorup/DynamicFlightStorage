@@ -13,7 +13,7 @@ public class WeatherInjector
     }
 
     /*
-     * Accepts JSON data as strings - NOT file paths
+     * Accepts JSON data as strings - NOT file paths. Up for change
      */
     public void AddWeather(params string[] jsonStrings)
     {
@@ -27,7 +27,6 @@ public class WeatherInjector
     
     public async Task PublishWeatherUntil(DateTime date)
     {
-        var weatherUntil = new List<Weather>();
         while (_counter < _weatherList.Count)
         {
             if (_weatherList[_counter].ValidTo > date)
