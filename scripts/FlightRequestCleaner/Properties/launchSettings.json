@@ -1,7 +1,8 @@
 {
   "profiles": {
     "FlightRequestCleaner": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "C:\\Users\\alexa\\Downloads\\500_Flight_plans -o flightfiles"
     }
   }
 }

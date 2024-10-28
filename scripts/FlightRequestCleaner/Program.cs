@@ -1,4 +1,5 @@
-﻿using System.CommandLine;
+﻿using DynamicFlightStorageDTOs;
+using System.CommandLine;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Xml.Linq;
@@ -40,14 +41,26 @@ namespace FlightRequestCleaner
                 try
                 {
                     var flight = FlightConverter.ConvertFlight(reply);
-                    string fileOutPath = Path.Combine(output, MD5Hash(filePath) + ".json");
+                    string fileOutPath = Path.Combine(output, GetFileName(flight) + ".json");
+                    int i = 1;
+                    while (File.Exists(fileOutPath))
+                    {
+                        fileOutPath = Path.Combine(output, GetFileName(flight) + $"_{i++}.json");
+                        if (i > 100)
+                        {
+                            throw new InvalidOperationException("Too many files with the same name, aborting");
+                        }
+                    }
                     File.WriteAllText(fileOutPath, JsonSerializer.Serialize(flight));
-
+                    Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine($"Converted {filePath} => {fileOutPath}");
+                    Console.ResetColor();
                 }
                 catch (Exception e)
                 {
+                    Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine($"Failed to convert reply {filePath}: {e}");
+                    Console.ResetColor();
                 }
             }
         }
@@ -89,15 +102,9 @@ namespace FlightRequestCleaner
             }
         }
 
-        public static string MD5Hash(string input)
+        public static string GetFileName(Flight flight)
         {
-            // Use input string to calculate MD5 hash
-            using (MD5 md5 = MD5.Create())
-            {
-                byte[] inputBytes = System.Text.Encoding.ASCII.GetBytes(input);
-                byte[] hashBytes = md5.ComputeHash(inputBytes);
-                return Convert.ToHexString(hashBytes);
-            }
+            return $"flight{flight.ScheduledTimeOfDeparture:yyyyMMddTHHmmssff}";
         }
     }
 }
