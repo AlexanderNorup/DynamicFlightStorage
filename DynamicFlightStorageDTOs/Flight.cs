@@ -1,16 +1,25 @@
-﻿using System.Diagnostics;
+﻿using MessagePack;
+using System.Diagnostics;
 
 namespace DynamicFlightStorageDTOs
 {
     [DebuggerDisplay($"{{{nameof(GetDebuggerDisplay)}(),nq}}")]
+    [MessagePackObject]
     public class Flight : IFlight
     {
+        [Key(0)]
         public required string FlightIdentification { get; set; }
+        [Key(1)]
         public required string DepartureAirport { get; set; }
+        [Key(2)]
         public required string DestinationAirport { get; set; }
+        [Key(3)]
         public Dictionary<string, string> OtherRelatedAirports { get; set; } = new();
+        [Key(4)]
         public List<RouteNode>? Route { get; set; }
+        [Key(5)]
         public DateTime ScheduledTimeOfDeparture { get; set; }
+        [Key(6)]
         public DateTime ScheduledTimeOfArrival { get; set; }
 
         public override bool Equals(object? obj)

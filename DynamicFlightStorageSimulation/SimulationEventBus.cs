@@ -1,5 +1,6 @@
 ﻿using DynamicFlightStorageDTOs;
 using DynamicFlightStorageSimulation.Events;
+using MessagePack;
 using Microsoft.Extensions.Logging;
 using MQTTnet;
 using MQTTnet.Client;
@@ -15,6 +16,7 @@ namespace DynamicFlightStorageSimulation
         private readonly IMqttClient _mqttClient;
         private readonly EventBusConfig _eventBusConfig;
         private readonly MqttClientOptions _mqttClientOptions;
+        private readonly MessagePackSerializerOptions _messagePackOptions;
         public SimulationEventBus(EventBusConfig eventBusConfig, ILogger<SimulationEventBus> logger)
         {
             _logger = logger;
@@ -28,6 +30,7 @@ namespace DynamicFlightStorageSimulation
                 .Build();
 
             _mqttClient = new MqttFactory().CreateMqttClient();
+            _messagePackOptions = MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4Block);
         }
 
         public delegate Task FlightStorageEventHandler(FlightStorageEvent e);
@@ -84,25 +87,25 @@ namespace DynamicFlightStorageSimulation
 
         public Task PublishFlightAsync(Flight flight)
         {
-            return PublishMessageInternalAsync(_eventBusConfig.FlightTopic, JsonSerializer.Serialize(flight));
+            return PublishMessageInternalAsync(_eventBusConfig.FlightTopic, MessagePackSerializer.Serialize(flight, _messagePackOptions));
         }
 
         public Task PublishWeatherAsync(Weather weather)
         {
-            return PublishMessageInternalAsync(_eventBusConfig.WeatherTopic, JsonSerializer.Serialize(weather));
+            return PublishMessageInternalAsync(_eventBusConfig.WeatherTopic, MessagePackSerializer.Serialize(weather, _messagePackOptions));
         }
 
         public Task PublishRecalculationAsync(Flight flight)
         {
-            return PublishMessageInternalAsync(_eventBusConfig.RecalculationTopic, JsonSerializer.Serialize(flight));
+            return PublishMessageInternalAsync(_eventBusConfig.RecalculationTopic, MessagePackSerializer.Serialize(flight, _messagePackOptions));
         }
 
         public Task PublishSystemMessage(SystemMessage systemMessage)
         {
-            return PublishMessageInternalAsync(_eventBusConfig.SystemTopic, JsonSerializer.Serialize(systemMessage));
+            return PublishMessageInternalAsync(_eventBusConfig.SystemTopic, MessagePackSerializer.Serialize(systemMessage, _messagePackOptions));
         }
 
-        private async Task PublishMessageInternalAsync(string topic, string payload)
+        private async Task PublishMessageInternalAsync(string topic, byte[] payload)
         {
             if (!IsConnected())
             {
@@ -149,7 +152,7 @@ namespace DynamicFlightStorageSimulation
                 {
                     if (e.ApplicationMessage.Topic == _eventBusConfig.FlightTopic)
                     {
-                        var flight = JsonSerializer.Deserialize<Flight>(Encoding.UTF8.GetString(e.ApplicationMessage.PayloadSegment));
+                        var flight = MessagePackSerializer.Deserialize<Flight>(e.ApplicationMessage.PayloadSegment, _messagePackOptions);
                         if (flight is not null)
                         {
                             foreach (var handler in flightStorageEventHandlers)
@@ -161,7 +164,7 @@ namespace DynamicFlightStorageSimulation
                     }
                     else if (e.ApplicationMessage.Topic == _eventBusConfig.WeatherTopic)
                     {
-                        var weather = JsonSerializer.Deserialize<Weather>(Encoding.UTF8.GetString(e.ApplicationMessage.PayloadSegment));
+                        var weather = MessagePackSerializer.Deserialize<Weather>(e.ApplicationMessage.PayloadSegment, _messagePackOptions);
                         if (weather is not null)
                         {
                             foreach (var handler in weatherEventHandlers)
@@ -173,7 +176,7 @@ namespace DynamicFlightStorageSimulation
                     }
                     else if (e.ApplicationMessage.Topic == _eventBusConfig.RecalculationTopic)
                     {
-                        var flight = JsonSerializer.Deserialize<Flight>(Encoding.UTF8.GetString(e.ApplicationMessage.PayloadSegment));
+                        var flight = MessagePackSerializer.Deserialize<Flight>(e.ApplicationMessage.PayloadSegment, _messagePackOptions);
                         if (flight is not null)
                         {
                             foreach (var handler in flightRecalculationEventHandlers)
@@ -200,7 +203,7 @@ namespace DynamicFlightStorageSimulation
             }
             try
             {
-                var systemMessage = JsonSerializer.Deserialize<SystemMessage>(Encoding.UTF8.GetString(e.ApplicationMessage.PayloadSegment));
+                var systemMessage = MessagePackSerializer.Deserialize<SystemMessage>(e.ApplicationMessage.PayloadSegment, _messagePackOptions);
                 if (systemMessage is not null)
                 {
                     foreach (var handler in systemMessageEventHandlers)
