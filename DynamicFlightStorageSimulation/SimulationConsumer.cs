@@ -18,6 +18,7 @@ namespace DynamicFlightStorageSimulation
             _eventDataStore = eventDataStore ?? throw new ArgumentNullException(nameof(eventDataStore));
             _simulationEventBus.SubscribeToFlightStorageEvent(OnFlightRecieved);
             _simulationEventBus.SubscribeToWeatherEvent(OnWeatherRecieved);
+            _simulationEventBus.SubscribeToSystemEvent(OnSystemMessage);
         }
 
         public async Task StartAsync()
@@ -39,6 +40,25 @@ namespace DynamicFlightStorageSimulation
             _logger?.LogDebug("Processed flight event: {Flight}", e.Flight);
         }
 
+        private async Task OnSystemMessage(SystemMessageEvent e)
+        {
+            var message = e.SystemMessage;
+            switch (message.MessageType)
+            {
+                case SystemMessage.SystemMessageType.LatencyRequest:
+                    await _simulationEventBus.PublishSystemMessage(new()
+                    {
+                        Message = message.Message,
+                        TimeStamp = message.TimeStamp,
+                        MessageType = SystemMessage.SystemMessageType.LatencyResponse,
+                        Source = _simulationEventBus.ClientId
+                    }).ConfigureAwait(false);
+                    break;
+                default:
+                    break;
+            }
+        }
+
         protected virtual void Dispose(bool disposing)
         {
             if (!disposedValue)
@@ -47,6 +67,7 @@ namespace DynamicFlightStorageSimulation
                 {
                     _simulationEventBus.UnSubscribeToFlightStorageEvent(OnFlightRecieved);
                     _simulationEventBus.UnSubscribeToWeatherEvent(OnWeatherRecieved);
+                    _simulationEventBus.UnSubscribeToSystemEvent(OnSystemMessage);
                 }
                 if (_eventDataStore is IDisposable disposable)
                 {

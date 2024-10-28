@@ -1,4 +1,5 @@
 ﻿@page "/"
+@using System.Text.Json
 @inject SimulationEventBus eventbus
 @inject ILoggerFactory loggerFactory
 @implements IDisposable
@@ -22,14 +23,34 @@
         <div class="col-12 border rounded p-2">
             <h3>Consumer:</h3>
             <p>The embedded consumer is enabled: @(consumer is not null)</p>
-            <button class="btn btn-success" disabled="@(consumer is not null)" @onclick="CreateConsumer">Enable embedded consumer?</button>
-            <button class="btn btn-danger" disabled="@(consumer is null)" @onclick="KillConsumer">Disable embedded consumer?</button>
+            @if(consumer is null)
+            {
+
+                <button class="btn btn-success" @onclick="CreateConsumer">Enable embedded consumer?</button>
+            }
+            else
+            {
+                <button class="btn btn-danger" @onclick="KillConsumer">Disable embedded consumer?</button>
+            }
+        </div>
+        <div class="col-12 border rounded p-2">
+            <h3>Latency Tester:</h3>
+            <p>The latency tester is ready: @(latencyTester is not null)</p>
+            @if (latencyTester is not null)
+            {
+                <p>Latency test in progress: @(latencyTester.LatencyExperimentRunning)</p>
+                <button class="btn btn-primary" disabled="@latencyTester.LatencyExperimentRunning" @onclick="() => PerformLatencyTest(100,100)">Perform Latency test</button>
+                <button class="btn btn-secondary" disabled="@latencyTester.LatencyExperimentRunning" @onclick="() => PerformLatencyTest(1,1)">Get Consumers</button>
+                @if(latencyTestResult is not null)
+                {
+                    <p>Test Results:<br/>
+                        <pre>@latencyTestResult</pre>
+                    </p>
+                }
+            }
         </div>
     </div>
 </div>
-
-
-
 
 <h2>Recalculation events:</h2>
 <table class="table table-striped">
@@ -59,15 +80,18 @@
 </table>
 
 @code {
+    private CancellationTokenSource cts = new();
     private List<LogEntry> logs = new List<LogEntry>();
     private SimulationConsumer? consumer;
+    private LatencyTester? latencyTester;
+    private string? latencyTestResult;
 
     protected override async Task OnInitializedAsync()
     {
         await eventbus.ConnectAsync(true, true, true).ConfigureAwait(false);
 
         eventbus.SubscribeToRecalculationEvent(OnRecalculationEvent);
-
+        latencyTester = new LatencyTester(eventbus, loggerFactory.CreateLogger<LatencyTester>());
     }
 
     private void CreateConsumer()
@@ -81,6 +105,23 @@
     {
         consumer?.Dispose();
         consumer = null;
+    }
+
+    public async Task PerformLatencyTest(int sample, int delay)
+    {
+        if (latencyTester is null || latencyTester.LatencyExperimentRunning)
+        {
+            return;
+        }
+        latencyTestResult = null;
+        StateHasChanged();
+
+        var results = await latencyTester.GetConsumersAndLatencyAsync(sample, delay, cts.Token);
+
+        latencyTestResult = JsonSerializer.Serialize(results, new JsonSerializerOptions()
+        {
+            WriteIndented = true
+        });
     }
 
     private async Task OnRecalculationEvent(DynamicFlightStorageSimulation.Events.FlightRecalculationEvent e)
@@ -103,6 +144,9 @@
 
     public void Dispose()
     {
+        cts.Cancel();
         consumer?.Dispose();   
+        latencyTester?.Dispose();
+        cts.Dispose();
     }
 }
