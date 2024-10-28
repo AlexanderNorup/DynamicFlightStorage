@@ -32,7 +32,7 @@ namespace ExperimentRunner
             var eventDataStore = new BasicEventDataStore.BasicEventDataStore(weatherService, simulationEventBus);
 
             logger.LogInformation("Event data store of type {Type} ready", eventDataStore.GetType().FullName);
-            using var consumer = new SimulationConsumer(simulationEventBus, eventDataStore, factory.CreateLogger<SimulationConsumer>());
+            using var consumer = new SimulationConsumer(simulationEventBus, weatherService, eventDataStore, factory.CreateLogger<SimulationConsumer>());
 
             await consumer.StartAsync();
             logger.LogInformation("Simulation consumer started");

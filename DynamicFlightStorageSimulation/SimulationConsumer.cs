@@ -8,13 +8,15 @@ namespace DynamicFlightStorageSimulation
     {
         private ILogger<SimulationConsumer>? _logger;
         private SimulationEventBus _simulationEventBus;
+        private WeatherService _weatherService;
         private IEventDataStore _eventDataStore;
         private bool disposedValue;
 
-        public SimulationConsumer(SimulationEventBus simulationEventBus, IEventDataStore eventDataStore, ILogger<SimulationConsumer> logger)
+        public SimulationConsumer(SimulationEventBus simulationEventBus, WeatherService weatherService, IEventDataStore eventDataStore, ILogger<SimulationConsumer> logger)
         {
             _logger = logger;
             _simulationEventBus = simulationEventBus ?? throw new ArgumentNullException(nameof(simulationEventBus));
+            _weatherService = weatherService ?? throw new ArgumentNullException(nameof(weatherService));
             _eventDataStore = eventDataStore ?? throw new ArgumentNullException(nameof(eventDataStore));
             _simulationEventBus.SubscribeToFlightStorageEvent(OnFlightRecieved);
             _simulationEventBus.SubscribeToWeatherEvent(OnWeatherRecieved);
@@ -30,6 +32,7 @@ namespace DynamicFlightStorageSimulation
 
         private async Task OnWeatherRecieved(WeatherEvent e)
         {
+            _weatherService.AddWeather(e.Weather);
             await _eventDataStore.AddWeatherAsync(e.Weather).ConfigureAwait(false);
             _logger?.LogDebug("Processed weather event: {Weather}", e.Weather);
         }

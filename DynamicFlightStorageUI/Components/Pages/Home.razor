@@ -96,8 +96,10 @@
 
     private void CreateConsumer()
     {
+        var weatherService = new WeatherService();
         consumer = new SimulationConsumer(eventbus,
-            new BasicEventDataStore.BasicEventDataStore(new WeatherService(), eventbus),
+            weatherService,
+            new BasicEventDataStore.BasicEventDataStore(weatherService, eventbus),
             loggerFactory.CreateLogger<SimulationConsumer>());
     }
 
