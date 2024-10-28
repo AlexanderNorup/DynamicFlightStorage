@@ -37,6 +37,11 @@ public class FlightInjector
         _flightList = _flightList.OrderBy(x => x.ScheduledTimeOfArrival).ToList();
     }
     
+    public List<Flight> GetFlights()
+    {
+        return _flightList;
+    }
+    
     public async Task PublishFlightsUntil(DateTime date)
     {
         while (_counter < _flightList.Count)

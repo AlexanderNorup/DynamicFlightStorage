@@ -5,7 +5,7 @@ namespace DynamicFlightStorageSimulation;
 public class WeatherInjector
 {
     private readonly SimulationEventBus _eventBus;
-    private List<Weather> _weatherList;
+    private List<Weather> _weatherList = new();
     private int _counter;
     public WeatherInjector(SimulationEventBus eventBus)
     {
@@ -23,6 +23,11 @@ public class WeatherInjector
         }
 
         _weatherList = _weatherList.OrderBy(x => x.ValidTo).ToList();
+    }
+
+    public List<Weather> GetWeatherList()
+    {
+        return _weatherList;
     }
     
     public async Task PublishWeatherUntil(DateTime date)
