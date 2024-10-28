@@ -14,7 +14,11 @@ namespace DynamicFlightStorageUI
 
             // Add services to the container.
             builder.Services.AddRazorComponents()
-                .AddInteractiveServerComponents();
+                .AddInteractiveServerComponents()
+                .AddCircuitOptions(o =>
+                {
+                    o.DisconnectedCircuitRetentionPeriod = TimeSpan.FromSeconds(5);
+                });
 
             builder.Services.AddOptions<EventBusConfig>()
                 .Bind(builder.Configuration.GetSection("EventBusConfig"))
