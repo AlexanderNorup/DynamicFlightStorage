@@ -35,11 +35,12 @@
         </div>
         <div class="col-12 border rounded p-2">
             <h3>Orchestrator:</h3>
-            <p>The embedded consumer is enabled: @(orchestrator is not null)</p>
+            <p>The embedded orchestrator is ready: @(orchestrator is not null)</p>
             @if (orchestrator is not null)
             {
                 <p>Latency test in progress: @(orchestrator.LatencyExperimentRunning)</p>
-                <button class="btn btn-primary" disabled="@orchestrator.LatencyExperimentRunning" @onclick="PerformLatencyTest">Perform Latency test?</button>
+                <button class="btn btn-primary" disabled="@orchestrator.LatencyExperimentRunning" @onclick="() => PerformLatencyTest(100,100)">Perform Latency test</button>
+                <button class="btn btn-secondary" disabled="@orchestrator.LatencyExperimentRunning" @onclick="() => PerformLatencyTest(1,1)">Get Consumers</button>
                 @if(latencyTestResult is not null)
                 {
                     <p>Test Results:<br/>
@@ -50,9 +51,6 @@
         </div>
     </div>
 </div>
-
-
-
 
 <h2>Recalculation events:</h2>
 <table class="table table-striped">
@@ -108,7 +106,7 @@
         consumer = null;
     }
 
-    public async Task PerformLatencyTest()
+    public async Task PerformLatencyTest(int sample, int delay)
     {
         if (orchestrator is null || orchestrator.LatencyExperimentRunning)
         {
@@ -117,7 +115,7 @@
         latencyTestResult = null;
         StateHasChanged();
 
-        var results = await orchestrator.GetConsumersAndLatencyAsync(5, 1000);
+        var results = await orchestrator.GetConsumersAndLatencyAsync(sample, delay);
 
         latencyTestResult = JsonSerializer.Serialize(results, new JsonSerializerOptions()
         {

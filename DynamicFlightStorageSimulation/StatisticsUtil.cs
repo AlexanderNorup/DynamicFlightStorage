@@ -25,7 +25,7 @@
         // From https://stackoverflow.com/a/55467992
         public static double StdDev(this List<double> values)
         {
-            if (values.Count == 0)
+            if (values.Count <= 1)
             {
                 return 0;
             }

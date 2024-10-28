@@ -47,10 +47,12 @@ namespace DynamicFlightStorageSimulation
                         Source = _simulationEventBus.ClientId,
                         TimeStamp = DateTime.UtcNow
                     }).ConfigureAwait(false);
+                    _logger?.LogDebug("Experiment progress {Sent}/{Total}",
+                        i, samplePoints);
                     await Task.Delay(sampleDelayMs).ConfigureAwait(false);
                 }
                 _logger?.LogInformation("Waiting for responses for {ExperimentId}.", experimentId);
-                await Task.Delay(5000).ConfigureAwait(false);
+                await Task.Delay(1000).ConfigureAwait(false);
 
                 var responses = latencyExperimentBag.ToList();
                 _logger?.LogInformation("Got {Responses} responses.", responses.Count);
