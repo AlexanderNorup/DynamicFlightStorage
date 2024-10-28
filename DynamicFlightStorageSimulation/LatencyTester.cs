@@ -22,7 +22,7 @@ namespace DynamicFlightStorageSimulation
 
         public bool LatencyExperimentRunning => doingLatencyExperiment;
 
-        public async Task<List<LatencyTestResult>> GetConsumersAndLatencyAsync(int samplePoints, int sampleDelayMs)
+        public async Task<List<LatencyTestResult>> GetConsumersAndLatencyAsync(int samplePoints, int sampleDelayMs, CancellationToken cancellationToken = default)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan(samplePoints, 1);
             ArgumentOutOfRangeException.ThrowIfLessThan(sampleDelayMs, 1);
@@ -40,6 +40,7 @@ namespace DynamicFlightStorageSimulation
 
                 for (int i = 0; i < samplePoints; i++)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     await _simulationEventBus.PublishSystemMessage(new SystemMessage()
                     {
                         Message = $"{experimentId}_{i}",
@@ -49,10 +50,12 @@ namespace DynamicFlightStorageSimulation
                     }).ConfigureAwait(false);
                     _logger?.LogDebug("Experiment progress {Sent}/{Total}",
                         i, samplePoints);
-                    await Task.Delay(sampleDelayMs).ConfigureAwait(false);
+                    await Task.Delay(sampleDelayMs, cancellationToken).ConfigureAwait(false);
                 }
+
+                cancellationToken.ThrowIfCancellationRequested();
                 _logger?.LogInformation("Waiting for responses for {ExperimentId}.", experimentId);
-                await Task.Delay(1000).ConfigureAwait(false);
+                await Task.Delay(1000, cancellationToken).ConfigureAwait(false);
 
                 var responses = latencyExperimentBag.ToList();
                 _logger?.LogInformation("Got {Responses} responses.", responses.Count);
@@ -60,6 +63,7 @@ namespace DynamicFlightStorageSimulation
                 var experimentResults = new List<LatencyTestResult>();
                 foreach (var group in responses.GroupBy(x => x.message.Source))
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     var clientId = group.Key;
                     bool success = true;
                     var clientResponses = group.OrderBy(x => x.message.TimeStamp).ToList();

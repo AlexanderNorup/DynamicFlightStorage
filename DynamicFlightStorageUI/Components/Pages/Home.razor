@@ -80,6 +80,7 @@
 </table>
 
 @code {
+    private CancellationTokenSource cts = new();
     private List<LogEntry> logs = new List<LogEntry>();
     private SimulationConsumer? consumer;
     private LatencyTester? latencyTester;
@@ -115,7 +116,7 @@
         latencyTestResult = null;
         StateHasChanged();
 
-        var results = await latencyTester.GetConsumersAndLatencyAsync(sample, delay);
+        var results = await latencyTester.GetConsumersAndLatencyAsync(sample, delay, cts.Token);
 
         latencyTestResult = JsonSerializer.Serialize(results, new JsonSerializerOptions()
         {
@@ -143,7 +144,9 @@
 
     public void Dispose()
     {
+        cts.Cancel();
         consumer?.Dispose();   
         latencyTester?.Dispose();
+        cts.Dispose();
     }
 }
