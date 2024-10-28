@@ -5,15 +5,15 @@ using System.Collections.Concurrent;
 
 namespace DynamicFlightStorageSimulation
 {
-    public class ExperimentOrchestrator : IDisposable
+    public class LatencyTester : IDisposable
     {
-        private ILogger<ExperimentOrchestrator>? _logger;
+        private ILogger<LatencyTester>? _logger;
         private SimulationEventBus _simulationEventBus;
         private bool doingLatencyExperiment = false;
         private ConcurrentBag<(SystemMessage message, DateTime messageRecieved)> latencyExperimentBag = new();
         private bool disposedValue;
 
-        public ExperimentOrchestrator(SimulationEventBus simulationEventBus, ILogger<ExperimentOrchestrator> logger)
+        public LatencyTester(SimulationEventBus simulationEventBus, ILogger<LatencyTester> logger)
         {
             _logger = logger;
             _simulationEventBus = simulationEventBus ?? throw new ArgumentNullException(nameof(simulationEventBus));
@@ -108,14 +108,12 @@ namespace DynamicFlightStorageSimulation
         private Task OnSystemMessage(SystemMessageEvent e)
         {
             var message = e.SystemMessage;
-            switch (message.MessageType)
+            if (message.MessageType is not SystemMessage.SystemMessageType.LatencyResponse)
             {
-                case SystemMessage.SystemMessageType.LatencyResponse:
-                    latencyExperimentBag.Add((message, DateTime.UtcNow));
-                    break;
-                default:
-                    break;
+                return Task.CompletedTask;
             }
+
+            latencyExperimentBag.Add((message, DateTime.UtcNow));
             return Task.CompletedTask;
         }
 

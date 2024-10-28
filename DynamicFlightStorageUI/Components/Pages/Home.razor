@@ -34,13 +34,13 @@
             }
         </div>
         <div class="col-12 border rounded p-2">
-            <h3>Orchestrator:</h3>
-            <p>The embedded orchestrator is ready: @(orchestrator is not null)</p>
-            @if (orchestrator is not null)
+            <h3>Latency Tester:</h3>
+            <p>The latency tester is ready: @(latencyTester is not null)</p>
+            @if (latencyTester is not null)
             {
-                <p>Latency test in progress: @(orchestrator.LatencyExperimentRunning)</p>
-                <button class="btn btn-primary" disabled="@orchestrator.LatencyExperimentRunning" @onclick="() => PerformLatencyTest(100,100)">Perform Latency test</button>
-                <button class="btn btn-secondary" disabled="@orchestrator.LatencyExperimentRunning" @onclick="() => PerformLatencyTest(1,1)">Get Consumers</button>
+                <p>Latency test in progress: @(latencyTester.LatencyExperimentRunning)</p>
+                <button class="btn btn-primary" disabled="@latencyTester.LatencyExperimentRunning" @onclick="() => PerformLatencyTest(100,100)">Perform Latency test</button>
+                <button class="btn btn-secondary" disabled="@latencyTester.LatencyExperimentRunning" @onclick="() => PerformLatencyTest(1,1)">Get Consumers</button>
                 @if(latencyTestResult is not null)
                 {
                     <p>Test Results:<br/>
@@ -82,7 +82,7 @@
 @code {
     private List<LogEntry> logs = new List<LogEntry>();
     private SimulationConsumer? consumer;
-    private ExperimentOrchestrator? orchestrator;
+    private LatencyTester? latencyTester;
     private string? latencyTestResult;
 
     protected override async Task OnInitializedAsync()
@@ -90,7 +90,7 @@
         await eventbus.ConnectAsync(true, true, true).ConfigureAwait(false);
 
         eventbus.SubscribeToRecalculationEvent(OnRecalculationEvent);
-        orchestrator = new ExperimentOrchestrator(eventbus, loggerFactory.CreateLogger<ExperimentOrchestrator>());
+        latencyTester = new LatencyTester(eventbus, loggerFactory.CreateLogger<LatencyTester>());
     }
 
     private void CreateConsumer()
@@ -108,14 +108,14 @@
 
     public async Task PerformLatencyTest(int sample, int delay)
     {
-        if (orchestrator is null || orchestrator.LatencyExperimentRunning)
+        if (latencyTester is null || latencyTester.LatencyExperimentRunning)
         {
             return;
         }
         latencyTestResult = null;
         StateHasChanged();
 
-        var results = await orchestrator.GetConsumersAndLatencyAsync(sample, delay);
+        var results = await latencyTester.GetConsumersAndLatencyAsync(sample, delay);
 
         latencyTestResult = JsonSerializer.Serialize(results, new JsonSerializerOptions()
         {
@@ -144,6 +144,6 @@
     public void Dispose()
     {
         consumer?.Dispose();   
-        orchestrator?.Dispose();
+        latencyTester?.Dispose();
     }
 }
