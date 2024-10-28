@@ -1,4 +1,5 @@
 ﻿@page "/"
+@using System.Text.Json
 @inject SimulationEventBus eventbus
 @inject ILoggerFactory loggerFactory
 @implements IDisposable
@@ -22,8 +23,30 @@
         <div class="col-12 border rounded p-2">
             <h3>Consumer:</h3>
             <p>The embedded consumer is enabled: @(consumer is not null)</p>
-            <button class="btn btn-success" disabled="@(consumer is not null)" @onclick="CreateConsumer">Enable embedded consumer?</button>
-            <button class="btn btn-danger" disabled="@(consumer is null)" @onclick="KillConsumer">Disable embedded consumer?</button>
+            @if(consumer is null)
+            {
+
+                <button class="btn btn-success" @onclick="CreateConsumer">Enable embedded consumer?</button>
+            }
+            else
+            {
+                <button class="btn btn-danger" @onclick="KillConsumer">Disable embedded consumer?</button>
+            }
+        </div>
+        <div class="col-12 border rounded p-2">
+            <h3>Orchestrator:</h3>
+            <p>The embedded consumer is enabled: @(orchestrator is not null)</p>
+            @if (orchestrator is not null)
+            {
+                <p>Latency test in progress: @(orchestrator.LatencyExperimentRunning)</p>
+                <button class="btn btn-primary" disabled="@orchestrator.LatencyExperimentRunning" @onclick="PerformLatencyTest">Perform Latency test?</button>
+                @if(latencyTestResult is not null)
+                {
+                    <p>Test Results:<br/>
+                        <pre>@latencyTestResult</pre>
+                    </p>
+                }
+            }
         </div>
     </div>
 </div>
@@ -61,13 +84,15 @@
 @code {
     private List<LogEntry> logs = new List<LogEntry>();
     private SimulationConsumer? consumer;
+    private ExperimentOrchestrator? orchestrator;
+    private string? latencyTestResult;
 
     protected override async Task OnInitializedAsync()
     {
         await eventbus.ConnectAsync(true, true, true).ConfigureAwait(false);
 
         eventbus.SubscribeToRecalculationEvent(OnRecalculationEvent);
-
+        orchestrator = new ExperimentOrchestrator(eventbus, loggerFactory.CreateLogger<ExperimentOrchestrator>());
     }
 
     private void CreateConsumer()
@@ -81,6 +106,23 @@
     {
         consumer?.Dispose();
         consumer = null;
+    }
+
+    public async Task PerformLatencyTest()
+    {
+        if (orchestrator is null || orchestrator.LatencyExperimentRunning)
+        {
+            return;
+        }
+        latencyTestResult = null;
+        StateHasChanged();
+
+        var results = await orchestrator.GetConsumersAndLatencyAsync(5, 1000);
+
+        latencyTestResult = JsonSerializer.Serialize(results, new JsonSerializerOptions()
+        {
+            WriteIndented = true
+        });
     }
 
     private async Task OnRecalculationEvent(DynamicFlightStorageSimulation.Events.FlightRecalculationEvent e)
@@ -104,5 +146,6 @@
     public void Dispose()
     {
         consumer?.Dispose();   
+        orchestrator?.Dispose();
     }
 }

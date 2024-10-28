@@ -3,6 +3,7 @@ using DynamicFlightStorageSimulation.Events;
 using Microsoft.Extensions.Logging;
 using MQTTnet;
 using MQTTnet.Client;
+using MQTTnet.Protocol;
 using System.Text;
 using System.Text.Json;
 
@@ -32,10 +33,14 @@ namespace DynamicFlightStorageSimulation
         public delegate Task FlightStorageEventHandler(FlightStorageEvent e);
         public delegate Task WeatherEventHandler(WeatherEvent e);
         public delegate Task FlightRecalculationEventHandler(FlightRecalculationEvent e);
+        public delegate Task SystemMessageEventHandler(SystemMessageEvent e);
 
         private HashSet<FlightStorageEventHandler> flightStorageEventHandlers = new();
         private HashSet<WeatherEventHandler> weatherEventHandlers = new();
         private HashSet<FlightRecalculationEventHandler> flightRecalculationEventHandlers = new();
+        private HashSet<SystemMessageEventHandler> systemMessageEventHandlers = new();
+
+        public string ClientId => _mqttClient.Options.ClientId;
 
         public void SubscribeToFlightStorageEvent(FlightStorageEventHandler handler)
         {
@@ -50,6 +55,11 @@ namespace DynamicFlightStorageSimulation
         public void SubscribeToRecalculationEvent(FlightRecalculationEventHandler handler)
         {
             flightRecalculationEventHandlers.Add(handler);
+        }
+
+        public void SubscribeToSystemEvent(SystemMessageEventHandler handler)
+        {
+            systemMessageEventHandlers.Add(handler);
         }
 
         public void UnSubscribeToFlightStorageEvent(FlightStorageEventHandler handler)
@@ -67,6 +77,11 @@ namespace DynamicFlightStorageSimulation
             flightRecalculationEventHandlers.Remove(handler);
         }
 
+        public void UnSubscribeToSystemEvent(SystemMessageEventHandler handler)
+        {
+            systemMessageEventHandlers.Remove(handler);
+        }
+
         public Task PublishFlightAsync(Flight flight)
         {
             return PublishMessageInternalAsync(_eventBusConfig.FlightTopic, JsonSerializer.Serialize(flight));
@@ -82,6 +97,11 @@ namespace DynamicFlightStorageSimulation
             return PublishMessageInternalAsync(_eventBusConfig.RecalculationTopic, JsonSerializer.Serialize(flight));
         }
 
+        public Task PublishSystemMessage(SystemMessage systemMessage)
+        {
+            return PublishMessageInternalAsync(_eventBusConfig.SystemTopic, JsonSerializer.Serialize(systemMessage));
+        }
+
         private async Task PublishMessageInternalAsync(string topic, string payload)
         {
             if (!IsConnected())
@@ -92,6 +112,7 @@ namespace DynamicFlightStorageSimulation
             var message = new MqttApplicationMessageBuilder()
                 .WithTopic(topic)
                 .WithPayload(payload)
+                .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.ExactlyOnce)
                 .Build();
 
             await _mqttClient.PublishAsync(message).ConfigureAwait(false);
@@ -117,6 +138,9 @@ namespace DynamicFlightStorageSimulation
             {
                 await _mqttClient.SubscribeAsync(_eventBusConfig.RecalculationTopic);
             }
+            await _mqttClient.SubscribeAsync(_eventBusConfig.SystemTopic);
+            // System messages requires it's own handler as we want to process them in parallel.
+            _mqttClient.ApplicationMessageReceivedAsync += HandleSystemMessage;
 
             _mqttClient.ApplicationMessageReceivedAsync += async (e) =>
             {
@@ -133,6 +157,7 @@ namespace DynamicFlightStorageSimulation
                                 await handler(new FlightStorageEvent(flight)).ConfigureAwait(false);
                             }
                         }
+                        e.IsHandled = true;
                     }
                     else if (e.ApplicationMessage.Topic == _eventBusConfig.WeatherTopic)
                     {
@@ -144,6 +169,7 @@ namespace DynamicFlightStorageSimulation
                                 await handler(new WeatherEvent(weather)).ConfigureAwait(false);
                             }
                         }
+                        e.IsHandled = true;
                     }
                     else if (e.ApplicationMessage.Topic == _eventBusConfig.RecalculationTopic)
                     {
@@ -155,6 +181,7 @@ namespace DynamicFlightStorageSimulation
                                 await handler(new FlightRecalculationEvent(flight)).ConfigureAwait(false);
                             }
                         }
+                        e.IsHandled = true;
                     }
                 }
                 catch (Exception ex)
@@ -163,6 +190,31 @@ namespace DynamicFlightStorageSimulation
                     // TODO: Do something here, because this should invalidate the experiment.
                 }
             };
+        }
+
+        private Task HandleSystemMessage(MqttApplicationMessageReceivedEventArgs e)
+        {
+            if (!e.ApplicationMessage.Topic.Equals(_eventBusConfig.SystemTopic))
+            {
+                return Task.CompletedTask;
+            }
+            try
+            {
+                var systemMessage = JsonSerializer.Deserialize<SystemMessage>(Encoding.UTF8.GetString(e.ApplicationMessage.PayloadSegment));
+                if (systemMessage is not null)
+                {
+                    foreach (var handler in systemMessageEventHandlers)
+                    {
+                        _ = handler(new SystemMessageEvent(systemMessage));
+                    }
+                }
+                e.IsHandled = true;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Exception of type {Name} while processing system message from {Topic}", ex.GetType().FullName, e.ApplicationMessage.Topic);
+            }
+            return Task.CompletedTask;
         }
 
         public async Task DisconnectAsync()
@@ -178,6 +230,7 @@ namespace DynamicFlightStorageSimulation
             flightStorageEventHandlers.Clear();
             weatherEventHandlers.Clear();
             flightRecalculationEventHandlers.Clear();
+            systemMessageEventHandlers.Clear();
             _mqttClient.Dispose();
         }
     }
