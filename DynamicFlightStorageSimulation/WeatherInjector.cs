@@ -26,21 +26,21 @@ public class WeatherInjector
         _metarFiles = new(FindFiles(metarPath));
         _tafFiles = new(FindFiles(tafPath));
     }
-    
-    public async Task PublishWeatherUntil(DateTime date)
+
+    public async Task PublishWeatherUntil(DateTime date, CancellationToken cancellationToken = default)
     {
         DateTime currentDate;
         if (_metar is null || _metar.Count < 1)
         {
             _metar = ReadNextFile(_metarFiles, "metar");
         }
-        
+
         // There might not be any METAR weather left, but we don't want to return yet as there might still be TAF
         if (_metar.Count > 0)
         {
             currentDate = _metar.Peek().ValidTo;
 
-            while (currentDate < date && _metar.Count > 0)
+            while (currentDate < date && _metar.Count > 0 && !cancellationToken.IsCancellationRequested)
             {
                 await _eventBus.PublishWeatherAsync(_metar.Dequeue()).ConfigureAwait(false);
                 currentDate = _metar.Peek().ValidTo;
@@ -59,12 +59,12 @@ public class WeatherInjector
             if (_taf.Count < 1) return;
         }
         currentDate = _taf.Peek().ValidTo;
-        
-        while (currentDate < date && _taf.Count > 0)
+
+        while (currentDate < date && _taf.Count > 0 && !cancellationToken.IsCancellationRequested)
         {
             await _eventBus.PublishWeatherAsync(_taf.Dequeue()).ConfigureAwait(false);
             currentDate = _taf.Peek().ValidTo;
-            
+
             // If no more TAF then refill. If an empty queue is returned, the loop ends
             if (_taf is null || _taf.Count < 1)
             {
@@ -78,8 +78,8 @@ public class WeatherInjector
         var files = new List<string>();
         foreach (var file in Directory.EnumerateFiles(path))
         {
-            if (!(( file.Contains("metar", StringComparison.OrdinalIgnoreCase) 
-                   || file.Contains("taf", StringComparison.OrdinalIgnoreCase) ) 
+            if (!((file.Contains("metar", StringComparison.OrdinalIgnoreCase)
+                   || file.Contains("taf", StringComparison.OrdinalIgnoreCase))
                   && file.EndsWith(".json", StringComparison.OrdinalIgnoreCase)))
             {
                 Console.WriteLine($"Files {file} does not fit");
@@ -101,7 +101,7 @@ public class WeatherInjector
         }
         return new Queue<Weather>(WeatherCreator.ReadWeatherJson(File.ReadAllText(fileQueue.Dequeue())));
     }
-    
+
     public Queue<string> GetMetarFiles()
     {
         return _metarFiles;

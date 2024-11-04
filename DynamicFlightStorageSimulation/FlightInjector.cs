@@ -15,7 +15,7 @@ public class FlightInjector
         _directoryPath = directoryPath;
 
     }
-    
+
     private List<Flight> DeserializeFlights(string directoryPath)
     {
         if (!Directory.Exists(directoryPath))
@@ -25,7 +25,7 @@ public class FlightInjector
         string[] files = Directory.GetFiles(directoryPath, "*.json");
 
         var flightList = new List<Flight>();
-        
+
         foreach (string file in files)
         {
             try
@@ -36,13 +36,14 @@ public class FlightInjector
             {
                 Console.WriteLine($"Could not serialize flight from file {file}");
             }
-            
+
         }
 
-        return flightList;
+        //TODO: This should be sorted by DatePlanned instead
+        return flightList.OrderBy(x => x.ScheduledTimeOfDeparture).ToList();
     }
-    
-    public async Task PublishFlightsUntil(DateTime date)
+
+    public async Task PublishFlightsUntil(DateTime date, CancellationToken cancellationToken = default)
     {
         if (_flights is null)
         {
@@ -53,18 +54,21 @@ public class FlightInjector
         {
             return;
         }
-        
-        
-        var currentDate = _flights.Peek().ScheduledTimeOfArrival;
 
-        while (currentDate < date)
+        var currentDate = _flights.Peek().ScheduledTimeOfDeparture;
+        int i = 0;
+        while (currentDate < date && !cancellationToken.IsCancellationRequested)
         {
             await _eventBus.PublishFlightAsync(_flights.Dequeue()).ConfigureAwait(false);
             if (_flights.Count < 1)
             {
                 return;
             }
-            currentDate = _flights.Peek().ScheduledTimeOfArrival;
+            currentDate = _flights.Peek().ScheduledTimeOfDeparture;
+            if (i++ > 30)
+            {
+                return;
+            }
         }
     }
 
