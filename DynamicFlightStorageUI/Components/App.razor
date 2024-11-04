@@ -14,6 +14,15 @@
 </head>
 
 <body>
+    <div id="preload">
+        <h1 class="text-center">Loading...</h1>
+
+        <div class="d-flex justify-content-center">
+            <div class="spinner-border" role="status">
+                <span></span>
+            </div>
+        </div>
+    </div>
     <Routes @rendermode="new InteractiveServerRenderMode(prerender: false)" />
     <script src="_framework/blazor.web.js"></script>
 </body>

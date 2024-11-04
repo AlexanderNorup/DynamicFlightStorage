@@ -12,13 +12,14 @@ namespace DynamicFlightStorageUI
                 .Bind(builder.Configuration.GetSection("EventBusConfig"))
                 .ValidateDataAnnotations();
 
-            builder.Services.AddSingleton(async (s) =>
+            builder.Services.AddSingleton((s) =>
             {
                 var config = s.GetService<IOptions<EventBusConfig>>()!.Value;
                 var bus = new SimulationEventBus(config, s.GetRequiredService<ILogger<SimulationEventBus>>());
-                await bus.ConnectAsync();
                 return bus;
             });
+
+            builder.Services.AddHostedService<EventBusConnector>();
 
             builder.Services.AddSingleton<LatencyTester>();
 

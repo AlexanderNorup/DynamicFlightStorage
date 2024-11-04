@@ -52,6 +52,11 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
         public async Task RunExperimentPreloadAsync()
         {
+            if(ExperimentRunnerClientIds.Count == 0)
+            {
+                _logger.LogError("Cannot start preload because there is no ExperimentRunnerClientIds set");
+                return;
+            }
             if (CurrentExperiment is null)
             {
                 throw new InvalidOperationException("No experiment is currently set.");
@@ -93,6 +98,11 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
         public async Task StartExperimentAsync()
         {
+            if (ExperimentRunnerClientIds.Count == 0)
+            {
+                _logger.LogError("Cannot start experiment because there is no ExperimentRunnerClientIds set");
+                return;
+            }
             if (CurrentExperiment is null)
             {
                 throw new InvalidOperationException("No experiment is currently set.");

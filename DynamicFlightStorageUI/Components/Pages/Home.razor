@@ -2,6 +2,7 @@
 @using DynamicFlightStorageSimulation.ExperimentOrchestrator
 @using System.Text.Json
 @inject SimulationEventBus eventbus
+@inject Orchestrator orchestrator
 @inject ILoggerFactory loggerFactory
 @implements IDisposable
 
@@ -9,7 +10,7 @@
 
 <h1>Prototyping Dashboard!</h1>
 <div class="container mb-2">
-    <div class="row g-2">
+    <div class="row g-2 mb-2">
         <div class="col-6 border rounded p-2">
             <h3>Publish Weather:</h3>
             <WeatherBuilder OnWeatherCreated="PublishWeather" />
@@ -21,7 +22,7 @@
     </div>
 
     <div class="row g-2">
-        <div class="col-12 border rounded p-2">
+        <div class="col-6 border rounded p-2">
             <h3>Consumer:</h3>
             <p>The embedded consumer is enabled: @(consumer is not null)</p>
             @if(consumer is null)
@@ -32,6 +33,35 @@
             else
             {
                 <button class="btn btn-danger" @onclick="KillConsumer">Disable embedded consumer?</button>
+            }
+        </div>
+        <div class="col-6 border rounded p-2">
+            <h3>Orchestrator: <button class="btn btn-sm" @onclick="StateHasChanged">Refresh state</button></h3>
+            <p>An experiment is running: @(orchestrator.CurrentExperimentResult is not null)</p>
+            <p>Experiment time: @(orchestrator.CurrentSimulationTime)</p>
+            <p>Preload is done: @(orchestrator.PreloadDone)</p>
+            <div class="mb-3">
+                <label for="clientIds" class="form-label">Client IDs for experiment (separated by <code>,</code>)</label>
+                <input type="text" class="form-control" id="clientIds" @onchange="ExperimentClientIdUpdated" value="@(string.Join(',',orchestrator.ExperimentRunnerClientIds))" >
+            </div>
+            <p>Parsed client ids:
+                <ul>
+                    @foreach(var clientId in orchestrator.ExperimentRunnerClientIds)
+                    {
+                        <li>@clientId</li>
+                    }
+                </ul>
+            </p>
+            <button class="btn btn-outline-primary" @onclick="orchestrator.RunExperimentPreloadAsync">Preload Data</button>
+            <button class="btn btn-primary" @onclick="orchestrator.StartExperimentAsync">Start Experiment</button>
+            <button class="btn btn-danger" @onclick="orchestrator.AbortExperiment">Abort Experiment</button>
+            <hr/>
+            @if(orchestrator.CurrentExperimentResult is {} results )
+            {
+                <p>
+                Current Experiment results:<br />
+                    <pre>@(JsonSerializer.Serialize(results, new JsonSerializerOptions() { WriteIndented = true }))</pre>
+                </p>
             }
         </div>
         <div class="col-12 border rounded p-2">
@@ -87,10 +117,36 @@
     private LatencyTester? latencyTester;
     private string? latencyTestResult;
 
-    protected override async Task OnInitializedAsync()
+    private readonly Experiment testExperiment = new Experiment()
     {
+        Name = "Test Experiment",
+        PreloadAllFlights = true,
+        SimulatedStartTime = new DateTime(2024, 8, 4, 00, 00, 00, DateTimeKind.Utc),
+        SimulatedEndTime = new DateTime(2024, 8, 5, 00, 00, 00, DateTimeKind.Utc),
+        SimulatedPreloadStartTime = new DateTime(2024, 8, 3, 20, 00, 00, DateTimeKind.Utc),
+        SimulatedPreloadEndTime = new DateTime(2024, 8, 3, 21, 00, 00, DateTimeKind.Utc),
+    };
+
+    protected override void OnInitialized()
+    {
+        orchestrator.SetExperiment(testExperiment);
         eventbus.SubscribeToRecalculationEvent(OnRecalculationEvent);
         latencyTester = new LatencyTester(eventbus, loggerFactory.CreateLogger<LatencyTester>());
+    }
+
+    public void ExperimentClientIdUpdated(ChangeEventArgs e)
+    {
+        orchestrator.ExperimentRunnerClientIds.Clear();
+        var newValue = e.Value as string;
+        if (string.IsNullOrWhiteSpace(newValue))
+        {
+            return;
+        }
+        var newClientIds = newValue.Split(",").Select(x => x.Trim());
+        foreach(var clientId in newClientIds)
+        {
+            orchestrator.ExperimentRunnerClientIds.Add(clientId);
+        }
     }
 
     private void CreateConsumer()
