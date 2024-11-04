@@ -10,7 +10,7 @@ namespace DynamicFlightStorageDTOs
         [Key(1)]
         public required string Source { get; set; }
         [Key(2)]
-        public required DateTime TimeStamp { get; set; }
+        public DateTime TimeStamp { get; set; } = DateTime.UtcNow;
         [Key(3)]
         public required SystemMessageType MessageType { get; set; }
 
@@ -18,7 +18,9 @@ namespace DynamicFlightStorageDTOs
         {
             Message = 0,
             LatencyRequest = 1,
-            LatencyResponse = 2
+            LatencyResponse = 2,
+            NewExperiment = 3,
+            NewExperimentReady = 4
         }
     }
 }

@@ -60,5 +60,10 @@ namespace DynamicFlightStorageSimulation
                 ValidTo = end
             });
         }
+
+        public void Clear()
+        {
+            _weather.Clear();
+        }
     }
 }

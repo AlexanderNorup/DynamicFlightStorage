@@ -3,7 +3,7 @@ using DynamicFlightStorageSimulation.Events;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 
-namespace DynamicFlightStorageSimulation
+namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 {
     public class LatencyTester : IDisposable
     {

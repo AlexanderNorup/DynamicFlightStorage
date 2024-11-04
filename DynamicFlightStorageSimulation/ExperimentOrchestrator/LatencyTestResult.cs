@@ -1,4 +1,4 @@
-﻿namespace DynamicFlightStorageSimulation
+﻿namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 {
     public record LatencyTestResult(string Clientid,
         bool Success,

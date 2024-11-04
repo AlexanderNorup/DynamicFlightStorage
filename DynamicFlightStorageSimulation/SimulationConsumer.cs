@@ -10,6 +10,7 @@ namespace DynamicFlightStorageSimulation
         private SimulationEventBus _simulationEventBus;
         private WeatherService _weatherService;
         private IEventDataStore _eventDataStore;
+        private bool cleanState;
         private bool disposedValue;
 
         public SimulationConsumer(SimulationEventBus simulationEventBus, WeatherService weatherService, IEventDataStore eventDataStore, ILogger<SimulationConsumer> logger)
@@ -21,6 +22,7 @@ namespace DynamicFlightStorageSimulation
             _simulationEventBus.SubscribeToFlightStorageEvent(OnFlightRecieved);
             _simulationEventBus.SubscribeToWeatherEvent(OnWeatherRecieved);
             _simulationEventBus.SubscribeToSystemEvent(OnSystemMessage);
+            cleanState = true;
         }
 
         public async Task StartAsync()
@@ -32,6 +34,7 @@ namespace DynamicFlightStorageSimulation
 
         private async Task OnWeatherRecieved(WeatherEvent e)
         {
+            cleanState = false;
             _weatherService.AddWeather(e.Weather);
             await _eventDataStore.AddWeatherAsync(e.Weather).ConfigureAwait(false);
             _logger?.LogDebug("Processed weather event: {Weather}", e.Weather);
@@ -39,8 +42,36 @@ namespace DynamicFlightStorageSimulation
 
         private async Task OnFlightRecieved(FlightStorageEvent e)
         {
+            cleanState = false;
             await _eventDataStore.AddOrUpdateFlightAsync(e.Flight).ConfigureAwait(false);
             _logger?.LogDebug("Processed flight event: {Flight}", e.Flight);
+        }
+
+        private async Task ResetStateAsync(string experimentId)
+        {
+            _weatherService.Clear();
+            if (!cleanState)
+            {
+                // Try to reset the EventDataStore
+                try
+                {
+                    await _eventDataStore.ResetAsync().ConfigureAwait(false);
+                    cleanState = true;
+                }
+                catch (Exception e)
+                {
+                    _logger?.LogError(e, "Error resetting state");
+                    return;
+                }
+            }
+
+            // Signal ready
+            await _simulationEventBus.PublishSystemMessage(new SystemMessage()
+            {
+                Message = experimentId,
+                MessageType = SystemMessage.SystemMessageType.NewExperimentReady,
+                Source = _simulationEventBus.ClientId
+            });
         }
 
         private async Task OnSystemMessage(SystemMessageEvent e)
@@ -56,6 +87,9 @@ namespace DynamicFlightStorageSimulation
                         MessageType = SystemMessage.SystemMessageType.LatencyResponse,
                         Source = _simulationEventBus.ClientId
                     }).ConfigureAwait(false);
+                    break;
+                case SystemMessage.SystemMessageType.NewExperiment:
+                    await ResetStateAsync(message.Message).ConfigureAwait(false);
                     break;
                 default:
                     break;

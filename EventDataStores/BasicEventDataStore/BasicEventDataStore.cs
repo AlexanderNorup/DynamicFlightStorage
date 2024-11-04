@@ -101,5 +101,11 @@ namespace BasicEventDataStore
 
             return false;
         }
+
+        public Task ResetAsync()
+        {
+            _flights.Clear();
+            return Task.CompletedTask;
+        }
     }
 }

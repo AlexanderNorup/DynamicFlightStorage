@@ -5,8 +5,6 @@ using Microsoft.Extensions.Logging;
 using MQTTnet;
 using MQTTnet.Client;
 using MQTTnet.Protocol;
-using System.Text;
-using System.Text.Json;
 
 namespace DynamicFlightStorageSimulation
 {
