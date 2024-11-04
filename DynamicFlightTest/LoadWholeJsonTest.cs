@@ -3,6 +3,8 @@ using FluentAssertions;
 
 namespace SimulationTests;
 using DynamicFlightStorageSimulation;
+
+[Ignore("Needs the metar/taf files")]
 public class LoadWholeJsonTest
 {
     private readonly string _filePathTaf = Path.Combine(AppContext.BaseDirectory, "Resources", "taf2024-08-03T23.json");
@@ -18,8 +20,7 @@ public class LoadWholeJsonTest
         _tafWeatherList = WeatherCreator.ReadWeatherJson(jsonTafWeather);
         _metarWeatherList = WeatherCreator.ReadWeatherJson(jsonMetarWeather);
     }
-
-    [Ignore("Needs the metar/taf files")]
+    
     [Test]
     public void test()
     {

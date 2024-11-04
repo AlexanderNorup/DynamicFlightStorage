@@ -9,15 +9,15 @@ public static class WeatherCreator
     {
         var weatherList = new List<Weather>();
         
-        JsonArray? tafs = JsonNode.Parse(jsonString)?.AsArray();
-        if (tafs is null || tafs.Count < 1)
+        JsonArray? weather = JsonNode.Parse(jsonString)?.AsArray();
+        if (weather is null || weather.Count < 1)
         {
             Console.WriteLine("The JSON does not contain a valid array.");
             return weatherList;
         }
         
 
-        foreach (JsonNode? taf in tafs)
+        foreach (JsonNode? taf in weather)
         {
             if (taf is not null)
             {
@@ -36,7 +36,7 @@ public static class WeatherCreator
         var fullText = data["Text"]?.ToString();
         if (string.IsNullOrEmpty(fullText))
         {
-            Console.WriteLine("Full text is empty.");
+            //Console.WriteLine("Full text is empty.");
             return weatherList;
         }
         var identifier = fullText.Substring(0, 12);
@@ -45,7 +45,7 @@ public static class WeatherCreator
         var airportId = data["Ident"]?.ToString();
         if (string.IsNullOrEmpty(airportId))
         {
-            Console.WriteLine($"Airport identifier is empty for {identifier}");
+            //Console.WriteLine($"Airport identifier is empty for {identifier}");
             return weatherList;
         }
         
@@ -56,7 +56,7 @@ public static class WeatherCreator
         {
             if (!Enum.TryParse(data["FlightRules"]?.ToString(), out WeatherCategory category))
             {
-                Console.WriteLine($"Invalid weather category in METAR {identifier}");
+                //Console.WriteLine($"Invalid weather category in METAR {identifier}");
                 return weatherList;
             }
             
@@ -89,7 +89,7 @@ public static class WeatherCreator
             JsonNode? validPeriod = data["Period"];
             if (validPeriod is null)
             {
-                Console.WriteLine($"Period does not exist for TAF {identifier}");
+                //Console.WriteLine($"Period does not exist for TAF {identifier}");
                 return weatherList;
             }
         
@@ -100,7 +100,7 @@ public static class WeatherCreator
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Invalid period in TAF {identifier}: {e.Message}");
+                //Console.WriteLine($"Invalid period in TAF {identifier}: {e.Message}");
                 return weatherList;
             }
             
@@ -115,7 +115,7 @@ public static class WeatherCreator
         
         if (!Enum.TryParse(conditions[0]?["FlightRules"]?.ToString(), out WeatherCategory baseline))
         {
-            Console.WriteLine($"Invalid weather category in TAF {identifier}");
+            //Console.WriteLine($"Invalid weather category in TAF {identifier}");
             return weatherList;
         }
         
@@ -145,13 +145,13 @@ public static class WeatherCreator
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Invalid period in TAF {identifier}: {e.Message}");
+                //Console.WriteLine($"Invalid period in TAF {identifier}: {e.Message}");
                 continue;
             }
             
             if (!Enum.TryParse(condition?["FlightRules"]?.ToString(), out WeatherCategory weatherCategory))
             {
-                Console.WriteLine($"Invalid weather category in TAF {identifier}");
+                //Console.WriteLine($"Invalid weather category in TAF {identifier}");
                 continue;
             }
             

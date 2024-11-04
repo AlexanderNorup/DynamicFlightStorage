@@ -3,32 +3,45 @@ using FluentAssertions;
 
 namespace SimulationTests;
 
+[Ignore("These tests only works when resources folder contains specific sub directories with specific files.")]
 public class WeatherInjectionTest
 {
-    private readonly string _filePathMetar = Path.Combine(AppContext.BaseDirectory, "Resources", "MetarTest.json");
-    private readonly string _filePathMetarWithErrors = Path.Combine(AppContext.BaseDirectory, "Resources", "MetarTestErrors.json");
+    private readonly string _metarPath = Path.Combine(AppContext.BaseDirectory, "Resources", "metar");
+    private readonly string _tafPath = Path.Combine(AppContext.BaseDirectory, "Resources", "taf");
 
     private WeatherInjector _weatherInjector;
+    private Queue<string> _metarFilesQueue;
+    private Queue<string> _tafFilesQueue;
+
     
     [SetUp]
     public void Setup()
     {
-        string jsonMetarWeather = File.ReadAllText(_filePathMetar);
-        string jsonMetarWithErrorWeather = File.ReadAllText(_filePathMetarWithErrors);
-
-        _weatherInjector = new WeatherInjector(null);
-        _weatherInjector.AddWeather(jsonMetarWeather, jsonMetarWithErrorWeather);
-    }
-
-    [Test]
-    public void TestNotEmpty()
-    {
-        _weatherInjector.GetWeatherList().Count.Should().BeGreaterThan(0);
+       _weatherInjector = new WeatherInjector(null, _metarPath, _tafPath);
+       _metarFilesQueue = _weatherInjector.GetMetarFiles();
+       _tafFilesQueue = _weatherInjector.GetTafFiles();
     }
     
     [Test]
-    public void TestAllEventsCreated()
+    public void TestFilesFound()
     {
-        _weatherInjector.GetWeatherList().Count.Should().Be(10);
+        _metarFilesQueue.Count.Should().Be(5);
+        _tafFilesQueue.Count.Should().Be(5);
+    }
+    
+    [Test]
+    public void TestFilesInOrder()
+    {
+        _metarFilesQueue.Dequeue().Should().EndWith("metar2024-08-03T22.json");
+        _metarFilesQueue.Dequeue().Should().EndWith("metar2024-08-03T23.json");
+        _metarFilesQueue.Dequeue().Should().EndWith("metar2024-08-04T00.json");
+        _metarFilesQueue.Dequeue().Should().EndWith("metar2024-08-04T01.json");
+        _metarFilesQueue.Dequeue().Should().EndWith("metar2024-08-04T02.json");
+        
+        _tafFilesQueue.Dequeue().Should().EndWith("taf2024-08-03T22.json");
+        _tafFilesQueue.Dequeue().Should().EndWith("taf2024-08-03T23.json");
+        _tafFilesQueue.Dequeue().Should().EndWith("taf2024-08-04T00.json");
+        _tafFilesQueue.Dequeue().Should().EndWith("taf2024-08-04T01.json");
+        _tafFilesQueue.Dequeue().Should().EndWith("taf2024-08-04T02.json");
     }
 }

@@ -6,14 +6,16 @@ using System.Text.Json;
 public class FlightInjector
 {
     private readonly SimulationEventBus _eventBus;
-    private List<Flight> _flightList = new();
+    private Queue<Flight> _flights = new();
     private int _counter;
-    public FlightInjector(SimulationEventBus eventBus)
+    public FlightInjector(SimulationEventBus eventBus, string directoryPath)
     {
         _eventBus = eventBus;
+        _flights = new Queue<Flight>(DeserializeFlights(directoryPath));
+
     }
     
-    public void AddFlights(string directoryPath)
+    private List<Flight> DeserializeFlights(string directoryPath)
     {
         if (!Directory.Exists(directoryPath))
         {
@@ -21,11 +23,13 @@ public class FlightInjector
         }
         string[] files = Directory.GetFiles(directoryPath, "*.json");
 
+        var flightList = new List<Flight>();
+        
         foreach (string file in files)
         {
             try
             {
-                _flightList.Add(JsonSerializer.Deserialize<Flight>(File.ReadAllText(file)));
+                flightList.Add(JsonSerializer.Deserialize<Flight>(File.ReadAllText(file)));
             }
             catch (Exception e)
             {
@@ -34,36 +38,22 @@ public class FlightInjector
             
         }
 
-        _flightList = _flightList.OrderBy(x => x.ScheduledTimeOfArrival).ToList();
-    }
-    
-    public List<Flight> GetFlights()
-    {
-        return _flightList;
+        return flightList;
     }
     
     public async Task PublishFlightsUntil(DateTime date)
     {
-        while (_counter < _flightList.Count)
+        var currentDate = _flights.Peek().ScheduledTimeOfArrival;
+
+        while (currentDate < date)
         {
-            if (_flightList[_counter].ScheduledTimeOfArrival > date)
-            {
-                return;
-            }
-            
-            await _eventBus.PublishFlightAsync(_flightList[_counter]).ConfigureAwait(false);
-            _counter++;
+            await _eventBus.PublishFlightAsync(_flights.Dequeue()).ConfigureAwait(false);
+            currentDate = _flights.Peek().ScheduledTimeOfArrival;
         }
     }
 
-    public async Task PublishNextWeatherEvent()
+    public Queue<Flight> GetFlights()
     {
-        await _eventBus.PublishFlightAsync(_flightList[_counter]).ConfigureAwait(false);
-        _counter++;
-    }
-    
-    public void RestartState()
-    {
-        _counter = 0;
+        return _flights;
     }
 }

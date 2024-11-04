@@ -4,7 +4,7 @@ using FluentAssertions;
 namespace SimulationTests;
 using DynamicFlightStorageSimulation;
 
-public class JsonWeatherTest
+public class WeatherCreationTest
 {
     private readonly string _filePathTaf = Path.Combine(AppContext.BaseDirectory, "Resources", "TafTest.json");
     private readonly string _filePathTafWithErrors = Path.Combine(AppContext.BaseDirectory, "Resources", "TafTestErrors.json");
