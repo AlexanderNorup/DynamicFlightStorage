@@ -13,12 +13,16 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
         private SimulationEventBus _eventBus;
         private LatencyTester _latencyTester;
+        private WeatherInjector _weatherInjector;
+        private FlightInjector _flightInjector;
         private System.Timers.Timer _experimentLoopTimer;
         private ILogger<Orchestrator> _logger;
-        public Orchestrator(SimulationEventBus eventBus, LatencyTester latencyTester, ILogger<Orchestrator> logger)
+        public Orchestrator(SimulationEventBus eventBus, LatencyTester latencyTester, WeatherInjector weatherInjector, FlightInjector flightInjector, ILogger<Orchestrator> logger)
         {
             _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
             _latencyTester = latencyTester ?? throw new ArgumentNullException(nameof(latencyTester));
+            _weatherInjector = weatherInjector ?? throw new ArgumentNullException(nameof(weatherInjector));
+            _flightInjector = flightInjector ?? throw new ArgumentNullException(nameof(flightInjector));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             _experimentLoopTimer = new System.Timers.Timer
@@ -26,8 +30,6 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 Interval = 100 // Milliseconds
             };
             _experimentLoopTimer.Elapsed += async (s, e) => await ExperimentLoop().ConfigureAwait(false);
-
-            _eventBus.SubscribeToSystemEvent(OnSystemMessage);
         }
         public HashSet<string> ExperimentRunnerClientIds { get; } = new HashSet<string>();
 
@@ -71,6 +73,17 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             }
 
             // Do preload here.
+
+            await _weatherInjector.PublishWeatherUntil(CurrentExperiment.SimulatedPreloadEndTime).ConfigureAwait(false);
+
+            if (CurrentExperiment.PreloadAllFlights)
+            {
+                await _flightInjector.PublishFlightsUntil(DateTime.MaxValue).ConfigureAwait(false);
+            }
+            else
+            {
+                await _flightInjector.PublishFlightsUntil(CurrentExperiment.SimulatedPreloadEndTime).ConfigureAwait(false);
+            }
 
             //TODO: Check Queue if clients are done with preloading
             // Untill then we just wait a bit
@@ -151,6 +164,18 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
             // Inject weather and flights up to CurrentSimulationTime
 
+            var weatherTask = _weatherInjector.PublishWeatherUntil(CurrentSimulationTime.Value);
+
+            if (!CurrentExperiment.PreloadAllFlights)
+            {
+                var flightTask = _flightInjector.PublishFlightsUntil(CurrentSimulationTime.Value);
+                // Will inject flights and weather concurrently
+                await Task.WhenAll(weatherTask, flightTask).ConfigureAwait(false);
+            }
+            else
+            {
+                await weatherTask.ConfigureAwait(false);
+            }
         }
 
         private async Task<(bool success, List<SystemMessage> responses)> SendSystemMessageAndWaitForResponseAsync(SystemMessage messageToSend, SystemMessageType eventToWaitFor, TimeSpan timeout)
@@ -189,15 +214,8 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             return (false, responses);
         }
 
-        private async Task OnSystemMessage(SystemMessageEvent e)
-        {
-            var message = e.SystemMessage;
-            await Task.Yield();
-        }
-
         public void Dispose()
         {
-            _eventBus.UnSubscribeToSystemEvent(OnSystemMessage);
             _experimentLoopTimer.Dispose();
         }
     }

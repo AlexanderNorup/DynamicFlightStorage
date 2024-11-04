@@ -1,8 +1,4 @@
-using BasicEventDataStore;
-using DynamicFlightStorageDTOs;
-using DynamicFlightStorageSimulation;
 using DynamicFlightStorageUI.Components;
-using Microsoft.Extensions.Options;
 
 namespace DynamicFlightStorageUI
 {
@@ -20,15 +16,7 @@ namespace DynamicFlightStorageUI
                     o.DisconnectedCircuitRetentionPeriod = TimeSpan.FromSeconds(5);
                 });
 
-            builder.Services.AddOptions<EventBusConfig>()
-                .Bind(builder.Configuration.GetSection("EventBusConfig"))
-                .ValidateDataAnnotations();
-
-            builder.Services.AddTransient((s) =>
-            {
-                var config = s.GetService<IOptions<EventBusConfig>>()!.Value;
-                return new SimulationEventBus(config, s.GetRequiredService<ILogger<SimulationEventBus>>());
-            });
+            builder.AddExperimentServices();
 
             var app = builder.Build();
 

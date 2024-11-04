@@ -27,9 +27,10 @@ namespace DynamicFlightStorageSimulation
 
         public async Task StartAsync()
         {
-            await _simulationEventBus.ConnectAsync(withFlightTopic: true,
-                withWeatherTopic: true,
-                withRecalculationTopic: false).ConfigureAwait(false);
+            if (!_simulationEventBus.IsConnected())
+            {
+                await _simulationEventBus.ConnectAsync().ConfigureAwait(false);
+            }
         }
 
         private async Task OnWeatherRecieved(WeatherEvent e)

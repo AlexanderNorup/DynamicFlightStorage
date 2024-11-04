@@ -45,16 +45,28 @@ namespace DynamicFlightStorageSimulation
 
         public void SubscribeToFlightStorageEvent(FlightStorageEventHandler handler)
         {
+            if (flightStorageEventHandlers.Count == 0)
+            {
+                _mqttClient.SubscribeAsync(_eventBusConfig.FlightTopic).GetAwaiter().GetResult();
+            }
             flightStorageEventHandlers.Add(handler);
         }
 
         public void SubscribeToWeatherEvent(WeatherEventHandler handler)
         {
+            if (weatherEventHandlers.Count == 0)
+            {
+                _mqttClient.SubscribeAsync(_eventBusConfig.WeatherTopic).GetAwaiter().GetResult();
+            }
             weatherEventHandlers.Add(handler);
         }
 
         public void SubscribeToRecalculationEvent(FlightRecalculationEventHandler handler)
         {
+            if (flightRecalculationEventHandlers.Count == 0)
+            {
+                _mqttClient.SubscribeAsync(_eventBusConfig.RecalculationTopic).GetAwaiter().GetResult();
+            }
             flightRecalculationEventHandlers.Add(handler);
         }
 
@@ -66,16 +78,28 @@ namespace DynamicFlightStorageSimulation
         public void UnSubscribeToFlightStorageEvent(FlightStorageEventHandler handler)
         {
             flightStorageEventHandlers.Remove(handler);
+            if (flightStorageEventHandlers.Count == 0)
+            {
+                _mqttClient.UnsubscribeAsync(_eventBusConfig.FlightTopic).GetAwaiter().GetResult();
+            }
         }
 
         public void UnSubscribeToWeatherEvent(WeatherEventHandler handler)
         {
             weatherEventHandlers.Remove(handler);
+            if (weatherEventHandlers.Count == 0)
+            {
+                _mqttClient.UnsubscribeAsync(_eventBusConfig.WeatherTopic).GetAwaiter().GetResult();
+            }
         }
 
         public void UnSubscribeToRecalculationEvent(FlightRecalculationEventHandler handler)
         {
             flightRecalculationEventHandlers.Remove(handler);
+            if (flightRecalculationEventHandlers.Count == 0)
+            {
+                _mqttClient.UnsubscribeAsync(_eventBusConfig.RecalculationTopic).GetAwaiter().GetResult();
+            }
         }
 
         public void UnSubscribeToSystemEvent(SystemMessageEventHandler handler)
@@ -119,27 +143,15 @@ namespace DynamicFlightStorageSimulation
             await _mqttClient.PublishAsync(message).ConfigureAwait(false);
         }
 
-        public async Task ConnectAsync(bool withFlightTopic, bool withWeatherTopic, bool withRecalculationTopic)
+        public async Task ConnectAsync()
         {
             await _mqttClient.ConnectAsync(_mqttClientOptions);
 
-            _logger?.LogInformation("Connected to MQTT {Host} as {ClientId}.\n" +
-                "Subscribing to Flight:{Flight}, Weather:{Weather}, Recalculation:{Recalculation}",
-                _eventBusConfig.Host, _mqttClientOptions.ClientId, withFlightTopic, withWeatherTopic, withRecalculationTopic);
+            _logger?.LogInformation("Connected to MQTT {Host} as {ClientId}",
+                _eventBusConfig.Host, _mqttClientOptions.ClientId);
 
-            if (withFlightTopic)
-            {
-                await _mqttClient.SubscribeAsync(_eventBusConfig.FlightTopic);
-            }
-            if (withWeatherTopic)
-            {
-                await _mqttClient.SubscribeAsync(_eventBusConfig.WeatherTopic);
-            }
-            if (withRecalculationTopic)
-            {
-                await _mqttClient.SubscribeAsync(_eventBusConfig.RecalculationTopic);
-            }
             await _mqttClient.SubscribeAsync(_eventBusConfig.SystemTopic);
+
             // System messages requires it's own handler as we want to process them in parallel.
             _mqttClient.ApplicationMessageReceivedAsync += HandleSystemMessage;
 
