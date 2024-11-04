@@ -142,7 +142,7 @@
         {
             return;
         }
-        var newClientIds = newValue.Split(",").Select(x => x.Trim());
+        var newClientIds = newValue.Split(",").Select(x => x.Trim()).Where(x => !string.IsNullOrWhiteSpace(x));
         foreach(var clientId in newClientIds)
         {
             orchestrator.ExperimentRunnerClientIds.Add(clientId);
