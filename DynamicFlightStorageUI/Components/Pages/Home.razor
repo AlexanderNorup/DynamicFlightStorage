@@ -2,6 +2,7 @@
 @using DynamicFlightStorageSimulation.ExperimentOrchestrator
 @using System.Text.Json
 @using DynamicFlightStorageSimulation.Utilities
+@using System.Globalization
 @inject SimulationEventBus eventbus
 @inject Orchestrator orchestrator
 @inject ILoggerFactory loggerFactory
@@ -16,10 +17,32 @@
         <div class="col-12 border rounded p-2">
             <h3>Orchestrator: <button class="btn btn-sm" @onclick="StateHasChanged">Refresh state</button></h3>
             <p>An experiment is running: @(orchestrator.CheckExperimentRunning())</p>
-            @if(orchestrator.CurrentSimulationTime is { } simTime)
+            @if(orchestrator.CurrentSimulationTime is { } simTime
+               && orchestrator.CurrentExperiment is { } currEx
+               && orchestrator.CurrentExperimentResult is { } result)
             {
-                string timeScaleText = orchestrator.CurrentExperiment is { TimeScale: > 0 } ex ? $"x {ex.TimeScale}" : "Max Speed";
-                <p>Experiment time: <code>@(orchestrator.CurrentSimulationTime)</code> (TimeScale: @orchestrator.CurrentExperiment?.TimeScale)</p>
+                bool experimentDone = result.ExperimentEnded is not null;
+                string barColor = "";
+                if (experimentDone)
+                {
+                    barColor = result.ExperimentSuccess ? "bg-success" : "bg-danger";
+                }
+                string timeScaleText = currEx.TimeScale > 0 ? $"x {currEx.TimeScale}" : "Max Speed";
+                double experimentProgress = Math.Round((simTime - currEx.SimulatedStartTime) / (currEx.SimulatedEndTime - currEx.SimulatedStartTime) * 100d, 2);
+
+                <p>Experiment time: <code>@(orchestrator.CurrentSimulationTime)</code> (TimeScale: @timeScaleText)</p>
+                <p>Experiment time left: @(currEx.SimulatedEndTime - simTime)
+                <div class="progress" role="progressbar">
+                    <div
+                        class="progress-bar progress-bar-striped @barColor @(!experimentDone ? "progress-bar-animated" : "")" 
+                        style="width: @(experimentProgress.ToString(CultureInfo.InvariantCulture))%">
+                            @if (experimentDone)
+                            {
+                                <span style="animation: fadeIn ease 1s">Experiment succeded: @result.ExperimentSuccess!</span>
+                            }
+                        </div>
+                </div>
+                </p>
             }
             <p>Orchestrator State: @(orchestrator.OrchestratorState)</p>
             <div class="mb-3">
@@ -61,6 +84,8 @@
             <button class="btn btn-danger" @onclick="AbortExpxeriment">Abort Experiment</button>
             <button class="btn btn-secondary" @onclick="ResetExperiment">Reset Experiment</button>
             <hr />
+            <h3>Logs:</h3>
+            <ul id="logList" class="logContainer list-unstyled"></ul>
             @if (orchestrator.CurrentExperimentResult is { } results)
             {
                 <p>
@@ -68,8 +93,6 @@
                     <pre>@(JsonSerializer.Serialize(results, new JsonSerializerOptions() { WriteIndented = true }))</pre>
                 </p>
             }
-            <h3>Logs:</h3>
-            <ul id="logList" class="logContainer list-unstyled"></ul>
         </div>
 
         <div class="col-12 border rounded p-2">
@@ -151,7 +174,8 @@
         Name = "Test Experiment",
         PreloadAllFlights = true,
         SimulatedStartTime = new DateTime(2024, 10, 11, 00, 00, 00, DateTimeKind.Utc),
-        SimulatedEndTime = new DateTime(2024, 10, 12, 00, 00, 00, DateTimeKind.Utc),
+        SimulatedEndTime = new DateTime(2024, 10, 11, 06, 00, 00, DateTimeKind.Utc),
+        // SimulatedEndTime = new DateTime(2024, 10, 12, 00, 00, 00, DateTimeKind.Utc),
         SimulatedPreloadStartTime = new DateTime(2024, 1, 1, 00, 00, 00, DateTimeKind.Utc),
         SimulatedPreloadEndTime = new DateTime(2024, 10, 11, 3, 00, 00, DateTimeKind.Utc),
         TimeScale = -1 // Negative value means "as fast as possible"

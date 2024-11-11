@@ -1,7 +1,6 @@
 ﻿using DynamicFlightStorageDTOs;
 using DynamicFlightStorageSimulation.Utilities;
 using Microsoft.Extensions.Logging;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using static DynamicFlightStorageDTOs.SystemMessage;
 using static DynamicFlightStorageSimulation.SimulationEventBus;
@@ -12,7 +11,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
     {
         public const int LatencyTestSamples = 20;
         public const int LatencyTestFrequencyMs = 100;
-        public const int ExperimentLoopIntervalMs = 100;
+        public const int ExperimentLoopIntervalMs = 900;
 
         private SimulationEventBus _eventBus;
         private LatencyTester _latencyTester;
@@ -174,7 +173,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 //TODO: Check Queue if clients are done with preloading
                 // Untill then we just wait a bit
                 _logger.LogInformation("Published all preload-data. Waiting for consumers to consume it all");
-                await Task.Delay(TimeSpan.FromSeconds(10), ExperimentCancellationToken.Token).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromSeconds(2), ExperimentCancellationToken.Token).ConfigureAwait(false);
                 _logger.LogInformation("Preload done");
                 OrchestratorState = OrchestratorState.PreloadDone;
             }
