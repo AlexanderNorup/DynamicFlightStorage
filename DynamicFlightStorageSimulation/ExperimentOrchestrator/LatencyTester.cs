@@ -56,7 +56,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
                 cancellationToken.ThrowIfCancellationRequested();
                 _logger?.LogInformation("Waiting for responses for {ExperimentId}.", experimentId);
-                await Task.Delay(1000, cancellationToken).ConfigureAwait(false);
+                await Task.Delay(500, cancellationToken).ConfigureAwait(false);
 
                 var responses = latencyExperimentBag.ToList();
                 _logger?.LogInformation("Got {Responses} responses.", responses.Count);

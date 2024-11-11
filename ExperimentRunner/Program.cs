@@ -25,6 +25,7 @@ namespace ExperimentRunner
             EnsureValid(eventBusConfig);
 
             using var simulationEventBus = new SimulationEventBus(eventBusConfig, factory.CreateLogger<SimulationEventBus>());
+            await simulationEventBus.ConnectAsync();
 
             var weatherService = new WeatherService();
 

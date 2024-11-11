@@ -16,11 +16,36 @@
         <div class="col-12 border rounded p-2">
             <h3>Orchestrator: <button class="btn btn-sm" @onclick="StateHasChanged">Refresh state</button></h3>
             <p>An experiment is running: @(orchestrator.CheckExperimentRunning())</p>
-            <p>Experiment time: <code>@(orchestrator.CurrentSimulationTime)</code> (Timescale: @orchestrator.CurrentExperiment?.TimeScale)</p>
+            @if(orchestrator.CurrentSimulationTime is { } simTime)
+            {
+                string timeScaleText = orchestrator.CurrentExperiment is { TimeScale: > 0 } ex ? $"x {ex.TimeScale}" : "Max Speed";
+                <p>Experiment time: <code>@(orchestrator.CurrentSimulationTime)</code> (TimeScale: @orchestrator.CurrentExperiment?.TimeScale)</p>
+            }
             <p>Orchestrator State: @(orchestrator.OrchestratorState)</p>
             <div class="mb-3">
-                <label for="clientIds" class="form-label">Client IDs for experiment (separated by <code>,</code>)</label>
-                <input type="text" class="form-control" id="clientIds" @onchange="ExperimentClientIdUpdated" value="@(string.Join(',',orchestrator.ExperimentRunnerClientIds))">
+                <label for="clientIds" class="form-label">Client IDs for experiment:
+                    @if (latencyTester?.LatencyExperimentRunning == true)
+                    {
+                        <div class="spinner-border spinner-border-sm" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <span style="cursor:pointer;" @onclick="RefreshConsumers"><i class="bi bi-arrow-clockwise"></i></span>
+                    }
+                </label>
+                <select class="form-select" multiple @onchange="ExperimentClientIdUpdated">
+                    @foreach (var clientId in KnownClientIds)
+                    {
+                        <option value="@clientId">@clientId
+                            @if (clientId == consumer?.ClientId)
+                            {
+                                <span>  (Embedded Consumer)</span>
+                            }
+                        </option>
+                    }
+                </select>
             </div>
             <p>
                 Parsed client ids:
@@ -119,6 +144,8 @@
     private LatencyTester? latencyTester;
     private string? latencyTestResult;
 
+    private HashSet<string> KnownClientIds = new HashSet<string>();
+
     private readonly Experiment testExperiment = new Experiment()
     {
         Name = "Test Experiment",
@@ -149,6 +176,7 @@
             try
             {
                 await jsRuntime.InvokeVoidAsync("logMessages", orchestrator.GetLogCache());
+                _ =  RefreshConsumers();
             }
             catch
             {
@@ -218,13 +246,14 @@
     public void ExperimentClientIdUpdated(ChangeEventArgs e)
     {
         var newExperimentRunnerIds = new HashSet<string>();
-        var newValue = e.Value as string;
-        if (string.IsNullOrWhiteSpace(newValue))
+        var newValue = e.Value as string[];
+        if (newValue is null)
         {
             orchestrator.ExperimentRunnerClientIds = newExperimentRunnerIds;
             return;
         }
-        var newClientIds = newValue.Split(",").Select(x => x.Trim()).Where(x => !string.IsNullOrWhiteSpace(x));
+
+        var newClientIds = newValue.Select(x => x.Trim()).Where(x => !string.IsNullOrWhiteSpace(x));
         foreach(var clientId in newClientIds)
         {
             newExperimentRunnerIds.Add(clientId);
@@ -243,12 +272,27 @@
             weatherService,
             new BasicEventDataStore.BasicEventDataStore(weatherService, eventbus),
             loggerFactory.CreateLogger<SimulationConsumer>());
+        KnownClientIds.Add(consumer.ClientId);
     }
 
     private void KillConsumer()
     {
-        consumer?.Dispose();
+        if(consumer is not null){
+            KnownClientIds.Remove(consumer.ClientId);
+            consumer.Dispose();
+        }
         consumer = null;
+    }
+
+    public async Task RefreshConsumers()
+    {
+        if (latencyTester is null || latencyTester.LatencyExperimentRunning)
+        {
+            return;
+        }
+        var results = await latencyTester.GetConsumersAndLatencyAsync(1, 1).ConfigureAwait(false);
+        KnownClientIds = results.Select(x => x.Clientid).ToHashSet();
+        await InvokeAsync(StateHasChanged);
     }
 
     public async Task PerformLatencyTest(int sample, int delay)
@@ -261,7 +305,7 @@
         StateHasChanged();
 
         var results = await latencyTester.GetConsumersAndLatencyAsync(sample, delay, cts.Token);
-
+        KnownClientIds = results.Select(x => x.Clientid).ToHashSet();
         latencyTestResult = JsonSerializer.Serialize(results, new JsonSerializerOptions()
         {
             WriteIndented = true
