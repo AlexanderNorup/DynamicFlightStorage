@@ -17,6 +17,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
         private FlightInjector _flightInjector;
         private ILogger<Orchestrator> _logger;
         private System.Timers.Timer _experimentChecker;
+        private SemaphoreSlim _experimentControllerSemaphore = new SemaphoreSlim(1, 1);
         public Orchestrator(SimulationEventBus eventBus, LatencyTester latencyTester, WeatherInjector weatherInjector, FlightInjector flightInjector, ILogger<Orchestrator> logger)
         {
             _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
@@ -64,11 +65,25 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             {
                 throw new InvalidOperationException("No experiment is currently set.");
             }
-
-            _logger.LogInformation("Doing Experiment Preload");
-            OrchestratorState = OrchestratorState.Preloading;
+            if (CheckExperimentRunning())
+            {
+                throw new InvalidOperationException("An experiment is detected to be running");
+            }
+            if (OrchestratorState != OrchestratorState.Idle)
+            {
+                throw new InvalidOperationException($"Cannot start preload because the orchestrator is not in {OrchestratorState.Idle} state.");
+            }
+            await _experimentControllerSemaphore.WaitAsync().ConfigureAwait(false);
             try
             {
+                if (OrchestratorState != OrchestratorState.Idle)
+                {
+                    return;
+                }
+
+                _logger.LogInformation("Doing Experiment Preload");
+                OrchestratorState = OrchestratorState.Preloading;
+
                 ExperimentCancellationToken = new CancellationTokenSource();
                 var result = await SendSystemMessageAndWaitForResponseAsync(new SystemMessage()
                 {
@@ -97,6 +112,8 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     await _flightInjector.PublishFlightsUntil(CurrentExperiment.SimulatedPreloadEndTime, ExperimentCancellationToken.Token).ConfigureAwait(false);
                 }
 
+                ExperimentCancellationToken.Token.ThrowIfCancellationRequested();
+
                 //TODO: Check Queue if clients are done with preloading
                 // Untill then we just wait a bit
                 _logger.LogInformation("Published all preload-data. Waiting for consumers to consume it all");
@@ -107,13 +124,16 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             catch (Exception e)
             {
                 _logger.LogError(e, "Error during preload");
-                OrchestratorState = OrchestratorState.Idle;
+                ResetExperimentState();
+            }
+            finally
+            {
+                _experimentControllerSemaphore.Release();
             }
         }
 
         public async Task StartExperimentAsync()
         {
-            // TODO: Syncronize this method (and all others in here too)
             if (ExperimentRunnerClientIds.Count == 0)
             {
                 _logger.LogError("Cannot start experiment because there is no ExperimentRunnerClientIds set");
@@ -123,16 +143,21 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             {
                 throw new InvalidOperationException("No experiment is currently set.");
             }
+            if (CheckExperimentRunning())
+            {
+                throw new InvalidOperationException("An experiment is detected to be running");
+            }
+            if (OrchestratorState != OrchestratorState.PreloadDone)
+            {
+                throw new InvalidOperationException("Experiment cannot start because preload is not done.");
+            }
+            await _experimentControllerSemaphore.WaitAsync().ConfigureAwait(false);
+
             try
             {
-                if (OrchestratorState == OrchestratorState.Idle)
-                {
-                    await RunExperimentPreloadAsync().ConfigureAwait(false);
-                }
-
                 if (OrchestratorState != OrchestratorState.PreloadDone)
                 {
-                    throw new InvalidOperationException("Experiment cannot start because preload is not done.");
+                    return;
                 }
 
                 ExperimentCancellationToken = new CancellationTokenSource();
@@ -160,12 +185,18 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 // Start the experiment clock
                 CurrentExperimentResult.ExperimentStarted = DateTime.UtcNow;
                 CurrentSimulationTime = CurrentExperiment.SimulatedStartTime;
+                OrchestratorState = OrchestratorState.Running;
                 ExperimentTask = ExperimentLoop(); // Don't wait
                 _experimentChecker.Start();
             }
             catch (Exception e)
             {
                 _logger.LogError(e, "Error during experiment start");
+                ResetExperimentState();
+            }
+            finally
+            {
+                _experimentControllerSemaphore.Release();
             }
         }
 
@@ -212,29 +243,41 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             _experimentChecker.Stop();
         }
 
+        private SemaphoreSlim _abortSemaphore = new SemaphoreSlim(1, 1);
         public async Task AbortExperimentAsync()
         {
-            ExperimentCancellationToken.Cancel();
-            if (CurrentExperimentResult is { ExperimentSuccess: false, ExperimentEnded: null } currentResult)
+            await _abortSemaphore.WaitAsync().ConfigureAwait(false);
+            try
             {
-                currentResult.ExperimentError = "Experiment aborted at " + DateTime.UtcNow;
-                currentResult.ExperimentEnded = DateTime.UtcNow;
-                currentResult.ExperimentSuccess = false;
+                if (!ExperimentCancellationToken.IsCancellationRequested)
+                {
+                    ExperimentCancellationToken.Cancel();
+                }
+                if (CurrentExperimentResult is { ExperimentSuccess: false, ExperimentEnded: null } currentResult)
+                {
+                    currentResult.ExperimentError = "Experiment aborted at " + DateTime.UtcNow;
+                    currentResult.ExperimentEnded = DateTime.UtcNow;
+                    currentResult.ExperimentSuccess = false;
+                }
+                if (ExperimentTask is not null)
+                {
+                    // Will "Join the thread" and wait for completion.
+                    try
+                    {
+                        await ExperimentTask.ConfigureAwait(false);
+                    }
+                    catch (Exception e) when (e is not OperationCanceledException)
+                    {
+                        _logger.LogError(e, "Experiment threw an error while running.");
+                    }
+                    ExperimentTask = null;
+                }
+                ResetExperimentState();
             }
-            if (ExperimentTask is not null)
+            finally
             {
-                // Will "Join the thread" and wait for completion.
-                try
-                {
-                    await ExperimentTask.ConfigureAwait(false);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError(e, "Error during experiment abort");
-                }
-                ExperimentTask = null;
+                _abortSemaphore.Release();
             }
-            ResetExperimentState();
         }
 
         public async Task ExperimentLoop()
@@ -255,11 +298,10 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
                 if (CurrentSimulationTime >= CurrentExperiment.SimulatedEndTime)
                 {
-                    ExperimentCancellationToken.Cancel();
                     CurrentExperimentResult.ExperimentEnded = DateTime.UtcNow;
                     CurrentExperimentResult.ExperimentSuccess = true;
                     _logger.LogInformation("Experiment {Id} ended successfully.", CurrentExperiment.Id);
-                    OrchestratorState = OrchestratorState.Idle;
+                    ResetExperimentState();
                     return;
                 }
 
