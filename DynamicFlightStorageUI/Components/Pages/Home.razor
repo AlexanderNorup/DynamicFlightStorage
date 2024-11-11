@@ -6,6 +6,7 @@
 @inject SimulationEventBus eventbus
 @inject Orchestrator orchestrator
 @inject ILoggerFactory loggerFactory
+@inject IJSRuntime jsRuntime
 @implements IDisposable
 
 <PageTitle>Home</PageTitle>
@@ -66,39 +67,7 @@
                 </p>
             }
             <h3>Logs:</h3>
-            <table class="table table-striped" style="table-layout: fixed;">
-                <thead>
-                    <tr>
-                        <th style="width: 20%">Timestamp</th>
-                        <th style="width: 10%">Severity</th>
-                        <th>Message</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (orchestratorLogs.Any())
-                    {
-                        @foreach (var log in orchestratorLogs)
-                        {
-                            <tr>
-                                <td>@log.Timestamp</td>
-                                <td>@log.LogLevel</td>
-                                <td>@log.Message
-                                    @if(log.Exception is { } ex)
-                                    {
-                                        <br /><b>Exception:</b><br/><pre>@ex.Message</pre>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    }
-                    else
-                    {
-                        <tr>
-                            <td colspan="3" class="text-center">No logs yet</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+            <ul id="logList" class="logContainer list-unstyled"></ul>
         </div>
         <div class="col-12 border rounded p-2">
             <h3>Latency Tester:</h3>
@@ -172,16 +141,29 @@
         }
         orchestrator.OnExperimentStateChanged += OnExperimentStateChanged;
         orchestrator.OnLogEvent += OnOrchestraorLog;
-        orchestratorLogs = orchestrator.GetLogCache();
-
         eventbus.SubscribeToRecalculationEvent(OnRecalculationEvent);
         latencyTester = new LatencyTester(eventbus, loggerFactory.CreateLogger<LatencyTester>());
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                await jsRuntime.InvokeVoidAsync("logMessages", orchestrator.GetLogCache());
+            }
+            catch
+            {
+                // Ignore
+            }
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
     private void OnOrchestraorLog(LogEntry log)
     {
-        orchestratorLogs.Add(log);
-        OnExperimentStateChanged();
+        _ = jsRuntime.InvokeVoidAsync("logMessage", log);
     }
 
     private void OnExperimentStateChanged()
