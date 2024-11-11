@@ -10,8 +10,8 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
     public class ExperimentResult
     {
         public required Experiment Experiment { get; init; }
-        public DateTime ExperimentStarted { get; set; }
-        public DateTime ExperimentEnded { get; set; }
+        public DateTime? ExperimentStarted { get; set; }
+        public DateTime? ExperimentEnded { get; set; }
         public List<LatencyTestResult> LatencyTestResults { get; set; } = new();
         public string? ExperimentError { get; set; }
         public bool ExperimentSuccess { get; set; }

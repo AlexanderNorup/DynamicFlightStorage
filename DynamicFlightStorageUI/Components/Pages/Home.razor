@@ -39,7 +39,7 @@
             <h3>Orchestrator: <button class="btn btn-sm" @onclick="StateHasChanged">Refresh state</button></h3>
             <p>An experiment is running: @(orchestrator.CurrentExperimentResult is not null)</p>
             <p>Experiment time: @(orchestrator.CurrentSimulationTime)</p>
-            <p>Preload is done: @(orchestrator.PreloadDone)</p>
+            <p>Orchestrator State: @(orchestrator.OrchestratorState)</p>
             <div class="mb-3">
                 <label for="clientIds" class="form-label">Client IDs for experiment (separated by <code>,</code>)</label>
                 <input type="text" class="form-control" id="clientIds" @onchange="ExperimentClientIdUpdated" value="@(string.Join(',',orchestrator.ExperimentRunnerClientIds))" >
@@ -54,7 +54,7 @@
             </p>
             <button class="btn btn-outline-primary" @onclick="orchestrator.RunExperimentPreloadAsync">Preload Data</button>
             <button class="btn btn-primary" @onclick="orchestrator.StartExperimentAsync">Start Experiment</button>
-            <button class="btn btn-danger" @onclick="orchestrator.AbortExperiment">Abort Experiment</button>
+            <button class="btn btn-danger" @onclick="orchestrator.AbortExperimentAsync">Abort Experiment</button>
             <hr/>
             @if(orchestrator.CurrentExperimentResult is {} results )
             {
@@ -129,7 +129,10 @@
 
     protected override void OnInitialized()
     {
-        orchestrator.SetExperiment(testExperiment);
+        if (orchestrator.CurrentExperiment is null)
+        {
+            orchestrator.SetExperiment(testExperiment);
+        }
         eventbus.SubscribeToRecalculationEvent(OnRecalculationEvent);
         latencyTester = new LatencyTester(eventbus, loggerFactory.CreateLogger<LatencyTester>());
     }
