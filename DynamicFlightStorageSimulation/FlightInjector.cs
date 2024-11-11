@@ -53,7 +53,7 @@ public class FlightInjector
             return;
         }
 
-        logger?.LogInformation("Publishing {BatchNum} flight batches (until {Untill}).",
+        logger?.LogDebug("Publishing {BatchNum} flight batches (until {Untill}).",
             flightsToPublish.Count,
             date);
 
@@ -63,7 +63,7 @@ public class FlightInjector
             await _eventBus.PublishFlightAsync(flightBatch).ConfigureAwait(false);
             if (++batchCount % 10 == 0)
             {
-                logger?.LogInformation("Published {Count}/{Total} flight batches (untill {Untill}).",
+                logger?.LogDebug("Published {Count}/{Total} flight batches (untill {Untill}).",
                     batchCount,
                     flightsToPublish.Count,
                     date);

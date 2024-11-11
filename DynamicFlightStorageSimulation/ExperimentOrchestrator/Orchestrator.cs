@@ -357,11 +357,19 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             while (!ExperimentCancellationToken.IsCancellationRequested)
             {
                 // Update simulation time
-                LastUpdateTime ??= DateTime.UtcNow;
-                var now = DateTime.UtcNow;
-                var timeDiff = now - LastUpdateTime.Value;
-                CurrentSimulationTime = CurrentSimulationTime.Value.Add(timeDiff);
-                LastUpdateTime = now;
+                if (CurrentExperiment.TimeScale > 0)
+                {
+                    LastUpdateTime ??= DateTime.UtcNow;
+                    var now = DateTime.UtcNow;
+                    var timeDiff = now - LastUpdateTime.Value;
+                    CurrentSimulationTime = CurrentSimulationTime.Value.Add(timeDiff * CurrentExperiment.TimeScale);
+                    LastUpdateTime = now;
+                }
+                else
+                {
+                    // Run as fast as possible
+                    CurrentSimulationTime = CurrentSimulationTime.Value.Add(TimeSpan.FromMinutes(1));
+                }
 
                 if (CurrentSimulationTime >= CurrentExperiment.SimulatedEndTime)
                 {
@@ -389,7 +397,10 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     await weatherTask.ConfigureAwait(false);
                 }
 
-                await Task.Delay(ExperimentLoopIntervalMs, ExperimentCancellationToken.Token).ConfigureAwait(false);
+                if (ExperimentLoopIntervalMs > 0 && CurrentExperiment.TimeScale > 0)
+                {
+                    await Task.Delay(ExperimentLoopIntervalMs, ExperimentCancellationToken.Token).ConfigureAwait(false);
+                }
             }
             _logger.LogWarning("ExperimentLoop stopped: Cancelled={Cancelled}", ExperimentCancellationToken.IsCancellationRequested);
         }

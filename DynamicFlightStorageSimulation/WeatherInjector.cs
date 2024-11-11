@@ -39,7 +39,7 @@ public class WeatherInjector
             return;
         }
 
-        logger?.LogInformation("Publishing {BatchNum} weather batches (until {Untill}).",
+        logger?.LogDebug("Publishing {BatchNum} weather batches (until {Untill}).",
             weatherBatches.Count,
             date);
         int batchCount = 0;
@@ -48,7 +48,7 @@ public class WeatherInjector
             await _eventBus.PublishWeatherAsync(weatherBatch).ConfigureAwait(false);
             if (++batchCount % 10 == 0)
             {
-                logger?.LogInformation("Published {Count}/{Total} weather batches ({Untill}).",
+                logger?.LogDebug("Published {Count}/{Total} weather batches ({Untill}).",
                     batchCount,
                     weatherBatches.Count,
                     date);

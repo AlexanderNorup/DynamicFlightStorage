@@ -16,7 +16,7 @@
         <div class="col-12 border rounded p-2">
             <h3>Orchestrator: <button class="btn btn-sm" @onclick="StateHasChanged">Refresh state</button></h3>
             <p>An experiment is running: @(orchestrator.CheckExperimentRunning())</p>
-            <p>Experiment time: @(orchestrator.CurrentSimulationTime)</p>
+            <p>Experiment time: <code>@(orchestrator.CurrentSimulationTime)</code> (Timescale: @orchestrator.CurrentExperiment?.TimeScale)</p>
             <p>Orchestrator State: @(orchestrator.OrchestratorState)</p>
             <div class="mb-3">
                 <label for="clientIds" class="form-label">Client IDs for experiment (separated by <code>,</code>)</label>
@@ -127,6 +127,7 @@
         SimulatedEndTime = new DateTime(2024, 10, 12, 00, 00, 00, DateTimeKind.Utc),
         SimulatedPreloadStartTime = new DateTime(2024, 1, 1, 00, 00, 00, DateTimeKind.Utc),
         SimulatedPreloadEndTime = new DateTime(2024, 10, 11, 3, 00, 00, DateTimeKind.Utc),
+        TimeScale = -1 // Negative value means "as fast as possible"
     };
 
     protected override void OnInitialized()
