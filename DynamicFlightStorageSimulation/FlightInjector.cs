@@ -47,12 +47,27 @@ public class FlightInjector
     {
         const int MaxFlightBatch = 50;
         var flightsToPublish = GetFlightsUntill(date, cancellationToken).Chunk(MaxFlightBatch).ToList();
-        logger?.LogInformation("Publishing {BatchNum} batches of flights until {Untill}.",
+        if (flightsToPublish.Count == 0)
+        {
+            //logger?.LogDebug("No flights to publish (untill {Untill}).", date);
+            return;
+        }
+
+        logger?.LogInformation("Publishing {BatchNum} flight batches (until {Untill}).",
             flightsToPublish.Count,
             date);
+
+        int batchCount = 0;
         foreach (var flightBatch in flightsToPublish)
         {
             await _eventBus.PublishFlightAsync(flightBatch).ConfigureAwait(false);
+            if (++batchCount % 10 == 0)
+            {
+                logger?.LogInformation("Published {Count}/{Total} flight batches (untill {Untill}).",
+                    batchCount,
+                    flightsToPublish.Count,
+                    date);
+            }
         }
     }
 
@@ -79,10 +94,6 @@ public class FlightInjector
                 yield break;
             }
             currentDate = _flights.Peek().DatePlanned;
-            if (i++ > 30)
-            {
-                yield break;
-            }
         }
     }
 

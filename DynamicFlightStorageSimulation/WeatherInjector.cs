@@ -35,20 +35,20 @@ public class WeatherInjector
 
         if (weatherBatches.Count == 0)
         {
-            logger?.LogDebug("No weather data to publish.");
+            //logger?.LogDebug("No weather data to publish (untill {Untill}).", date);
             return;
         }
 
-        logger?.LogInformation("Publishing {BatchNum} batches (Weather-data until {Untill}).",
+        logger?.LogInformation("Publishing {BatchNum} weather batches (until {Untill}).",
             weatherBatches.Count,
             date);
         int batchCount = 0;
         foreach (var weatherBatch in weatherBatches)
         {
             await _eventBus.PublishWeatherAsync(weatherBatch).ConfigureAwait(false);
-            if (batchCount++ % 10 == 0)
+            if (++batchCount % 10 == 0)
             {
-                logger?.LogInformation("Published {Count}/{Total} batches (Weather-data until {Untill}).",
+                logger?.LogInformation("Published {Count}/{Total} weather batches ({Untill}).",
                     batchCount,
                     weatherBatches.Count,
                     date);
