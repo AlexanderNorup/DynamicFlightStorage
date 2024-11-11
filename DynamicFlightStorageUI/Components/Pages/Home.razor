@@ -1,6 +1,7 @@
 ﻿@page "/"
 @using DynamicFlightStorageSimulation.ExperimentOrchestrator
 @using System.Text.Json
+@using DynamicFlightStorageSimulation.Utilities
 @inject SimulationEventBus eventbus
 @inject Orchestrator orchestrator
 @inject ILoggerFactory loggerFactory
@@ -22,7 +23,7 @@
     </div>
 
     <div class="row g-2">
-        <div class="col-6 border rounded p-2">
+        <div class="col-12 border rounded p-2">
             <h3>Consumer:</h3>
             <p>The embedded consumer is enabled: @(consumer is not null)</p>
             @if(consumer is null)
@@ -35,7 +36,7 @@
                 <button class="btn btn-danger" @onclick="KillConsumer">Disable embedded consumer?</button>
             }
         </div>
-        <div class="col-6 border rounded p-2">
+        <div class="col-12 border rounded p-2">
             <h3>Orchestrator: <button class="btn btn-sm" @onclick="StateHasChanged">Refresh state</button></h3>
             <p>An experiment is running: @(orchestrator.CheckExperimentRunning())</p>
             <p>Experiment time: @(orchestrator.CurrentSimulationTime)</p>
@@ -63,6 +64,41 @@
                     <pre>@(JsonSerializer.Serialize(results, new JsonSerializerOptions() { WriteIndented = true }))</pre>
                 </p>
             }
+            <h3>Logs:</h3>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Level</th>
+                        <th>Message</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (orchestratorLogs.Any())
+                    {
+                        @foreach (var log in orchestratorLogs)
+                        {
+                            <tr>
+                                <td>@log.Timestamp</td>
+                                <td>@log.LogLevel</td>
+                                <td>@log.Message
+                                    @if(log.Exception is { } ex)
+                                    {
+                                        <br /><b>Exception:</b><br/><pre>@ex</pre>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="3">No logs yet</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
         </div>
         <div class="col-12 border rounded p-2">
             <h3>Latency Tester:</h3>
@@ -92,8 +128,8 @@
         </tr>
     </thead>
     <tbody>
-        @if(logs.Any()){
-            @foreach(var log in logs)
+        @if(recalculationLogs.Any()){
+            @foreach(var log in recalculationLogs)
             {
                 <tr>
                     <td>@log.Timestamp</td>
@@ -112,7 +148,8 @@
 
 @code {
     private CancellationTokenSource cts = new();
-    private List<LogEntry> logs = new List<LogEntry>();
+    private List<RecalculationLogEntry> recalculationLogs = new List<RecalculationLogEntry>();
+    private List<LogEntry> orchestratorLogs = new List<LogEntry>();
     private SimulationConsumer? consumer;
     private LatencyTester? latencyTester;
     private string? latencyTestResult;
@@ -134,8 +171,17 @@
             orchestrator.SetExperiment(testExperiment);
         }
         orchestrator.OnExperimentStateChanged += OnExperimentStateChanged;
+        orchestrator.OnLogEvent += OnOrchestraorLog;
+        orchestratorLogs = orchestrator.GetLogCache();
+
         eventbus.SubscribeToRecalculationEvent(OnRecalculationEvent);
         latencyTester = new LatencyTester(eventbus, loggerFactory.CreateLogger<LatencyTester>());
+    }
+
+    private void OnOrchestraorLog(LogEntry log)
+    {
+        orchestratorLogs.Add(log);
+        OnExperimentStateChanged();
     }
 
     private void OnExperimentStateChanged()
@@ -197,7 +243,7 @@
 
     private async Task OnRecalculationEvent(DynamicFlightStorageSimulation.Events.FlightRecalculationEvent e)
     {
-        logs.Add(new(DateTime.UtcNow, e.Flight.ToString()));
+        recalculationLogs.Add(new(DateTime.UtcNow, e.Flight.ToString()));
         await InvokeAsync(StateHasChanged);
     }
 
@@ -211,7 +257,7 @@
         await eventbus.PublishFlightAsync(flight).ConfigureAwait(false);
     }
 
-    private record LogEntry(DateTime Timestamp, string Message);
+    private record RecalculationLogEntry(DateTime Timestamp, string Message);
 
     public void Dispose()
     {
@@ -220,5 +266,7 @@
         latencyTester?.Dispose();
         cts.Dispose();
         orchestrator.OnExperimentStateChanged -= OnExperimentStateChanged;
+        orchestrator.OnLogEvent -= OnOrchestraorLog;
+        orchestratorLogs = null!;
     }
 }

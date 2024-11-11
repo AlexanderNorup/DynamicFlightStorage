@@ -1,4 +1,4 @@
-﻿namespace DynamicFlightStorageSimulation
+﻿namespace DynamicFlightStorageSimulation.Utilities
 {
     public static class StatisticsUtil
     {

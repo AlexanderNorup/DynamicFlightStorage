@@ -1,5 +1,7 @@
 ﻿using DynamicFlightStorageDTOs;
+using DynamicFlightStorageSimulation.Utilities;
 using Microsoft.Extensions.Logging;
+using System.Collections.ObjectModel;
 using static DynamicFlightStorageDTOs.SystemMessage;
 using static DynamicFlightStorageSimulation.SimulationEventBus;
 
@@ -15,7 +17,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
         private LatencyTester _latencyTester;
         private WeatherInjector _weatherInjector;
         private FlightInjector _flightInjector;
-        private ILogger<Orchestrator> _logger;
+        private EventLogger<Orchestrator> _logger;
         private System.Timers.Timer _experimentChecker;
         private SemaphoreSlim _experimentControllerSemaphore = new SemaphoreSlim(1, 1);
         public Orchestrator(SimulationEventBus eventBus, LatencyTester latencyTester, WeatherInjector weatherInjector, FlightInjector flightInjector, ILogger<Orchestrator> logger)
@@ -24,12 +26,44 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             _latencyTester = latencyTester ?? throw new ArgumentNullException(nameof(latencyTester));
             _weatherInjector = weatherInjector ?? throw new ArgumentNullException(nameof(weatherInjector));
             _flightInjector = flightInjector ?? throw new ArgumentNullException(nameof(flightInjector));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _logger = new EventLogger<Orchestrator>(logger);
             _experimentChecker = new System.Timers.Timer(1000);
             _experimentChecker.Elapsed += (s, e) => CheckExperimentRunning();
             _experimentChecker.AutoReset = true;
+
+            _logger.OnLog += OnLog;
         }
 
+        private const int LogsToKeep = 30;
+        private object _logLock = new object();
+        private LinkedList<LogEntry> _logCache = new LinkedList<LogEntry>();
+
+        // You might ask yourself why I don't just call "OnLog" instead of "_logger.____".
+        // The reason being that I might want to give my ILogger to for example the FlightInjector. In this case,
+        // I also want the events from inside FlightInjector to be sent to anyone potentially listening. 
+        // Therefore I need to wrap the event and re-cast it to anyone listening on the Orchestrator.
+        public event OnLogEvent? OnLogEvent;
+        private void OnLog(LogEntry e)
+        {
+            OnLogEvent?.Invoke(e);
+            lock (_logLock)
+            {
+                _logCache.AddLast(e);
+                if (_logCache.Count > LogsToKeep)
+                {
+                    _logCache.RemoveFirst();
+                }
+            }
+        }
+
+        // This is used to pre-populate the logs when you're just subscribing to the event.
+        public List<LogEntry> GetLogCache()
+        {
+            lock (_logLock)
+            {
+                return new List<LogEntry>(_logCache);
+            }
+        }
 
         private HashSet<string> _experimentRunnerClientIds = new HashSet<string>();
         public HashSet<string> ExperimentRunnerClientIds
@@ -55,7 +89,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
         public DateTime? LastUpdateTime { get; private set; }
         public CancellationTokenSource ExperimentCancellationToken { get; private set; } = new();
 
-        public event Action OnExperimentStateChanged;
+        public event Action? OnExperimentStateChanged;
 
         public void SetExperiment(Experiment experiment)
         {
@@ -391,6 +425,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             ExperimentCancellationToken.Dispose();
             _experimentChecker.Stop();
             _experimentChecker.Dispose();
+            _logger.OnLog -= OnLog;
         }
     }
 }
