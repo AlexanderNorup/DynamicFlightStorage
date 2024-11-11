@@ -6,26 +6,35 @@ namespace DynamicFlightStorageSimulation;
 public class WeatherInjector
 {
     private readonly SimulationEventBus _eventBus;
-    private Queue<string> _metarFiles;
-    private Queue<string> _tafFiles;
+    private Queue<string> _metarFiles = new();
+    private Queue<string> _tafFiles = new();
     private Queue<Weather>? _taf;
     private Queue<Weather>? _metar;
-    private int _counter;
+
+    private string _metarPath = "metar";
+    private string _tafPath = "metar";
     public WeatherInjector(SimulationEventBus eventBus, string metarPath, string tafPath)
     {
         _eventBus = eventBus;
         if (!Directory.Exists(metarPath))
         {
-            Console.WriteLine($"The path {metarPath} is not a directory!");
-            Environment.Exit(1);
+            throw new ArgumentException($"The metar-path {metarPath} is not a directory");
         }
         if (!Directory.Exists(tafPath))
         {
-            Console.WriteLine($"The path {tafPath} is not a directory!");
-            Environment.Exit(1);
+            throw new ArgumentException($"The taf-path {tafPath} is not a directory");
         }
-        _metarFiles = new(FindFiles(metarPath));
-        _tafFiles = new(FindFiles(tafPath));
+        _metarPath = metarPath;
+        _tafPath = tafPath;
+        ResetReader();
+    }
+
+    public void ResetReader()
+    {
+        _metar = null;
+        _taf = null;
+        _metarFiles = new(FindFiles(_metarPath));
+        _tafFiles = new(FindFiles(_tafPath));
     }
 
     public async Task PublishWeatherUntil(DateTime date, ILogger? logger = null, CancellationToken cancellationToken = default)

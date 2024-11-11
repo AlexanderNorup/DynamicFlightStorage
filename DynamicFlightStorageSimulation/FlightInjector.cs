@@ -9,12 +9,16 @@ public class FlightInjector
 {
     private readonly SimulationEventBus _eventBus;
     private Queue<Flight>? _flights;
-    private int _counter;
     private string _directoryPath;
     public FlightInjector(SimulationEventBus eventBus, string directoryPath)
     {
         _eventBus = eventBus;
         _directoryPath = directoryPath;
+    }
+
+    public void ResetReader()
+    {
+        _flights = null;
     }
 
     private List<Flight> DeserializeFlights(string directoryPath)
@@ -31,13 +35,13 @@ public class FlightInjector
         {
             try
             {
-                flightList.Add(JsonSerializer.Deserialize<Flight>(File.ReadAllText(file)));
+                flightList.Add(JsonSerializer.Deserialize<Flight>(File.ReadAllText(file))
+                    ?? throw new InvalidOperationException($"Deserializing {file} returned null?"));
             }
             catch (Exception e)
             {
                 Console.WriteLine($"Could not serialize flight from file {file}");
             }
-
         }
 
         return flightList.OrderBy(x => x.DatePlanned).ToList();
@@ -71,7 +75,7 @@ public class FlightInjector
         }
     }
 
-    private IEnumerable<Flight> GetFlightsUntill(DateTime date, CancellationToken cancellationToken = default)
+    public IEnumerable<Flight> GetFlightsUntill(DateTime date, CancellationToken cancellationToken = default)
     {
         if (_flights is null)
         {
@@ -95,11 +99,5 @@ public class FlightInjector
             }
             currentDate = _flights.Peek().DatePlanned;
         }
-    }
-
-
-    public Queue<Flight> GetFlights()
-    {
-        return _flights;
     }
 }

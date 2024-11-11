@@ -302,6 +302,8 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             ExperimentCancellationToken = new CancellationTokenSource();
             OrchestratorState = OrchestratorState.Idle;
             _experimentChecker.Stop();
+            _flightInjector.ResetReader();
+            _weatherInjector.ResetReader();
             OnExperimentStateChanged?.Invoke();
         }
 
