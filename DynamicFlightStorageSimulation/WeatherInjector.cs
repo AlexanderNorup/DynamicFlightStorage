@@ -1,4 +1,5 @@
 using DynamicFlightStorageDTOs;
+using Microsoft.Extensions.Logging;
 
 namespace DynamicFlightStorageSimulation;
 
@@ -27,7 +28,35 @@ public class WeatherInjector
         _tafFiles = new(FindFiles(tafPath));
     }
 
-    public async Task PublishWeatherUntil(DateTime date, CancellationToken cancellationToken = default)
+    public async Task PublishWeatherUntil(DateTime date, ILogger? logger = null, CancellationToken cancellationToken = default)
+    {
+        const int MaxWeatherBatch = 500;
+        var weatherBatches = GetWeatherUntill(date, cancellationToken).Chunk(MaxWeatherBatch).ToList();
+
+        if (weatherBatches.Count == 0)
+        {
+            logger?.LogDebug("No weather data to publish.");
+            return;
+        }
+
+        logger?.LogInformation("Publishing {BatchNum} batches (Weather-data until {Untill}).",
+            weatherBatches.Count,
+            date);
+        int batchCount = 0;
+        foreach (var weatherBatch in weatherBatches)
+        {
+            await _eventBus.PublishWeatherAsync(weatherBatch).ConfigureAwait(false);
+            if (batchCount++ % 10 == 0)
+            {
+                logger?.LogInformation("Published {Count}/{Total} batches (Weather-data until {Untill}).",
+                    batchCount,
+                    weatherBatches.Count,
+                    date);
+            }
+        }
+    }
+
+    public IEnumerable<Weather> GetWeatherUntill(DateTime date, CancellationToken cancellationToken = default)
     {
         DateTime currentDate;
         if (_metar is null || _metar.Count < 1)
@@ -42,8 +71,8 @@ public class WeatherInjector
 
             while (currentDate < date && _metar.Count > 0 && !cancellationToken.IsCancellationRequested)
             {
-                await _eventBus.PublishWeatherAsync(_metar.Dequeue()).ConfigureAwait(false);
                 currentDate = _metar.Peek().ValidTo;
+                yield return _metar.Dequeue();
 
                 // If no more METAR then refill. If an empty queue is returned, the loop ends
                 if (_metar is null || _metar.Count < 1)
@@ -56,14 +85,14 @@ public class WeatherInjector
         if (_taf is null || _taf.Count < 1)
         {
             _taf = ReadNextFile(_tafFiles, "taf");
-            if (_taf.Count < 1) return;
+            if (_taf.Count < 1) { yield break; }
         }
         currentDate = _taf.Peek().ValidTo;
 
         while (currentDate < date && _taf.Count > 0 && !cancellationToken.IsCancellationRequested)
         {
-            await _eventBus.PublishWeatherAsync(_taf.Dequeue()).ConfigureAwait(false);
             currentDate = _taf.Peek().ValidTo;
+            yield return _taf.Dequeue();
 
             // If no more TAF then refill. If an empty queue is returned, the loop ends
             if (_taf is null || _taf.Count < 1)

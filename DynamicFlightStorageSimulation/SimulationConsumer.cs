@@ -25,6 +25,8 @@ namespace DynamicFlightStorageSimulation
             cleanState = true;
         }
 
+        public string ClientId => _simulationEventBus.ClientId;
+
         public async Task StartAsync()
         {
             if (!_simulationEventBus.IsConnected())
@@ -38,14 +40,14 @@ namespace DynamicFlightStorageSimulation
             cleanState = false;
             _weatherService.AddWeather(e.Weather);
             await _eventDataStore.AddWeatherAsync(e.Weather).ConfigureAwait(false);
-            _logger?.LogDebug("Processed weather event: {Weather}", e.Weather);
+            //_logger?.LogDebug("Processed weather event: {Weather}", e.Weather);
         }
 
         private async Task OnFlightRecieved(FlightStorageEvent e)
         {
             cleanState = false;
             await _eventDataStore.AddOrUpdateFlightAsync(e.Flight).ConfigureAwait(false);
-            _logger?.LogDebug("Processed flight event: {Flight}", e.Flight);
+            //_logger?.LogDebug("Processed flight event: {Flight}", e.Flight);
         }
 
         private async Task ResetStateAsync(string experimentId)
@@ -81,7 +83,7 @@ namespace DynamicFlightStorageSimulation
             switch (message.MessageType)
             {
                 case SystemMessage.SystemMessageType.LatencyRequest:
-                    await _simulationEventBus.PublishSystemMessage(new()
+                    await _simulationEventBus.PublishSystemMessage(new SystemMessage()
                     {
                         Message = message.Message,
                         TimeStamp = message.TimeStamp,

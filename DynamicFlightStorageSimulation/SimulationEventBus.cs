@@ -107,22 +107,22 @@ namespace DynamicFlightStorageSimulation
             systemMessageEventHandlers.Remove(handler);
         }
 
-        public Task PublishFlightAsync(Flight flight)
+        public Task PublishFlightAsync(params Flight[] flight)
         {
             return PublishMessageInternalAsync(_eventBusConfig.FlightTopic, MessagePackSerializer.Serialize(flight, _messagePackOptions));
         }
 
-        public Task PublishWeatherAsync(Weather weather)
+        public Task PublishWeatherAsync(params Weather[] weather)
         {
             return PublishMessageInternalAsync(_eventBusConfig.WeatherTopic, MessagePackSerializer.Serialize(weather, _messagePackOptions));
         }
 
-        public Task PublishRecalculationAsync(Flight flight)
+        public Task PublishRecalculationAsync(params Flight[] flight)
         {
             return PublishMessageInternalAsync(_eventBusConfig.RecalculationTopic, MessagePackSerializer.Serialize(flight, _messagePackOptions));
         }
 
-        public Task PublishSystemMessage(SystemMessage systemMessage)
+        public Task PublishSystemMessage(params SystemMessage[] systemMessage)
         {
             return PublishMessageInternalAsync(_eventBusConfig.SystemTopic, MessagePackSerializer.Serialize(systemMessage, _messagePackOptions));
         }
@@ -162,36 +162,45 @@ namespace DynamicFlightStorageSimulation
                 {
                     if (e.ApplicationMessage.Topic == _eventBusConfig.FlightTopic)
                     {
-                        var flight = MessagePackSerializer.Deserialize<Flight>(e.ApplicationMessage.PayloadSegment, _messagePackOptions);
-                        if (flight is not null)
+                        var flights = MessagePackSerializer.Deserialize<Flight[]>(e.ApplicationMessage.PayloadSegment, _messagePackOptions);
+                        if (flights is not null)
                         {
                             foreach (var handler in flightStorageEventHandlers)
                             {
-                                await handler(new FlightStorageEvent(flight)).ConfigureAwait(false);
+                                foreach (var flight in flights)
+                                {
+                                    await handler(new FlightStorageEvent(flight)).ConfigureAwait(false);
+                                }
                             }
                         }
                         e.IsHandled = true;
                     }
                     else if (e.ApplicationMessage.Topic == _eventBusConfig.WeatherTopic)
                     {
-                        var weather = MessagePackSerializer.Deserialize<Weather>(e.ApplicationMessage.PayloadSegment, _messagePackOptions);
-                        if (weather is not null)
+                        var weathers = MessagePackSerializer.Deserialize<Weather[]>(e.ApplicationMessage.PayloadSegment, _messagePackOptions);
+                        if (weathers is not null)
                         {
                             foreach (var handler in weatherEventHandlers)
                             {
-                                await handler(new WeatherEvent(weather)).ConfigureAwait(false);
+                                foreach (var weather in weathers)
+                                {
+                                    await handler(new WeatherEvent(weather)).ConfigureAwait(false);
+                                }
                             }
                         }
                         e.IsHandled = true;
                     }
                     else if (e.ApplicationMessage.Topic == _eventBusConfig.RecalculationTopic)
                     {
-                        var flight = MessagePackSerializer.Deserialize<Flight>(e.ApplicationMessage.PayloadSegment, _messagePackOptions);
-                        if (flight is not null)
+                        var flights = MessagePackSerializer.Deserialize<Flight[]>(e.ApplicationMessage.PayloadSegment, _messagePackOptions);
+                        if (flights is not null)
                         {
                             foreach (var handler in flightRecalculationEventHandlers)
                             {
-                                await handler(new FlightRecalculationEvent(flight)).ConfigureAwait(false);
+                                foreach (var flight in flights)
+                                {
+                                    await handler(new FlightRecalculationEvent(flight)).ConfigureAwait(false);
+                                }
                             }
                         }
                         e.IsHandled = true;
@@ -213,12 +222,15 @@ namespace DynamicFlightStorageSimulation
             }
             try
             {
-                var systemMessage = MessagePackSerializer.Deserialize<SystemMessage>(e.ApplicationMessage.PayloadSegment, _messagePackOptions);
-                if (systemMessage is not null)
+                var systemMessages = MessagePackSerializer.Deserialize<SystemMessage[]>(e.ApplicationMessage.PayloadSegment, _messagePackOptions);
+                if (systemMessages is not null)
                 {
                     foreach (var handler in systemMessageEventHandlers)
                     {
-                        _ = handler(new SystemMessageEvent(systemMessage));
+                        foreach (var message in systemMessages)
+                        {
+                            _ = handler(new SystemMessageEvent(message));
+                        }
                     }
                 }
                 e.IsHandled = true;

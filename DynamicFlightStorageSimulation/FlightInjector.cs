@@ -1,7 +1,9 @@
 namespace DynamicFlightStorageSimulation;
 
 using DynamicFlightStorageDTOs;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using System.Threading;
 
 public class FlightInjector
 {
@@ -13,7 +15,6 @@ public class FlightInjector
     {
         _eventBus = eventBus;
         _directoryPath = directoryPath;
-
     }
 
     private List<Flight> DeserializeFlights(string directoryPath)
@@ -39,11 +40,23 @@ public class FlightInjector
 
         }
 
-        //TODO: This should be sorted by DatePlanned instead
-        return flightList.OrderBy(x => x.ScheduledTimeOfDeparture).ToList();
+        return flightList.OrderBy(x => x.DatePlanned).ToList();
     }
 
-    public async Task PublishFlightsUntil(DateTime date, CancellationToken cancellationToken = default)
+    public async Task PublishFlightsUntil(DateTime date, ILogger? logger = null, CancellationToken cancellationToken = default)
+    {
+        const int MaxFlightBatch = 50;
+        var flightsToPublish = GetFlightsUntill(date, cancellationToken).Chunk(MaxFlightBatch).ToList();
+        logger?.LogInformation("Publishing {BatchNum} batches of flights until {Untill}.",
+            flightsToPublish.Count,
+            date);
+        foreach (var flightBatch in flightsToPublish)
+        {
+            await _eventBus.PublishFlightAsync(flightBatch).ConfigureAwait(false);
+        }
+    }
+
+    private IEnumerable<Flight> GetFlightsUntill(DateTime date, CancellationToken cancellationToken = default)
     {
         if (_flights is null)
         {
@@ -52,25 +65,27 @@ public class FlightInjector
 
         if (_flights.Count < 1)
         {
-            return;
+            yield break;
         }
 
-        var currentDate = _flights.Peek().ScheduledTimeOfDeparture;
+        var currentDate = _flights.Peek().DatePlanned;
         int i = 0;
         while (currentDate < date && !cancellationToken.IsCancellationRequested)
         {
-            await _eventBus.PublishFlightAsync(_flights.Dequeue()).ConfigureAwait(false);
+            yield return _flights.Dequeue();
+
             if (_flights.Count < 1)
             {
-                return;
+                yield break;
             }
-            currentDate = _flights.Peek().ScheduledTimeOfDeparture;
+            currentDate = _flights.Peek().DatePlanned;
             if (i++ > 30)
             {
-                return;
+                yield break;
             }
         }
     }
+
 
     public Queue<Flight> GetFlights()
     {

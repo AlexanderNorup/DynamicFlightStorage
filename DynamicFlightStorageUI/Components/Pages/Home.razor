@@ -49,7 +49,7 @@
 
         <div class="col-12 border rounded p-2">
             <h3>Consumer:</h3>
-            <p>The embedded consumer is enabled: @(consumer is not null)</p>
+            <p>The embedded consumer is enabled: @(consumer is not null)</p>            
             @if(consumer is null)
             {
 
@@ -57,6 +57,7 @@
             }
             else
             {
+                <p>Consumer id: <code>@consumer.ClientId</code></p>
                 <button class="btn btn-danger" @onclick="KillConsumer">Disable embedded consumer?</button>
             }
         </div>
@@ -122,10 +123,10 @@
     {
         Name = "Test Experiment",
         PreloadAllFlights = true,
-        SimulatedStartTime = new DateTime(2024, 8, 4, 00, 00, 00, DateTimeKind.Utc),
-        SimulatedEndTime = new DateTime(2024, 8, 5, 00, 00, 00, DateTimeKind.Utc),
-        SimulatedPreloadStartTime = new DateTime(2024, 8, 3, 20, 00, 00, DateTimeKind.Utc),
-        SimulatedPreloadEndTime = new DateTime(2024, 8, 3, 21, 00, 00, DateTimeKind.Utc),
+        SimulatedStartTime = new DateTime(2024, 10, 10, 00, 00, 00, DateTimeKind.Utc),
+        SimulatedEndTime = new DateTime(2024, 10, 11, 00, 00, 00, DateTimeKind.Utc),
+        SimulatedPreloadStartTime = new DateTime(2024, 10, 9, 00, 00, 00, DateTimeKind.Utc),
+        SimulatedPreloadEndTime = new DateTime(2024, 10, 10, 3, 00, 00, DateTimeKind.Utc),
     };
 
     protected override void OnInitialized()
