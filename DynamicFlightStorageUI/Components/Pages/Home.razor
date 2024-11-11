@@ -37,7 +37,7 @@
         </div>
         <div class="col-6 border rounded p-2">
             <h3>Orchestrator: <button class="btn btn-sm" @onclick="StateHasChanged">Refresh state</button></h3>
-            <p>An experiment is running: @(orchestrator.CurrentExperimentResult is not null)</p>
+            <p>An experiment is running: @(orchestrator.CheckExperimentRunning())</p>
             <p>Experiment time: @(orchestrator.CurrentSimulationTime)</p>
             <p>Orchestrator State: @(orchestrator.OrchestratorState)</p>
             <div class="mb-3">
@@ -133,13 +133,19 @@
         {
             orchestrator.SetExperiment(testExperiment);
         }
+        orchestrator.OnExperimentStateChanged += OnExperimentStateChanged;
         eventbus.SubscribeToRecalculationEvent(OnRecalculationEvent);
         latencyTester = new LatencyTester(eventbus, loggerFactory.CreateLogger<LatencyTester>());
     }
 
+    private void OnExperimentStateChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
     public void ExperimentClientIdUpdated(ChangeEventArgs e)
     {
-        orchestrator.ExperimentRunnerClientIds.Clear();
+        var newExperimentRunnerIds = new HashSet<string>();
         var newValue = e.Value as string;
         if (string.IsNullOrWhiteSpace(newValue))
         {
@@ -148,12 +154,17 @@
         var newClientIds = newValue.Split(",").Select(x => x.Trim()).Where(x => !string.IsNullOrWhiteSpace(x));
         foreach(var clientId in newClientIds)
         {
-            orchestrator.ExperimentRunnerClientIds.Add(clientId);
+            newExperimentRunnerIds.Add(clientId);
         }
+        orchestrator.ExperimentRunnerClientIds = newExperimentRunnerIds;
     }
 
     private void CreateConsumer()
     {
+        if(consumer is not null)
+        {
+            return;
+        }
         var weatherService = new WeatherService();
         consumer = new SimulationConsumer(eventbus,
             weatherService,
@@ -208,5 +219,6 @@
         consumer?.Dispose();   
         latencyTester?.Dispose();
         cts.Dispose();
+        orchestrator.OnExperimentStateChanged -= OnExperimentStateChanged;
     }
 }

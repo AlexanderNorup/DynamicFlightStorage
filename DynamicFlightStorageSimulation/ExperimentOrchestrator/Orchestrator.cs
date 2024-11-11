@@ -29,7 +29,21 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             _experimentChecker.Elapsed += (s, e) => CheckExperimentRunning();
             _experimentChecker.AutoReset = true;
         }
-        public HashSet<string> ExperimentRunnerClientIds { get; } = new HashSet<string>();
+
+
+        private HashSet<string> _experimentRunnerClientIds = new HashSet<string>();
+        public HashSet<string> ExperimentRunnerClientIds
+        {
+            get => _experimentRunnerClientIds;
+            set
+            {
+                if (value is not null)
+                {
+                    _experimentRunnerClientIds = value;
+                    OnExperimentStateChanged?.Invoke();
+                }
+            }
+        }
 
         public Experiment? CurrentExperiment { get; private set; }
         public Task? ExperimentTask { get; private set; }
@@ -40,6 +54,8 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
         public DateTime? CurrentSimulationTime { get; private set; }
         public DateTime? LastUpdateTime { get; private set; }
         public CancellationTokenSource ExperimentCancellationToken { get; private set; } = new();
+
+        public event Action OnExperimentStateChanged;
 
         public void SetExperiment(Experiment experiment)
         {
@@ -83,6 +99,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
                 _logger.LogInformation("Doing Experiment Preload");
                 OrchestratorState = OrchestratorState.Preloading;
+                OnExperimentStateChanged?.Invoke();
 
                 ExperimentCancellationToken = new CancellationTokenSource();
                 var result = await SendSystemMessageAndWaitForResponseAsync(new SystemMessage()
@@ -100,7 +117,6 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 }
 
                 // Do preload here.
-
                 await _weatherInjector.PublishWeatherUntil(CurrentExperiment.SimulatedPreloadEndTime, ExperimentCancellationToken.Token).ConfigureAwait(false);
 
                 if (CurrentExperiment.PreloadAllFlights)
@@ -129,6 +145,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             finally
             {
                 _experimentControllerSemaphore.Release();
+                OnExperimentStateChanged?.Invoke();
             }
         }
 
@@ -159,6 +176,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 {
                     return;
                 }
+                OrchestratorState = OrchestratorState.Starting;
 
                 ExperimentCancellationToken = new CancellationTokenSource();
 
@@ -197,6 +215,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             finally
             {
                 _experimentControllerSemaphore.Release();
+                OnExperimentStateChanged?.Invoke();
             }
         }
 
@@ -241,12 +260,15 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             ExperimentCancellationToken = new CancellationTokenSource();
             OrchestratorState = OrchestratorState.Idle;
             _experimentChecker.Stop();
+            OnExperimentStateChanged?.Invoke();
         }
 
         private SemaphoreSlim _abortSemaphore = new SemaphoreSlim(1, 1);
+
         public async Task AbortExperimentAsync()
         {
             await _abortSemaphore.WaitAsync().ConfigureAwait(false);
+            OrchestratorState = OrchestratorState.Aborting;
             try
             {
                 if (!ExperimentCancellationToken.IsCancellationRequested)
@@ -272,10 +294,10 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     }
                     ExperimentTask = null;
                 }
-                ResetExperimentState();
             }
             finally
             {
+                ResetExperimentState();
                 _abortSemaphore.Release();
             }
         }
@@ -304,6 +326,8 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     ResetExperimentState();
                     return;
                 }
+
+                OnExperimentStateChanged?.Invoke();
 
                 // Inject weather and flights up to CurrentSimulationTime
 
