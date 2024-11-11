@@ -240,6 +240,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 OrchestratorState = OrchestratorState.Running;
                 ExperimentTask = ExperimentLoop(); // Don't wait
                 _experimentChecker.Start();
+                _logger.LogInformation("Experiment successfully started!");
             }
             catch (Exception e)
             {
@@ -301,6 +302,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
         public async Task AbortExperimentAsync()
         {
+            _logger.LogWarning("Aborting experiment");
             await _abortSemaphore.WaitAsync().ConfigureAwait(false);
             OrchestratorState = OrchestratorState.Aborting;
             try
@@ -320,6 +322,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     // Will "Join the thread" and wait for completion.
                     try
                     {
+                        _logger.LogDebug("Joining the experiment task to wait for exit..");
                         await ExperimentTask.ConfigureAwait(false);
                     }
                     catch (Exception e) when (e is not OperationCanceledException)
@@ -331,6 +334,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             }
             finally
             {
+                _logger.LogWarning("Experiment aborted successfully!");
                 ResetExperimentState();
                 _abortSemaphore.Release();
             }
