@@ -1,0 +1,28 @@
+﻿@page "/manual"
+@inject SimulationEventBus eventbus
+<h1>Prototyping Dashboard!</h1>
+<div class="container mb-2">
+    <div class="row g-2 mb-2">
+        <div class="col-6 border rounded p-2">
+            <h3>Publish Weather:</h3>
+            <WeatherBuilder OnWeatherCreated="PublishWeather" />
+        </div>
+        <div class="col-6 border rounded p-2">
+            <h3>Publish Flight:</h3>
+            <FlightBuilder OnFlightCreated="PublishFlight" />
+        </div>
+    </div>
+</div>
+
+@code {
+
+    private async Task PublishWeather(Weather weather)
+    {
+        await eventbus.PublishWeatherAsync(weather).ConfigureAwait(false);
+    }
+
+    private async Task PublishFlight(Flight flight)
+    {
+        await eventbus.PublishFlightAsync(flight).ConfigureAwait(false);
+    }
+}

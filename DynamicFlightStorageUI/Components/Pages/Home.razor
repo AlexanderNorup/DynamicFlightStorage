@@ -2,7 +2,6 @@
 @using DynamicFlightStorageSimulation.ExperimentOrchestrator
 @using System.Text.Json
 @using DynamicFlightStorageSimulation.Utilities
-@using static DynamicFlightStorageUI.RunAndIgnore;
 @inject SimulationEventBus eventbus
 @inject Orchestrator orchestrator
 @inject ILoggerFactory loggerFactory
@@ -13,18 +12,41 @@
 
 <h1>Prototyping Dashboard!</h1>
 <div class="container mb-2">
-    <div class="row g-2 mb-2">
-        <div class="col-6 border rounded p-2">
-            <h3>Publish Weather:</h3>
-            <WeatherBuilder OnWeatherCreated="PublishWeather" />
-        </div>
-        <div class="col-6 border rounded p-2">
-            <h3>Publish Flight:</h3>
-            <FlightBuilder OnFlightCreated="PublishFlight" />
-        </div>
-    </div>
-
     <div class="row g-2">
+        <div class="col-12 border rounded p-2">
+            <h3>Orchestrator: <button class="btn btn-sm" @onclick="StateHasChanged">Refresh state</button></h3>
+            <p>An experiment is running: @(orchestrator.CheckExperimentRunning())</p>
+            <p>Experiment time: @(orchestrator.CurrentSimulationTime)</p>
+            <p>Orchestrator State: @(orchestrator.OrchestratorState)</p>
+            <div class="mb-3">
+                <label for="clientIds" class="form-label">Client IDs for experiment (separated by <code>,</code>)</label>
+                <input type="text" class="form-control" id="clientIds" @onchange="ExperimentClientIdUpdated" value="@(string.Join(',',orchestrator.ExperimentRunnerClientIds))">
+            </div>
+            <p>
+                Parsed client ids:
+                <ul>
+                    @foreach (var clientId in orchestrator.ExperimentRunnerClientIds)
+                    {
+                        <li>@clientId</li>
+                    }
+                </ul>
+            </p>
+            <button class="btn btn-outline-primary" @onclick="PreloadExperiment">Preload Data</button>
+            <button class="btn btn-primary" @onclick="StartExperiment">Start Experiment</button>
+            <button class="btn btn-danger" @onclick="AbortExpxeriment">Abort Experiment</button>
+            <button class="btn btn-secondary" @onclick="ResetExperiment">Reset Experiment</button>
+            <hr />
+            @if (orchestrator.CurrentExperimentResult is { } results)
+            {
+                <p>
+                    Current Experiment results:<br />
+                    <pre>@(JsonSerializer.Serialize(results, new JsonSerializerOptions() { WriteIndented = true }))</pre>
+                </p>
+            }
+            <h3>Logs:</h3>
+            <ul id="logList" class="logContainer list-unstyled"></ul>
+        </div>
+
         <div class="col-12 border rounded p-2">
             <h3>Consumer:</h3>
             <p>The embedded consumer is enabled: @(consumer is not null)</p>
@@ -38,38 +60,38 @@
                 <button class="btn btn-danger" @onclick="KillConsumer">Disable embedded consumer?</button>
             }
         </div>
+
         <div class="col-12 border rounded p-2">
-            <h3>Orchestrator: <button class="btn btn-sm" @onclick="StateHasChanged">Refresh state</button></h3>
-            <p>An experiment is running: @(orchestrator.CheckExperimentRunning())</p>
-            <p>Experiment time: @(orchestrator.CurrentSimulationTime)</p>
-            <p>Orchestrator State: @(orchestrator.OrchestratorState)</p>
-            <div class="mb-3">
-                <label for="clientIds" class="form-label">Client IDs for experiment (separated by <code>,</code>)</label>
-                <input type="text" class="form-control" id="clientIds" @onchange="ExperimentClientIdUpdated" value="@(string.Join(',',orchestrator.ExperimentRunnerClientIds))" >
-            </div>
-            <p>Parsed client ids:
-                <ul>
-                    @foreach(var clientId in orchestrator.ExperimentRunnerClientIds)
+            <h3>Recalculation events:</h3>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Message</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (recalculationLogs.Any())
                     {
-                        <li>@clientId</li>
+                        @foreach (var log in recalculationLogs)
+                        {
+                            <tr>
+                                <td>@log.Timestamp</td>
+                                <td>@log.Message</td>
+                            </tr>
+                        }
                     }
-                </ul>
-            </p>
-            <button class="btn btn-outline-primary" @onclick="async () => await orchestrator.RunExperimentPreloadAsync().IgnoringExceptions()">Preload Data</button>
-            <button class="btn btn-primary" @onclick="async () => await orchestrator.StartExperimentAsync().IgnoringExceptions()">Start Experiment</button>
-            <button class="btn btn-danger" @onclick="async () => await orchestrator.AbortExperimentAsync().IgnoringExceptions()">Abort Experiment</button>
-            <hr/>
-            @if(orchestrator.CurrentExperimentResult is {} results )
-            {
-                <p>
-                Current Experiment results:<br />
-                    <pre>@(JsonSerializer.Serialize(results, new JsonSerializerOptions() { WriteIndented = true }))</pre>
-                </p>
-            }
-            <h3>Logs:</h3>
-            <ul id="logList" class="logContainer list-unstyled"></ul>
+                    else
+                    {
+                        <tr>
+                            <td colspan="2" class="text-center">No flights signaled to be recalculated yet</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
-        <div class="col-12 border rounded p-2">
+
+       <div class="col-12 border rounded p-2">
             <h3>Latency Tester:</h3>
             <p>The latency tester is ready: @(latencyTester is not null)</p>
             @if (latencyTester is not null)
@@ -87,33 +109,6 @@
         </div>
     </div>
 </div>
-
-<h2>Recalculation events:</h2>
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Timestamp</th>
-            <th>Message</th>
-        </tr>
-    </thead>
-    <tbody>
-        @if(recalculationLogs.Any()){
-            @foreach(var log in recalculationLogs)
-            {
-                <tr>
-                    <td>@log.Timestamp</td>
-                    <td>@log.Message</td>
-                </tr>
-            }
-        }
-        else
-        {
-            <tr>
-                <td colspan="2" class="text-center">No flights signaled to be recalculated yet</td>
-            </tr>
-        }
-    </tbody>
-</table>
 
 @code {
     private CancellationTokenSource cts = new();
@@ -140,7 +135,7 @@
             orchestrator.SetExperiment(testExperiment);
         }
         orchestrator.OnExperimentStateChanged += OnExperimentStateChanged;
-        orchestrator.OnLogEvent += OnOrchestraorLog;
+        orchestrator.OnLogEvent += OnOrchestratorLog;
         eventbus.SubscribeToRecalculationEvent(OnRecalculationEvent);
         latencyTester = new LatencyTester(eventbus, loggerFactory.CreateLogger<LatencyTester>());
     }
@@ -161,7 +156,7 @@
         await base.OnAfterRenderAsync(firstRender);
     }
 
-    private void OnOrchestraorLog(LogEntry log)
+    private void OnOrchestratorLog(LogEntry log)
     {
         _ = jsRuntime.InvokeVoidAsync("logMessage", log);
     }
@@ -171,12 +166,60 @@
         _ = InvokeAsync(StateHasChanged);
     }
 
+    public async Task PreloadExperiment()
+    {
+        try
+        {
+            await orchestrator.RunExperimentPreloadAsync();
+        }catch(Exception e)
+        {
+            OnOrchestratorLog(new LogEntry(LogLevel.Error, "Local error starting preload.", e));
+        }
+    }
+
+    public async Task StartExperiment()
+    {
+        try
+        {
+            await orchestrator.StartExperimentAsync();
+        }
+        catch (Exception e)
+        {
+            OnOrchestratorLog(new LogEntry(LogLevel.Error, "Local error starting experiment.", e));
+        }
+    }
+
+    public async Task AbortExpxeriment()
+    {
+        try
+        {
+            await orchestrator.AbortExperimentAsync();
+        }
+        catch (Exception e)
+        {
+            OnOrchestratorLog(new LogEntry(LogLevel.Error, "Local error aborting experiment.", e));
+        }
+    }
+
+    public void ResetExperiment()
+    {
+        try
+        {
+            orchestrator.SetExperiment(testExperiment);
+        }
+        catch (Exception e)
+        {
+            OnOrchestratorLog(new LogEntry(LogLevel.Error, "Local error resetting experiment.", e));
+        }
+    }
+
     public void ExperimentClientIdUpdated(ChangeEventArgs e)
     {
         var newExperimentRunnerIds = new HashSet<string>();
         var newValue = e.Value as string;
         if (string.IsNullOrWhiteSpace(newValue))
         {
+            orchestrator.ExperimentRunnerClientIds = newExperimentRunnerIds;
             return;
         }
         var newClientIds = newValue.Split(",").Select(x => x.Trim()).Where(x => !string.IsNullOrWhiteSpace(x));
@@ -229,16 +272,6 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task PublishWeather(Weather weather)
-    {
-        await eventbus.PublishWeatherAsync(weather).ConfigureAwait(false);
-    }
-
-    private async Task PublishFlight(Flight flight)
-    {
-        await eventbus.PublishFlightAsync(flight).ConfigureAwait(false);
-    }
-
     private record RecalculationLogEntry(DateTime Timestamp, string Message);
 
     public void Dispose()
@@ -248,7 +281,7 @@
         latencyTester?.Dispose();
         cts.Dispose();
         orchestrator.OnExperimentStateChanged -= OnExperimentStateChanged;
-        orchestrator.OnLogEvent -= OnOrchestraorLog;
+        orchestrator.OnLogEvent -= OnOrchestratorLog;
         orchestratorLogs = null!;
     }
 }
