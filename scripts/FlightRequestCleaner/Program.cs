@@ -1,5 +1,6 @@
 ﻿using DynamicFlightStorageDTOs;
 using System.CommandLine;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Xml.Linq;
@@ -40,7 +41,16 @@ namespace FlightRequestCleaner
             {
                 try
                 {
+                    var containingDirectory = Path.GetFileName(Path.GetDirectoryName(filePath));
+
                     var flight = FlightConverter.ConvertFlight(reply);
+
+                    if (!DateTime.TryParseExact(containingDirectory, "yyyyMMdd HH-mm-ss-ffffff", CultureInfo.InvariantCulture, DateTimeStyles.AllowWhiteSpaces, out var plannedTime))
+                    {
+                        plannedTime = flight.ScheduledTimeOfDeparture.Subtract(TimeSpan.FromHours(5));
+                    };
+                    flight.DatePlanned = DateTime.SpecifyKind(plannedTime, DateTimeKind.Utc);
+
                     string fileOutPath = Path.Combine(output, GetFileName(flight) + ".json");
                     int i = 1;
                     while (File.Exists(fileOutPath))

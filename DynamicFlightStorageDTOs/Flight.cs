@@ -21,6 +21,8 @@ namespace DynamicFlightStorageDTOs
         public DateTime ScheduledTimeOfDeparture { get; set; }
         [Key(6)]
         public DateTime ScheduledTimeOfArrival { get; set; }
+        [Key(7)]
+        public DateTime DatePlanned { get; set; }
 
         public override bool Equals(object? obj)
         {
