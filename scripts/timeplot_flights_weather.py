@@ -6,9 +6,9 @@ import pytz
 import matplotlib.dates as mdates
 
 # Adjust as needed
-metar_dir = 'metar/'
-taf_dir = 'taf/'
-flight_dir = 'cleanflights/'
+metar_dir = '/home/sebastian/Desktop/thesis/weather_clean_2024_10_11/metar/'
+taf_dir = '/home/sebastian/Desktop/thesis/weather_clean_2024_10_11/taf/'
+flight_dir = '/home/sebastian/Desktop/thesis/2024_10_10_flights/'
 
 weather_dates = []
 flight_dates = []
@@ -93,6 +93,8 @@ full_time_index = pd.date_range(start=start_time, end=end_time, freq='h')
 # reindex to full time index
 combined_counts_resampled = combined_counts.set_index('DateHour').reindex(full_time_index)
 
+'''
+
 # plotting 
 fig, ax1 = plt.subplots(figsize=(12, 6))
 
@@ -121,3 +123,4 @@ plt.setp(ax1.xaxis.get_majorticklabels(), rotation=70)
 
 plt.tight_layout()
 plt.show()
+'''

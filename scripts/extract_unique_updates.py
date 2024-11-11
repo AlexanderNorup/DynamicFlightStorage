@@ -1,26 +1,37 @@
-import json, os
+import json, os, re, sys, argparse
 from datetime import datetime
+
 
 # Used to sort
 def get_date(item):
     return datetime.strptime(item['DateIssued'], '%Y-%m-%dT%H:%M:%SZ')
 
-# either 'taf' or 'metar'. Requires that the working directory contains a folder 
-# 'metar-taf-speciale' which itself contains 'taf' and 'metar' folders with respective json files
-entry_type = 'taf'
 
-# metar2024-08-03T22... -> metar2024-08-04T21...
-hour_categories = [f'{entry_type}2024-08-04T{i:02}' for i in range(23)]
+parser = argparse.ArgumentParser()
+parser.add_argument("-d", "--Directory", help = "Directory to read from")
+parser.add_argument("-o", "--Output", help = "Output directory (defaults to .)")
+args = parser.parse_args()
 
-hour_categories.extend([
-    f'{entry_type}2024-08-03T22',
-    f'{entry_type}2024-08-03T23',
-])
+if (args.Directory):
+    directory_path = args.Directory
+else:
+    directory_path = '.'
 
-directory_path = f'metar-taf-speciale/{entry_type}'
+if (args.Output):
+    output_directory = args.Output
+else:
+    output_directory = '.'
+
+pattern = r"^(taf|metar)\d{4}-\d{2}-\d{2}T\d{2}"
+unique_hours = set()
+
+for filename in os.listdir(directory_path):
+    if re.match(pattern, filename):
+        prefix = re.match(pattern, filename).group(0)
+        unique_hours.add(prefix)
 
 # For each hour run this loop that writes a new file
-for hour in hour_categories:
+for hour in unique_hours:
     # Get all files for this hour
     hourly_files = [filename for filename in os.listdir(directory_path) if filename.startswith(hour)]
 
@@ -45,7 +56,7 @@ for hour in hour_categories:
                 except KeyError:
                     continue
                 
-    file_path = f'{hour}.json'
+    file_path = os.path.join(output_directory, f'{hour}.json')
 
     # Sort based on date, then write
     if len(list_to_write) > 0:
