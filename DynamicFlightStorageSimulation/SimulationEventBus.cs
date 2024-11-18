@@ -34,7 +34,7 @@ namespace DynamicFlightStorageSimulation
 
         private HashSet<Func<Flight, Task>> flightStorageEventHandlers = new();
         private HashSet<Func<Weather, Task>> weatherEventHandlers = new();
-        private HashSet<Func<Flight, Task>> flightRecalculationEventHandlers = new();
+        private HashSet<Func<FlightRecalculation, Task>> flightRecalculationEventHandlers = new();
         private HashSet<Func<SystemMessage, Task>> systemMessageEventHandlers = new();
 
         public string CurrentExperimentId { get; private set; } = string.Empty;
@@ -113,7 +113,7 @@ namespace DynamicFlightStorageSimulation
             weatherEventHandlers.Add(handler);
         }
 
-        public void SubscribeToRecalculationEvent(Func<Flight, Task> handler)
+        public void SubscribeToRecalculationEvent(Func<FlightRecalculation, Task> handler)
         {
             flightRecalculationEventHandlers.Add(handler);
         }
@@ -133,7 +133,7 @@ namespace DynamicFlightStorageSimulation
             weatherEventHandlers.Remove(handler);
         }
 
-        public void UnSubscribeToRecalculationEvent(Func<Flight, Task> handler)
+        public void UnSubscribeToRecalculationEvent(Func<FlightRecalculation, Task> handler)
         {
             flightRecalculationEventHandlers.Remove(handler);
         }
@@ -155,7 +155,13 @@ namespace DynamicFlightStorageSimulation
 
         public Task PublishRecalculationAsync(Flight flight)
         {
-            return PublishMessageInternalAsync(string.Empty, MessagePackSerializer.Serialize(flight, _messagePackOptions), _eventBusConfig.RecalculationTopic);
+            var recalculation = new FlightRecalculation()
+            {
+                Flight = flight,
+                ExperimentId = CurrentExperimentId,
+                RecalculatedTime = DateTime.UtcNow
+            };
+            return PublishMessageInternalAsync(string.Empty, MessagePackSerializer.Serialize(recalculation, _messagePackOptions), _eventBusConfig.RecalculationTopic);
         }
 
         public Task PublishSystemMessage(SystemMessage systemMessage)
