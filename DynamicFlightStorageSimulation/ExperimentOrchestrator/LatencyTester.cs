@@ -1,5 +1,4 @@
 ﻿using DynamicFlightStorageDTOs;
-using DynamicFlightStorageSimulation.Events;
 using DynamicFlightStorageSimulation.Utilities;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
@@ -110,9 +109,8 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             }
         }
 
-        private Task OnSystemMessage(SystemMessageEvent e)
+        private Task OnSystemMessage(SystemMessage message)
         {
-            var message = e.SystemMessage;
             if (message.MessageType is not SystemMessage.SystemMessageType.LatencyResponse)
             {
                 return Task.CompletedTask;

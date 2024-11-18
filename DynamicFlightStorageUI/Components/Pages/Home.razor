@@ -336,9 +336,9 @@
         });
     }
 
-    private async Task OnRecalculationEvent(DynamicFlightStorageSimulation.Events.FlightRecalculationEvent e)
+    private async Task OnRecalculationEvent(Flight flight)
     {
-        recalculationLogs.Add(new(DateTime.UtcNow, e.Flight.ToString()));
+        recalculationLogs.Add(new(DateTime.UtcNow, flight.ToString()));
         await InvokeAsync(StateHasChanged);
     }
 

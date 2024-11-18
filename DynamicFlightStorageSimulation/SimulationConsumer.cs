@@ -1,5 +1,4 @@
 ﻿using DynamicFlightStorageDTOs;
-using DynamicFlightStorageSimulation.Events;
 using Microsoft.Extensions.Logging;
 
 namespace DynamicFlightStorageSimulation
@@ -35,18 +34,18 @@ namespace DynamicFlightStorageSimulation
             }
         }
 
-        private async Task OnWeatherRecieved(WeatherEvent e)
+        private async Task OnWeatherRecieved(Weather weather)
         {
             cleanState = false;
-            _weatherService.AddWeather(e.Weather);
-            await _eventDataStore.AddWeatherAsync(e.Weather).ConfigureAwait(false);
+            _weatherService.AddWeather(weather);
+            await _eventDataStore.AddWeatherAsync(weather).ConfigureAwait(false);
             //_logger?.LogDebug("Processed weather event: {Weather}", e.Weather);
         }
 
-        private async Task OnFlightRecieved(FlightStorageEvent e)
+        private async Task OnFlightRecieved(Flight flight)
         {
             cleanState = false;
-            await _eventDataStore.AddOrUpdateFlightAsync(e.Flight).ConfigureAwait(false);
+            await _eventDataStore.AddOrUpdateFlightAsync(flight).ConfigureAwait(false);
             //_logger?.LogDebug("Processed flight event: {Flight}", e.Flight);
         }
 
@@ -77,9 +76,8 @@ namespace DynamicFlightStorageSimulation
             });
         }
 
-        private async Task OnSystemMessage(SystemMessageEvent e)
+        private async Task OnSystemMessage(SystemMessage message)
         {
-            var message = e.SystemMessage;
             switch (message.MessageType)
             {
                 case SystemMessage.SystemMessageType.LatencyRequest:

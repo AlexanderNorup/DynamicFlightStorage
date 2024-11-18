@@ -410,13 +410,13 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
         {
             var waitingFor = new HashSet<string>(ExperimentRunnerClientIds);
             var responses = new List<SystemMessage>();
-            SystemMessageEventHandler listener = (e) =>
+            Func<SystemMessage, Task> listener = (systemMessage) =>
             {
-                if (e.SystemMessage.MessageType == eventToWaitFor
-                    && e.SystemMessage.Message == messageToSend.Message)
+                if (systemMessage.MessageType == eventToWaitFor
+                    && systemMessage.Message == messageToSend.Message)
                 {
-                    responses.Add(e.SystemMessage);
-                    waitingFor.Remove(e.SystemMessage.Source);
+                    responses.Add(systemMessage);
+                    waitingFor.Remove(systemMessage.Source);
                 }
                 return Task.CompletedTask;
             };

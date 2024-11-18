@@ -1,10 +1,8 @@
 ﻿using DynamicFlightStorageDTOs;
-using DynamicFlightStorageSimulation.Events;
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
-using System.Threading.Channels;
 
 namespace DynamicFlightStorageSimulation
 {
@@ -33,15 +31,14 @@ namespace DynamicFlightStorageSimulation
             _messagePackOptions = MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4Block);
         }
 
-        public delegate Task FlightStorageEventHandler(FlightStorageEvent e);
-        public delegate Task WeatherEventHandler(WeatherEvent e);
-        public delegate Task FlightRecalculationEventHandler(FlightRecalculationEvent e);
-        public delegate Task SystemMessageEventHandler(SystemMessageEvent e);
+        public delegate Task FlightStorageEventHandler(Flight e);
+        public delegate Task WeatherEventHandler(Weather e);
+        public delegate Task FlightRecalculationEventHandler(Flight e);
 
         private HashSet<FlightStorageEventHandler> flightStorageEventHandlers = new();
         private HashSet<WeatherEventHandler> weatherEventHandlers = new();
         private HashSet<FlightRecalculationEventHandler> flightRecalculationEventHandlers = new();
-        private HashSet<SystemMessageEventHandler> systemMessageEventHandlers = new();
+        private HashSet<Func<SystemMessage, Task>> systemMessageEventHandlers = new();
 
         public string ClientId => _rabbitConnection?.ClientProvidedName ?? string.Empty;
 
@@ -60,7 +57,7 @@ namespace DynamicFlightStorageSimulation
             flightRecalculationEventHandlers.Add(handler);
         }
 
-        public void SubscribeToSystemEvent(SystemMessageEventHandler handler)
+        public void SubscribeToSystemEvent(Func<SystemMessage, Task> handler)
         {
             systemMessageEventHandlers.Add(handler);
         }
@@ -80,7 +77,7 @@ namespace DynamicFlightStorageSimulation
             flightRecalculationEventHandlers.Remove(handler);
         }
 
-        public void UnSubscribeToSystemEvent(SystemMessageEventHandler handler)
+        public void UnSubscribeToSystemEvent(Func<SystemMessage, Task> handler)
         {
             systemMessageEventHandlers.Remove(handler);
         }
@@ -97,7 +94,7 @@ namespace DynamicFlightStorageSimulation
 
         public Task PublishRecalculationAsync(params Flight[] flight)
         {
-            return PublishMessageInternalAsync(_eventBusConfig.RecalculationTopic, MessagePackSerializer.Serialize(flight, _messagePackOptions));
+            return PublishMessageInternalAsync(string.Empty, MessagePackSerializer.Serialize(flight, _messagePackOptions), _eventBusConfig.RecalculationTopic);
         }
 
         public Task PublishSystemMessage(params SystemMessage[] systemMessage)
@@ -105,14 +102,14 @@ namespace DynamicFlightStorageSimulation
             return PublishMessageInternalAsync(_eventBusConfig.SystemTopic, MessagePackSerializer.Serialize(systemMessage, _messagePackOptions));
         }
 
-        private async Task PublishMessageInternalAsync(string exchange, byte[] payload)
+        private async Task PublishMessageInternalAsync(string exchange, byte[] payload, string routingKey = "")
         {
             if (!IsConnected() || _rabbitChannel is null)
             {
                 throw new InvalidOperationException("Not connected to the event bus.");
             }
 
-            await _rabbitChannel.BasicPublishAsync(exchange: exchange, string.Empty, payload);
+            await _rabbitChannel.BasicPublishAsync(exchange: exchange, routingKey, payload);
         }
 
         public async Task ConnectAsync()
@@ -135,7 +132,13 @@ namespace DynamicFlightStorageSimulation
                 routingKey: string.Empty);
 
             var systemConsumer = new AsyncEventingBasicConsumer(_rabbitChannel);
-            systemConsumer.ReceivedAsync += HandleSystemMessage;
+            var systemMessageEventHandler = SimulationEventHandlerFactory.GetEventHandler(
+                systemMessageEventHandlers,
+                _rabbitChannel,
+                _messagePackOptions,
+                _logger);
+
+            systemConsumer.ReceivedAsync += systemMessageEventHandler;
             await _rabbitChannel.BasicConsumeAsync(queue: queueName, autoAck: false, consumer: systemConsumer);
 
             //_rabbitConnection.ApplicationMessageReceivedAsync += async (e) =>
@@ -195,37 +198,6 @@ namespace DynamicFlightStorageSimulation
             //        // TODO: Do something here, because this should invalidate the experiment.
             //    }
             //};
-        }
-
-        private async Task HandleSystemMessage(object e, BasicDeliverEventArgs ea)
-        {
-            if (_rabbitChannel is null)
-            {
-                return;
-            }
-            try
-            {
-                var systemMessages = MessagePackSerializer.Deserialize<SystemMessage[]>(ea.Body, _messagePackOptions);
-                var tasks = new List<Task>(systemMessageEventHandlers.Count * systemMessages.Length);
-                if (systemMessages is not null)
-                {
-                    foreach (var handler in systemMessageEventHandlers)
-                    {
-                        foreach (var message in systemMessages)
-                        {
-                            tasks.Add(handler(new SystemMessageEvent(message)));
-                        }
-                    }
-                }
-                await Task.WhenAll(tasks).ConfigureAwait(false);
-                await _rabbitChannel.BasicAckAsync(ea.DeliveryTag, false);
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Exception of type {Name} while processing system message from {Exchange}",
-                    ex.GetType().FullName,
-                    ea.Exchange);
-            }
         }
 
         public async Task DisconnectAsync()
