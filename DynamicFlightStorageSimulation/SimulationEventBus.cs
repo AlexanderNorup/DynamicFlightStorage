@@ -1,5 +1,4 @@
 ﻿using DynamicFlightStorageDTOs;
-using DynamicFlightStorageSimulation.ExperimentOrchestrator;
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
@@ -201,6 +200,7 @@ namespace DynamicFlightStorageSimulation
                     _eventBusConfig.Host, ClientId);
 
                 _rabbitChannel = await _rabbitConnection.CreateChannelAsync();
+                await _rabbitChannel.BasicQosAsync(0, _eventBusConfig.MaxPrefetchPerConsumer, false);
                 await _rabbitChannel.ExchangeDeclareAsync(_eventBusConfig.SystemTopic, ExchangeType.Fanout);
                 await _rabbitChannel.ExchangeDeclareAsync(_eventBusConfig.RecalculationTopic, ExchangeType.Fanout);
                 await RegisterQueueAndHandleAsync(systemMessageEventHandlers, SystemQueueName, exchangeToBind: _eventBusConfig.SystemTopic);

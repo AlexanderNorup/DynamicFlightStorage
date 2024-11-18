@@ -27,6 +27,8 @@ namespace DynamicFlightStorageSimulation
         [Required]
         public required string SystemTopic { get; set; }
 
+        public ushort MaxPrefetchPerConsumer { get; set; } = 7500;
+
         public static EventBusConfig GetEmpty()
         {
             return new EventBusConfig()
