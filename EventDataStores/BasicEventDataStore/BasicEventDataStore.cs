@@ -19,6 +19,7 @@ namespace BasicEventDataStore
             {
                 // Update the flight in the datastore
                 foundFlight.LastSeenCategories = GetWeatherCategoriesForFlight(flight);
+                foundFlight.ToBeRecalculated = false;
             }
             else
             {
@@ -39,7 +40,8 @@ namespace BasicEventDataStore
             {
                 var flight = flightWrapper.Flight;
                 if (WeatherOverlapsFlight(flight, weather)
-                    && IsAirportInFlight(flight, weather.Airport))
+                    && IsAirportInFlight(flight, weather.Airport)
+                    && !flightWrapper.ToBeRecalculated)
                 {
                     // Check for airport last seen weather
                     if (flightWrapper.LastSeenCategories.TryGetValue(weather.Airport, out var lastSeenCat)
@@ -47,6 +49,7 @@ namespace BasicEventDataStore
                     {
                         // We need to recalculate
                         Console.WriteLine($"Recalculate flight: {flight.FlightIdentification}");
+                        flightWrapper.ToBeRecalculated = true;
                         await _flightRecalculation.PublishRecalculationAsync(flight).ConfigureAwait(false);
                     }
                 }
