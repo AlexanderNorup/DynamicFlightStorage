@@ -47,7 +47,7 @@ public class FlightInjector
         return flightList.OrderBy(x => x.DatePlanned).ToList();
     }
 
-    public async Task PublishFlightsUntil(DateTime date, ILogger? logger = null, CancellationToken cancellationToken = default)
+    public async Task PublishFlightsUntil(DateTime date, string experimentId, ILogger? logger = null, CancellationToken cancellationToken = default)
     {
         var flightsToPublish = GetFlightsUntill(date, cancellationToken).ToList();
         if (flightsToPublish.Count == 0)
@@ -63,7 +63,7 @@ public class FlightInjector
         int flightCount = 0;
         foreach (var flightBatch in flightsToPublish)
         {
-            await _eventBus.PublishFlightAsync(flightBatch).ConfigureAwait(false);
+            await _eventBus.PublishFlightAsync(flightBatch, experimentId).ConfigureAwait(false);
             if (++flightCount % 10 == 0)
             {
                 logger?.LogDebug("Published {Count}/{Total} flights (untill {Untill}).",

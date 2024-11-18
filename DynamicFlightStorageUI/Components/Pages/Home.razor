@@ -336,7 +336,7 @@
         });
     }
 
-    private async Task OnRecalculationEvent(Flight flight)
+    private async Task OnRecalculationEvent(FlightRecalculation flight)
     {
         recalculationLogs.Add(new(DateTime.UtcNow, flight.ToString()));
         await InvokeAsync(StateHasChanged);

@@ -2,6 +2,12 @@
 @inject SimulationEventBus eventbus
 <h1>Prototyping Dashboard!</h1>
 <div class="container mb-2">
+    <div class="row">
+        <div class="mb-3">
+            <label for="experimentIdInput" class="form-label">Current Experiment Id:</label>
+            <input type="text" class="form-control" id="experimentIdInput" @bind="CurrentExperimentId">
+        </div>
+    </div>
     <div class="row g-2 mb-2">
         <div class="col-6 border rounded p-2">
             <h3>Publish Weather:</h3>
@@ -15,14 +21,14 @@
 </div>
 
 @code {
-
+    private string CurrentExperimentId { get; set; } = Guid.NewGuid().ToString();
     private async Task PublishWeather(Weather weather)
     {
-        await eventbus.PublishWeatherAsync(weather).ConfigureAwait(false);
+        await eventbus.PublishWeatherAsync(weather, CurrentExperimentId).ConfigureAwait(false);
     }
 
     private async Task PublishFlight(Flight flight)
     {
-        await eventbus.PublishFlightAsync(flight).ConfigureAwait(false);
+        await eventbus.PublishFlightAsync(flight, CurrentExperimentId).ConfigureAwait(false);
     }
 }

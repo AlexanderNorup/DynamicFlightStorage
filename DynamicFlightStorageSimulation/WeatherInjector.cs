@@ -37,7 +37,7 @@ public class WeatherInjector
         _tafFiles = new(FindFiles(_tafPath));
     }
 
-    public async Task PublishWeatherUntil(DateTime date, ILogger? logger = null, CancellationToken cancellationToken = default)
+    public async Task PublishWeatherUntil(DateTime date, string experimentId, ILogger? logger = null, CancellationToken cancellationToken = default)
     {
         var weatherBatches = GetWeatherUntill(date, cancellationToken).ToList();
 
@@ -53,7 +53,7 @@ public class WeatherInjector
         int weatherCount = 0;
         foreach (var weatherBatch in weatherBatches)
         {
-            await _eventBus.PublishWeatherAsync(weatherBatch).ConfigureAwait(false);
+            await _eventBus.PublishWeatherAsync(weatherBatch, experimentId).ConfigureAwait(false);
             if (++weatherCount % 10 == 0)
             {
                 logger?.LogDebug("Published {Count}/{Total} weather batches (untill {Untill}).",
