@@ -2,32 +2,34 @@
 using DynamicFlightStorageSimulation.Events;
 using MessagePack;
 using Microsoft.Extensions.Logging;
-using MQTTnet;
-using MQTTnet.Client;
-using MQTTnet.Protocol;
+using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
+using System.Threading.Channels;
 
 namespace DynamicFlightStorageSimulation
 {
     public class SimulationEventBus : IRecalculateFlightEventPublisher, IDisposable
     {
         private readonly ILogger<SimulationEventBus>? _logger;
-        private readonly IMqttClient _mqttClient;
+        private IConnection? _rabbitConnection;
+        private IChannel? _rabbitChannel;
+        private readonly ConnectionFactory _rabbitConnectionFactory;
         private readonly EventBusConfig _eventBusConfig;
-        private readonly MqttClientOptions _mqttClientOptions;
+
         private readonly MessagePackSerializerOptions _messagePackOptions;
         public SimulationEventBus(EventBusConfig eventBusConfig, ILogger<SimulationEventBus> logger)
         {
             _logger = logger;
             _eventBusConfig = eventBusConfig ?? throw new ArgumentNullException(nameof(eventBusConfig));
 
-            _mqttClientOptions = new MqttClientOptionsBuilder()
-                .WithClientId($"{System.Net.Dns.GetHostName()}_{Guid.NewGuid()}")
-                .WithTcpServer(_eventBusConfig.Host)
-                .WithCredentials(_eventBusConfig.Username, _eventBusConfig.Password)
-                .WithCleanSession()
-                .Build();
+            _rabbitConnectionFactory = new ConnectionFactory()
+            {
+                HostName = _eventBusConfig.Host,
+                UserName = _eventBusConfig.Username,
+                Password = _eventBusConfig.Password,
+                ClientProvidedName = $"{_eventBusConfig.FriendlyClientName ?? System.Net.Dns.GetHostName()}_{Guid.NewGuid()}",
+            };
 
-            _mqttClient = new MqttFactory().CreateMqttClient();
             _messagePackOptions = MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4Block);
         }
 
@@ -41,32 +43,20 @@ namespace DynamicFlightStorageSimulation
         private HashSet<FlightRecalculationEventHandler> flightRecalculationEventHandlers = new();
         private HashSet<SystemMessageEventHandler> systemMessageEventHandlers = new();
 
-        public string ClientId => _mqttClient.Options.ClientId;
+        public string ClientId => _rabbitConnection?.ClientProvidedName ?? string.Empty;
 
         public void SubscribeToFlightStorageEvent(FlightStorageEventHandler handler)
         {
-            if (flightStorageEventHandlers.Count == 0)
-            {
-                _mqttClient.SubscribeAsync(_eventBusConfig.FlightTopic).GetAwaiter().GetResult();
-            }
             flightStorageEventHandlers.Add(handler);
         }
 
         public void SubscribeToWeatherEvent(WeatherEventHandler handler)
         {
-            if (weatherEventHandlers.Count == 0)
-            {
-                _mqttClient.SubscribeAsync(_eventBusConfig.WeatherTopic).GetAwaiter().GetResult();
-            }
             weatherEventHandlers.Add(handler);
         }
 
         public void SubscribeToRecalculationEvent(FlightRecalculationEventHandler handler)
         {
-            if (flightRecalculationEventHandlers.Count == 0)
-            {
-                _mqttClient.SubscribeAsync(_eventBusConfig.RecalculationTopic).GetAwaiter().GetResult();
-            }
             flightRecalculationEventHandlers.Add(handler);
         }
 
@@ -78,28 +68,16 @@ namespace DynamicFlightStorageSimulation
         public void UnSubscribeToFlightStorageEvent(FlightStorageEventHandler handler)
         {
             flightStorageEventHandlers.Remove(handler);
-            if (flightStorageEventHandlers.Count == 0)
-            {
-                _mqttClient.UnsubscribeAsync(_eventBusConfig.FlightTopic).GetAwaiter().GetResult();
-            }
         }
 
         public void UnSubscribeToWeatherEvent(WeatherEventHandler handler)
         {
             weatherEventHandlers.Remove(handler);
-            if (weatherEventHandlers.Count == 0)
-            {
-                _mqttClient.UnsubscribeAsync(_eventBusConfig.WeatherTopic).GetAwaiter().GetResult();
-            }
         }
 
         public void UnSubscribeToRecalculationEvent(FlightRecalculationEventHandler handler)
         {
             flightRecalculationEventHandlers.Remove(handler);
-            if (flightRecalculationEventHandlers.Count == 0)
-            {
-                _mqttClient.UnsubscribeAsync(_eventBusConfig.RecalculationTopic).GetAwaiter().GetResult();
-            }
         }
 
         public void UnSubscribeToSystemEvent(SystemMessageEventHandler handler)
@@ -127,128 +105,140 @@ namespace DynamicFlightStorageSimulation
             return PublishMessageInternalAsync(_eventBusConfig.SystemTopic, MessagePackSerializer.Serialize(systemMessage, _messagePackOptions));
         }
 
-        private async Task PublishMessageInternalAsync(string topic, byte[] payload)
+        private async Task PublishMessageInternalAsync(string exchange, byte[] payload)
         {
-            if (!IsConnected())
+            if (!IsConnected() || _rabbitChannel is null)
             {
                 throw new InvalidOperationException("Not connected to the event bus.");
             }
 
-            var message = new MqttApplicationMessageBuilder()
-                .WithTopic(topic)
-                .WithPayload(payload)
-                .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.ExactlyOnce)
-                .Build();
-
-            await _mqttClient.PublishAsync(message).ConfigureAwait(false);
+            await _rabbitChannel.BasicPublishAsync(exchange: exchange, string.Empty, payload);
         }
 
         public async Task ConnectAsync()
         {
-            await _mqttClient.ConnectAsync(_mqttClientOptions);
-
-            _logger?.LogInformation("Connected to MQTT {Host} as {ClientId}",
-                _eventBusConfig.Host, _mqttClientOptions.ClientId);
-
-            await _mqttClient.SubscribeAsync(_eventBusConfig.SystemTopic);
-
-            // System messages requires it's own handler as we want to process them in parallel.
-            _mqttClient.ApplicationMessageReceivedAsync += HandleSystemMessage;
-
-            _mqttClient.ApplicationMessageReceivedAsync += async (e) =>
+            if (IsConnected())
             {
-                e.AutoAcknowledge = true;
-                try
-                {
-                    if (e.ApplicationMessage.Topic == _eventBusConfig.FlightTopic)
-                    {
-                        var flights = MessagePackSerializer.Deserialize<Flight[]>(e.ApplicationMessage.PayloadSegment, _messagePackOptions);
-                        if (flights is not null)
-                        {
-                            foreach (var handler in flightStorageEventHandlers)
-                            {
-                                foreach (var flight in flights)
-                                {
-                                    await handler(new FlightStorageEvent(flight)).ConfigureAwait(false);
-                                }
-                            }
-                        }
-                        e.IsHandled = true;
-                    }
-                    else if (e.ApplicationMessage.Topic == _eventBusConfig.WeatherTopic)
-                    {
-                        var weathers = MessagePackSerializer.Deserialize<Weather[]>(e.ApplicationMessage.PayloadSegment, _messagePackOptions);
-                        if (weathers is not null)
-                        {
-                            foreach (var handler in weatherEventHandlers)
-                            {
-                                foreach (var weather in weathers)
-                                {
-                                    await handler(new WeatherEvent(weather)).ConfigureAwait(false);
-                                }
-                            }
-                        }
-                        e.IsHandled = true;
-                    }
-                    else if (e.ApplicationMessage.Topic == _eventBusConfig.RecalculationTopic)
-                    {
-                        var flights = MessagePackSerializer.Deserialize<Flight[]>(e.ApplicationMessage.PayloadSegment, _messagePackOptions);
-                        if (flights is not null)
-                        {
-                            foreach (var handler in flightRecalculationEventHandlers)
-                            {
-                                foreach (var flight in flights)
-                                {
-                                    await handler(new FlightRecalculationEvent(flight)).ConfigureAwait(false);
-                                }
-                            }
-                        }
-                        e.IsHandled = true;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger?.LogError(ex, "Exception of type {Name} while processing message from {Topic}", ex.GetType().FullName, e.ApplicationMessage.Topic);
-                    // TODO: Do something here, because this should invalidate the experiment.
-                }
-            };
+                return;
+            }
+            _rabbitConnection = await _rabbitConnectionFactory.CreateConnectionAsync();
+
+            _logger?.LogInformation("Connected to RabbitMQ {Host} as {ClientId}",
+                _eventBusConfig.Host, ClientId);
+
+            _rabbitChannel = await _rabbitConnection.CreateChannelAsync();
+            await _rabbitChannel.ExchangeDeclareAsync(_eventBusConfig.SystemTopic, ExchangeType.Fanout);
+            var queueName = $"system_{ClientId}";
+            await _rabbitChannel.QueueDeclareAsync(queue: queueName);
+            await _rabbitChannel.QueueBindAsync(queue: queueName,
+                exchange: _eventBusConfig.SystemTopic,
+                routingKey: string.Empty);
+
+            var systemConsumer = new AsyncEventingBasicConsumer(_rabbitChannel);
+            systemConsumer.ReceivedAsync += HandleSystemMessage;
+            await _rabbitChannel.BasicConsumeAsync(queue: queueName, autoAck: false, consumer: systemConsumer);
+
+            //_rabbitConnection.ApplicationMessageReceivedAsync += async (e) =>
+            //{
+            //    e.AutoAcknowledge = true;
+            //    try
+            //    {
+            //        if (e.ApplicationMessage.Topic == _eventBusConfig.FlightTopic)
+            //        {
+            //            var flights = MessagePackSerializer.Deserialize<Flight[]>(e.ApplicationMessage.PayloadSegment, _messagePackOptions);
+            //            if (flights is not null)
+            //            {
+            //                foreach (var handler in flightStorageEventHandlers)
+            //                {
+            //                    foreach (var flight in flights)
+            //                    {
+            //                        await handler(new FlightStorageEvent(flight)).ConfigureAwait(false);
+            //                    }
+            //                }
+            //            }
+            //            e.IsHandled = true;
+            //        }
+            //        else if (e.ApplicationMessage.Topic == _eventBusConfig.WeatherTopic)
+            //        {
+            //            var weathers = MessagePackSerializer.Deserialize<Weather[]>(e.ApplicationMessage.PayloadSegment, _messagePackOptions);
+            //            if (weathers is not null)
+            //            {
+            //                foreach (var handler in weatherEventHandlers)
+            //                {
+            //                    foreach (var weather in weathers)
+            //                    {
+            //                        await handler(new WeatherEvent(weather)).ConfigureAwait(false);
+            //                    }
+            //                }
+            //            }
+            //            e.IsHandled = true;
+            //        }
+            //        else if (e.ApplicationMessage.Topic == _eventBusConfig.RecalculationTopic)
+            //        {
+            //            var flights = MessagePackSerializer.Deserialize<Flight[]>(e.ApplicationMessage.PayloadSegment, _messagePackOptions);
+            //            if (flights is not null)
+            //            {
+            //                foreach (var handler in flightRecalculationEventHandlers)
+            //                {
+            //                    foreach (var flight in flights)
+            //                    {
+            //                        await handler(new FlightRecalculationEvent(flight)).ConfigureAwait(false);
+            //                    }
+            //                }
+            //            }
+            //            e.IsHandled = true;
+            //        }
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        _logger?.LogError(ex, "Exception of type {Name} while processing message from {Topic}", ex.GetType().FullName, e.ApplicationMessage.Topic);
+            //        // TODO: Do something here, because this should invalidate the experiment.
+            //    }
+            //};
         }
 
-        private Task HandleSystemMessage(MqttApplicationMessageReceivedEventArgs e)
+        private async Task HandleSystemMessage(object e, BasicDeliverEventArgs ea)
         {
-            if (!e.ApplicationMessage.Topic.Equals(_eventBusConfig.SystemTopic))
+            if (_rabbitChannel is null)
             {
-                return Task.CompletedTask;
+                return;
             }
             try
             {
-                var systemMessages = MessagePackSerializer.Deserialize<SystemMessage[]>(e.ApplicationMessage.PayloadSegment, _messagePackOptions);
+                var systemMessages = MessagePackSerializer.Deserialize<SystemMessage[]>(ea.Body, _messagePackOptions);
+                var tasks = new List<Task>(systemMessageEventHandlers.Count * systemMessages.Length);
                 if (systemMessages is not null)
                 {
                     foreach (var handler in systemMessageEventHandlers)
                     {
                         foreach (var message in systemMessages)
                         {
-                            _ = handler(new SystemMessageEvent(message));
+                            tasks.Add(handler(new SystemMessageEvent(message)));
                         }
                     }
                 }
-                e.IsHandled = true;
+                await Task.WhenAll(tasks).ConfigureAwait(false);
+                await _rabbitChannel.BasicAckAsync(ea.DeliveryTag, false);
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Exception of type {Name} while processing system message from {Topic}", ex.GetType().FullName, e.ApplicationMessage.Topic);
+                _logger?.LogError(ex, "Exception of type {Name} while processing system message from {Exchange}",
+                    ex.GetType().FullName,
+                    ea.Exchange);
             }
-            return Task.CompletedTask;
         }
 
         public async Task DisconnectAsync()
         {
-            _logger?.LogInformation("Disconnecting from the event bus.");
-            await _mqttClient.DisconnectAsync();
+            if (_rabbitConnection is null)
+            {
+                return;
+            }
+            _logger?.LogInformation("Disconnecting from RabbitMQ.");
+            await _rabbitConnection.CloseAsync();
         }
 
-        public bool IsConnected() => _mqttClient.IsConnected;
+        public bool IsConnected() => _rabbitConnection?.IsOpen ?? false;
 
         public void Dispose()
         {
@@ -256,7 +246,8 @@ namespace DynamicFlightStorageSimulation
             weatherEventHandlers.Clear();
             flightRecalculationEventHandlers.Clear();
             systemMessageEventHandlers.Clear();
-            _mqttClient.Dispose();
+            _rabbitChannel?.Dispose();
+            _rabbitConnection?.Dispose();
         }
     }
 }

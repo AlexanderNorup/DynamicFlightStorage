@@ -114,7 +114,7 @@ namespace FlightRequestCleaner
 
         public static string GetFileName(Flight flight)
         {
-            return $"flight{flight.ScheduledTimeOfDeparture:yyyyMMddTHHmmssff}";
+            return $"flight{flight.DatePlanned:yyyyMMddTHHmmssff}";
         }
     }
 }

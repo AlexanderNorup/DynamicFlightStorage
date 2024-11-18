@@ -29,8 +29,8 @@ namespace FlightRequestCleaner
                 throw new InvalidDataException($"Departure ({departure}) or destination ({destination}) airport is empty");
             }
 
-            var std = DateTime.Parse(SelectElement(replyFlightData, "FlightTimes/DepartureTimeUTC").Value);
-            var sta = DateTime.Parse(SelectElement(replyFlightData, "FlightTimes/EstimatedArrivalTime").Value);
+            var std = DateTime.Parse(SelectElement(replyFlightData, "FlightTimes/DepartureTimeUTC").Value).ToUniversalTime();
+            var sta = DateTime.Parse(SelectElement(replyFlightData, "FlightTimes/EstimatedArrivalTime").Value).ToUniversalTime();
 
             var relatedAirports = new Dictionary<string, string>();
 
@@ -114,7 +114,7 @@ namespace FlightRequestCleaner
                     {
                         continue;
                     }
-                    var timeOverWaypoint = DateTime.Parse(timeOverWaypointStr);
+                    var timeOverWaypoint = DateTime.Parse(timeOverWaypointStr).ToUniversalTime();
 
                     route.Add(new RouteNode()
                     {

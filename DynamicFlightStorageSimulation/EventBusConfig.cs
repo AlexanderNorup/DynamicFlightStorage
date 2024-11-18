@@ -13,6 +13,8 @@ namespace DynamicFlightStorageSimulation
         [Required]
         public required string Password { get; set; }
 
+        public string? FriendlyClientName { get; set; }
+
         [Required]
         public required string FlightTopic { get; set; }
 

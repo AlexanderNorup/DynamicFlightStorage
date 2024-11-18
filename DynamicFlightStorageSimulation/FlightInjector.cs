@@ -49,7 +49,7 @@ public class FlightInjector
 
     public async Task PublishFlightsUntil(DateTime date, ILogger? logger = null, CancellationToken cancellationToken = default)
     {
-        const int MaxFlightBatch = 50;
+        const int MaxFlightBatch = 200;
         var flightsToPublish = GetFlightsUntill(date, cancellationToken).Chunk(MaxFlightBatch).ToList();
         if (flightsToPublish.Count == 0)
         {
