@@ -102,6 +102,7 @@ namespace DynamicFlightStorageSimulation
         public string FlightQueueName => $"flight_{ClientId}";
         public string WeatherQueueName => $"weather_{ClientId}";
         public string SystemQueueName => $"system_{ClientId}";
+        public string RecalculationQueueName => $"recalculation_{ClientId}";
 
         public void SubscribeToFlightStorageEvent(Func<Flight, Task> handler)
         {
@@ -113,8 +114,9 @@ namespace DynamicFlightStorageSimulation
             weatherEventHandlers.Add(handler);
         }
 
-        public void SubscribeToRecalculationEvent(Func<FlightRecalculation, Task> handler)
+        public async Task SubscribeToRecalculationEventAsync(Func<FlightRecalculation, Task> handler)
         {
+            await CreateAndBindToRecalculationAsync();
             flightRecalculationEventHandlers.Add(handler);
         }
 
@@ -161,7 +163,7 @@ namespace DynamicFlightStorageSimulation
                 ExperimentId = CurrentExperimentId,
                 RecalculatedTime = DateTime.UtcNow
             };
-            return PublishMessageInternalAsync(string.Empty, MessagePackSerializer.Serialize(recalculation, _messagePackOptions), _eventBusConfig.RecalculationTopic);
+            return PublishMessageInternalAsync(_eventBusConfig.RecalculationTopic, MessagePackSerializer.Serialize(recalculation, _messagePackOptions));
         }
 
         public Task PublishSystemMessage(SystemMessage systemMessage)
@@ -169,34 +171,70 @@ namespace DynamicFlightStorageSimulation
             return PublishMessageInternalAsync(_eventBusConfig.SystemTopic, MessagePackSerializer.Serialize(systemMessage, _messagePackOptions));
         }
 
-        private async Task PublishMessageInternalAsync(string exchange, byte[] payload, string routingKey = "")
+        private async Task PublishMessageInternalAsync(string exchange, byte[] payload)
         {
             if (!IsConnected() || _rabbitChannel is null)
             {
                 throw new InvalidOperationException("Not connected to the event bus.");
             }
 
-            await _rabbitChannel.BasicPublishAsync(exchange: exchange, routingKey, payload);
+            await _rabbitChannel.BasicPublishAsync(exchange: exchange, string.Empty, payload);
         }
 
+        private SemaphoreSlim _connectionSemaphore = new SemaphoreSlim(1, 1);
         public async Task ConnectAsync()
         {
             if (IsConnected())
             {
                 return;
             }
-            _rabbitConnection = await _rabbitConnectionFactory.CreateConnectionAsync();
+            await _connectionSemaphore.WaitAsync();
+            try
+            {
+                if (IsConnected())
+                {
+                    return;
+                }
+                _rabbitConnection = await _rabbitConnectionFactory.CreateConnectionAsync();
 
-            _logger?.LogInformation("Connected to RabbitMQ {Host} as {ClientId}",
-                _eventBusConfig.Host, ClientId);
+                _logger?.LogInformation("Connected to RabbitMQ {Host} as {ClientId}",
+                    _eventBusConfig.Host, ClientId);
 
-            _rabbitChannel = await _rabbitConnection.CreateChannelAsync();
-            await _rabbitChannel.ExchangeDeclareAsync(_eventBusConfig.SystemTopic, ExchangeType.Fanout);
-            await RegisterQueueAndHandleAsync(systemMessageEventHandlers, SystemQueueName, exchangeToBind: _eventBusConfig.SystemTopic);
-            await RegisterQueueAndHandleAsync(flightStorageEventHandlers, FlightQueueName);
-            await RegisterQueueAndHandleAsync(weatherEventHandlers, WeatherQueueName);
+                _rabbitChannel = await _rabbitConnection.CreateChannelAsync();
+                await _rabbitChannel.ExchangeDeclareAsync(_eventBusConfig.SystemTopic, ExchangeType.Fanout);
+                await _rabbitChannel.ExchangeDeclareAsync(_eventBusConfig.RecalculationTopic, ExchangeType.Fanout);
+                await RegisterQueueAndHandleAsync(systemMessageEventHandlers, SystemQueueName, exchangeToBind: _eventBusConfig.SystemTopic);
+                await RegisterQueueAndHandleAsync(flightStorageEventHandlers, FlightQueueName);
+                await RegisterQueueAndHandleAsync(weatherEventHandlers, WeatherQueueName);
+            }
+            finally
+            {
+                _connectionSemaphore.Release();
+            }
+        }
 
-            //TODO: Recalculation
+        private bool _recalculationEventCreated = false;
+        private SemaphoreSlim _recaculationEventSemaphore = new SemaphoreSlim(1, 1);
+        private async Task CreateAndBindToRecalculationAsync()
+        {
+            if (_recalculationEventCreated)
+            {
+                return;
+            }
+            await _recaculationEventSemaphore.WaitAsync();
+            try
+            {
+                if (_recalculationEventCreated)
+                {
+                    return;
+                }
+                await RegisterQueueAndHandleAsync(flightRecalculationEventHandlers, RecalculationQueueName, exchangeToBind: _eventBusConfig.RecalculationTopic);
+                _recalculationEventCreated = true;
+            }
+            finally
+            {
+                _recaculationEventSemaphore.Release();
+            }
         }
 
         private async Task RegisterQueueAndHandleAsync<TMessage>(HashSet<Func<TMessage, Task>> handler, string queueName, string? exchangeToBind = null)
@@ -240,6 +278,8 @@ namespace DynamicFlightStorageSimulation
             weatherEventHandlers.Clear();
             flightRecalculationEventHandlers.Clear();
             systemMessageEventHandlers.Clear();
+            _connectionSemaphore.Dispose();
+            _recaculationEventSemaphore.Dispose();
             _rabbitChannel?.Dispose();
             _rabbitConnection?.Dispose();
         }

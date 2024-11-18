@@ -174,14 +174,14 @@
         Name = "Test Experiment",
         PreloadAllFlights = true,
         SimulatedStartTime = new DateTime(2024, 10, 11, 3, 00, 00, DateTimeKind.Utc),
-        SimulatedEndTime = new DateTime(2024, 10, 11, 06, 00, 00, DateTimeKind.Utc),
+        SimulatedEndTime = new DateTime(2024, 10, 12, 00, 00, 00, DateTimeKind.Utc),
         // SimulatedEndTime = new DateTime(2024, 10, 12, 00, 00, 00, DateTimeKind.Utc),
         SimulatedPreloadStartTime = new DateTime(2024, 1, 1, 00, 00, 00, DateTimeKind.Utc),
         SimulatedPreloadEndTime = new DateTime(2024, 10, 11, 3, 00, 00, DateTimeKind.Utc),
         TimeScale = -1 // Negative value means "as fast as possible"
     };
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         if (orchestrator.CurrentExperiment is null)
         {
@@ -189,7 +189,7 @@
         }
         orchestrator.OnExperimentStateChanged += OnExperimentStateChanged;
         orchestrator.OnLogEvent += OnOrchestratorLog;
-        eventbus.SubscribeToRecalculationEvent(OnRecalculationEvent);
+        await eventbus.SubscribeToRecalculationEventAsync(OnRecalculationEvent);
         latencyTester = new LatencyTester(eventbus, loggerFactory.CreateLogger<LatencyTester>());
     }
 
