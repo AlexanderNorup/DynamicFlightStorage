@@ -51,19 +51,19 @@ namespace DynamicFlightStorageSimulation
             if (!string.IsNullOrWhiteSpace(CurrentExperimentId))
             {
                 // We might already be bound to an experiment, so attempt to unbind first
-                await TryUnbindQueueFromExchange(FlightQueueName, $"{_eventBusConfig.FlightTopic}.{experimentId}");
-                await TryUnbindQueueFromExchange(WeatherQueueName, $"{_eventBusConfig.WeatherTopic}.{experimentId}");
+                await TryUnbindQueueFromExchange(FlightQueueName, GetFlightExperimentExchange(experimentId));
+                await TryUnbindQueueFromExchange(WeatherQueueName, GetWeatherExperimentExchange(experimentId));
             }
 
             CurrentExperimentId = experimentId;
             await _rabbitChannel.QueuePurgeAsync(FlightQueueName);
             await _rabbitChannel.QueueBindAsync(queue: FlightQueueName,
-                exchange: $"{_eventBusConfig.FlightTopic}.{experimentId}",
+                exchange: GetFlightExperimentExchange(experimentId),
                 routingKey: string.Empty);
 
             await _rabbitChannel.QueuePurgeAsync(WeatherQueueName);
             await _rabbitChannel.QueueBindAsync(queue: WeatherQueueName,
-                exchange: $"{_eventBusConfig.WeatherTopic}.{experimentId}",
+                exchange: GetWeatherExperimentExchange(experimentId),
                 routingKey: string.Empty);
             _logger?.LogInformation("Bound to new experiment {ExperimentId}", experimentId);
         }
@@ -93,13 +93,19 @@ namespace DynamicFlightStorageSimulation
                 throw new InvalidOperationException("Not connected to the event bus");
             }
 
-            await _rabbitChannel.ExchangeDeclareAsync($"{_eventBusConfig.FlightTopic}.{experimentId}", ExchangeType.Fanout, autoDelete: true);
-            await _rabbitChannel.ExchangeDeclareAsync($"{_eventBusConfig.WeatherTopic}.{experimentId}", ExchangeType.Fanout, autoDelete: true);
+            await _rabbitChannel.ExchangeDeclareAsync(GetFlightExperimentExchange(experimentId), ExchangeType.Fanout, autoDelete: true);
+            await _rabbitChannel.ExchangeDeclareAsync(GetWeatherExperimentExchange(experimentId), ExchangeType.Fanout, autoDelete: true);
         }
 
+        public string GetFlightExperimentExchange(string experimentId) => $"{_eventBusConfig.FlightTopic}.{experimentId}";
+        public string GetWeatherExperimentExchange(string experimentId) => $"{_eventBusConfig.WeatherTopic}.{experimentId}";
+
         public string ClientId => _rabbitConnection?.ClientProvidedName ?? string.Empty;
-        public string FlightQueueName => $"flight_{ClientId}";
-        public string WeatherQueueName => $"weather_{ClientId}";
+
+        public const string FlightQueuePrefix = "flight_";
+        public const string WeatherQueuePrefix = "weather_";
+        public string FlightQueueName => $"{FlightQueuePrefix}{ClientId}";
+        public string WeatherQueueName => $"{WeatherQueuePrefix}{ClientId}";
         public string SystemQueueName => $"system_{ClientId}";
         public string RecalculationQueueName => $"recalculation_{ClientId}";
 
@@ -146,12 +152,12 @@ namespace DynamicFlightStorageSimulation
 
         public Task PublishFlightAsync(Flight flight, string experimentId)
         {
-            return PublishMessageInternalAsync($"{_eventBusConfig.FlightTopic}.{experimentId}", MessagePackSerializer.Serialize(flight, _messagePackOptions));
+            return PublishMessageInternalAsync(GetFlightExperimentExchange(experimentId), MessagePackSerializer.Serialize(flight, _messagePackOptions));
         }
 
         public Task PublishWeatherAsync(Weather weather, string experimentId)
         {
-            return PublishMessageInternalAsync($"{_eventBusConfig.WeatherTopic}.{experimentId}", MessagePackSerializer.Serialize(weather, _messagePackOptions));
+            return PublishMessageInternalAsync(GetWeatherExperimentExchange(experimentId), MessagePackSerializer.Serialize(weather, _messagePackOptions));
         }
 
         public Task PublishRecalculationAsync(Flight flight)

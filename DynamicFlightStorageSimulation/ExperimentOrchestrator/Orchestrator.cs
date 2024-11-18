@@ -75,6 +75,11 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             {
                 if (value is not null)
                 {
+                    if (OrchestratorState != OrchestratorState.Idle || CheckExperimentRunning())
+                    {
+                        _logger.LogWarning("The ExperimentRunnerIds cannot be changed while an experiment is running.");
+                        return;
+                    }
                     _experimentRunnerClientIds = value;
                     OnExperimentStateChanged?.Invoke();
                 }
@@ -179,7 +184,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 _logger.LogInformation("Published all preload-data. Waiting for consumers to consume it all");
 
                 await minimumWaitPreloadWaitTime; // Wait for the minium time of 5 seconds before checking if everything is consumed
-                await _consumingMonitor.WaitForExchangesToBeConsumedAsync(CurrentExperiment.Id, ExperimentCancellationToken.Token);
+                await _consumingMonitor.WaitForExchangesToBeConsumedAsync(ExperimentRunnerClientIds.ToArray(), ExperimentCancellationToken.Token);
 
                 _logger.LogInformation("Preload done");
                 OrchestratorState = OrchestratorState.PreloadDone;
@@ -382,7 +387,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 if (CurrentSimulationTime >= CurrentExperiment.SimulatedEndTime)
                 {
                     _logger.LogInformation("Simulation Time done. Waiting for consumers to consume the rest of the data.");
-                    await _consumingMonitor.WaitForExchangesToBeConsumedAsync(CurrentExperiment.Id, ExperimentCancellationToken.Token);
+                    await _consumingMonitor.WaitForExchangesToBeConsumedAsync(ExperimentRunnerClientIds.ToArray(), ExperimentCancellationToken.Token);
                     CurrentExperimentResult.ExperimentEnded = DateTime.UtcNow;
                     CurrentExperimentResult.ExperimentSuccess = true;
                     _logger.LogInformation("Experiment {Id} ended successfully.", CurrentExperiment.Id);

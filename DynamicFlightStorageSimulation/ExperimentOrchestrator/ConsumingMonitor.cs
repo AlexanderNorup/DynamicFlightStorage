@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Json;
 using System.Text;
+using System.Threading;
 using DynamicFlightStorageSimulation.ExperimentOrchestrator.RabbitMQRestEntities;
 
 namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
@@ -25,27 +26,34 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             client.DefaultRequestHeaders.Add("Authorization", "Basic " + base64EncodedAuthenticationString);
         }
 
-        public async Task WaitForExchangesToBeConsumedAsync(string experimentId, CancellationToken cancellationToken = default)
+        public async Task<Dictionary<string, int>> GetMessageLagAsync(string[] clientids, CancellationToken cancellationToken = default)
         {
-            var allExchanges = await client.GetFromJsonAsync<RabbitMQExchangesResponse[]>("exchanges/%2F", cancellationToken).ConfigureAwait(false);
-            var weatherExchangeForExperiment = allExchanges?.FirstOrDefault(e => e.Name == $"{config.WeatherTopic}.{experimentId}");
-            var flightExchangeForExperiment = allExchanges?.FirstOrDefault(e => e.Name == $"{config.FlightTopic}.{experimentId}");
-
-            if (weatherExchangeForExperiment is null || flightExchangeForExperiment is null)
+            var result = new Dictionary<string, int>(clientids.Length * 2);
+            var queues = await client.GetFromJsonAsync<RabbitMQQueueMetricsResponse[]>($"queues/%2F/", cancellationToken).ConfigureAwait(false);
+            foreach (var queue in queues!)
             {
-                throw new InvalidOperationException("Could not find exchanges for experiment");
+                foreach (var clientId in clientids)
+                {
+                    if (queue.Name == SimulationEventBus.FlightQueuePrefix + clientId)
+                    {
+                        result.Add(queue.Name, queue.TotalMessages);
+                    }
+                    else if (queue.Name == SimulationEventBus.WeatherQueuePrefix + clientId)
+                    {
+                        result.Add(queue.Name, queue.TotalMessages);
+                    }
+                }
             }
 
-            var weatherQueue = await client.GetFromJsonAsync<RabbitMQExchangeDestinationResponse[]>($"exchanges/%2F/{weatherExchangeForExperiment.Name}/bindings/source", cancellationToken).ConfigureAwait(false);
-            var flightQueue = await client.GetFromJsonAsync<RabbitMQExchangeDestinationResponse[]>($"exchanges/%2F/{flightExchangeForExperiment.Name}/bindings/source", cancellationToken).ConfigureAwait(false);
-            var flightQueueId = flightQueue!.First().Destination;
-            var weatherQueueId = weatherQueue!.First().Destination;
+            return result;
+        }
 
+        public async Task WaitForExchangesToBeConsumedAsync(string[] clientIds, CancellationToken cancellationToken = default)
+        {
             while (!cancellationToken.IsCancellationRequested)
             {
-                var flightResponse = await client.GetFromJsonAsync<RabbitMQQueueMetricsResponse>($"queues/%2F/{flightQueueId}", cancellationToken).ConfigureAwait(false);
-                var weatherResponse = await client.GetFromJsonAsync<RabbitMQQueueMetricsResponse>($"queues/%2F/{weatherQueueId}", cancellationToken).ConfigureAwait(false);
-                if (weatherResponse?.TotalMessages == 0 && flightResponse?.TotalMessages == 0)
+                var lag = await GetMessageLagAsync(clientIds, cancellationToken);
+                if (lag.Values.All(x => x == 0))
                 {
                     break;
                 }
