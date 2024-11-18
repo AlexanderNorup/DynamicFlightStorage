@@ -3,7 +3,6 @@ using DynamicFlightStorageSimulation.Utilities;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using static DynamicFlightStorageDTOs.SystemMessage;
-using static DynamicFlightStorageSimulation.SimulationEventBus;
 
 namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 {
@@ -88,7 +87,9 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
         public Experiment? CurrentExperiment { get; private set; }
         public Task? ExperimentTask { get; private set; }
+        public Task? ExperimentConsumerLagTask { get; private set; }
         public ExperimentResult? CurrentExperimentResult { get; private set; }
+        public Dictionary<string, (int flightLag, int weatherLag)> CurrentLag { get; private set; } = new();
 
         public OrchestratorState OrchestratorState { get; private set; } = OrchestratorState.Idle;
 
@@ -248,15 +249,21 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 {
                     throw new InvalidOperationException("Latency test results do not contain results for all experiment runners.");
                 }
+
                 // Add Latency results to experiment result
-                CurrentExperimentResult.LatencyTestResults
-                    .AddRange(latencyResults.Where(x => ExperimentRunnerClientIds.Contains(x.Clientid)));
+                CurrentExperimentResult.ClientResults = latencyResults.Where(x => ExperimentRunnerClientIds.Contains(x.Clientid))
+                    .ToDictionary(x => x.Clientid, x => new ExperimentClientResult()
+                    {
+                        ClientId = x.Clientid,
+                        LatencyTest = x
+                    });
 
                 // Start the experiment clock
                 CurrentExperimentResult.ExperimentStarted = DateTime.UtcNow;
                 CurrentSimulationTime = CurrentExperiment.SimulatedStartTime;
                 OrchestratorState = OrchestratorState.Running;
                 ExperimentTask = ExperimentLoop(); // Don't wait
+                ExperimentConsumerLagTask = MonitorConsumerLagAsync();
                 _experimentChecker.Start();
                 _logger.LogInformation("Experiment successfully started!");
             }
@@ -310,8 +317,10 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
         {
             // Don't clear the result here!
             ExperimentTask = null;
+            ExperimentConsumerLagTask = null;
             ExperimentCancellationToken = new CancellationTokenSource();
             OrchestratorState = OrchestratorState.Idle;
+            CurrentLag = new();
             _experimentChecker.Stop();
             _flightInjector.ResetReader();
             _weatherInjector.ResetReader();
@@ -360,7 +369,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             }
         }
 
-        public async Task ExperimentLoop()
+        private async Task ExperimentLoop()
         {
             if (CurrentExperiment is null || CurrentExperimentResult is null || CurrentSimulationTime is null)
             {
@@ -418,6 +427,33 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 }
             }
             _logger.LogWarning("ExperimentLoop stopped: Cancelled={Cancelled}", ExperimentCancellationToken.IsCancellationRequested);
+        }
+
+        private async Task MonitorConsumerLagAsync()
+        {
+            while (!ExperimentCancellationToken.IsCancellationRequested
+                && ExperimentTask?.IsCompleted == false // Don't monitor if the experiment is not running
+                && CurrentExperimentResult is not null)
+            {
+                var experimentLag = await _consumingMonitor.GetMessageLagAsync(ExperimentRunnerClientIds.ToArray(), ExperimentCancellationToken.Token).ConfigureAwait(false);
+                CurrentLag = experimentLag;
+                foreach (var (clientId, lag) in experimentLag)
+                {
+                    if (CurrentExperimentResult.ClientResults.TryGetValue(clientId, out var result))
+                    {
+                        result.MaxFlightConsumerLag = Math.Max(result.MaxFlightConsumerLag, lag.flightLag);
+                        result.MaxWeatherConsumerLag = Math.Max(result.MaxWeatherConsumerLag, lag.weatherLag);
+                    }
+                }
+
+                if (CurrentSimulationTime >= CurrentExperiment!.SimulatedEndTime)
+                {
+                    // When the experiment is done over, start ticking the update as the lag does down.
+                    OnExperimentStateChanged?.Invoke();
+                }
+
+                await Task.Delay(200, ExperimentCancellationToken.Token).ConfigureAwait(false);
+            }
         }
 
         private async Task<(bool success, List<SystemMessage> responses)> SendSystemMessageAndWaitForResponseAsync(SystemMessage messageToSend, SystemMessageType eventToWaitFor, TimeSpan timeout)

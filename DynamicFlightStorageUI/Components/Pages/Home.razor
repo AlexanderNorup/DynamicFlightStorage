@@ -71,11 +71,16 @@
                 </select>
             </div>
             <p>
-                Parsed client ids:
+                Parsed client ids: (Lag: (flights, weather))
                 <ul>
                     @foreach (var clientId in orchestrator.ExperimentRunnerClientIds)
                     {
-                        <li>@clientId</li>
+                        <li>@clientId 
+                            @if(orchestrator.CurrentLag.TryGetValue(clientId, out var lag))
+                            {
+                                <span class="badge bg-secondary rounded ms-2">Lag: @lag</span>
+                            }
+                        </li>
                     }
                 </ul>
             </p>
@@ -338,6 +343,7 @@
 
     private async Task OnRecalculationEvent(FlightRecalculation flight)
     {
+        // TODO: Don't do this, as this becomes a race-condition because we both enumerate and add to the list at once.
         recalculationLogs.Add(new(DateTime.UtcNow, flight.ToString()));
         await InvokeAsync(StateHasChanged);
     }

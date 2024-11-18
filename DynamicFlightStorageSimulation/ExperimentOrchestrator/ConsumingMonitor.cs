@@ -26,23 +26,27 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             client.DefaultRequestHeaders.Add("Authorization", "Basic " + base64EncodedAuthenticationString);
         }
 
-        public async Task<Dictionary<string, int>> GetMessageLagAsync(string[] clientids, CancellationToken cancellationToken = default)
+        public async Task<Dictionary<string, (int flightLag, int weatherLag)>> GetMessageLagAsync(string[] clientids, CancellationToken cancellationToken = default)
         {
-            var result = new Dictionary<string, int>(clientids.Length * 2);
+            var result = new Dictionary<string, (int flightLag, int weatherLag)>(clientids.Length * 2);
             var queues = await client.GetFromJsonAsync<RabbitMQQueueMetricsResponse[]>($"queues/%2F/", cancellationToken).ConfigureAwait(false);
-            foreach (var queue in queues!)
+            foreach (var clientId in clientids)
             {
-                foreach (var clientId in clientids)
+                var flightLag = -1;
+                var weatherLag = -1;
+                foreach (var queue in queues!)
                 {
                     if (queue.Name == SimulationEventBus.FlightQueuePrefix + clientId)
                     {
-                        result.Add(queue.Name, queue.TotalMessages);
+                        flightLag = queue.TotalMessages;
                     }
                     else if (queue.Name == SimulationEventBus.WeatherQueuePrefix + clientId)
                     {
-                        result.Add(queue.Name, queue.TotalMessages);
+                        weatherLag = queue.TotalMessages;
                     }
                 }
+
+                result.Add(clientId, (flightLag, weatherLag));
             }
 
             return result;
@@ -53,7 +57,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             while (!cancellationToken.IsCancellationRequested)
             {
                 var lag = await GetMessageLagAsync(clientIds, cancellationToken);
-                if (lag.Values.All(x => x == 0))
+                if (lag.Values.All(x => x.weatherLag == 0 && x.flightLag == 0))
                 {
                     break;
                 }
