@@ -67,6 +67,8 @@ namespace DynamicFlightStorageSimulation
                 }
             }
 
+            await _simulationEventBus.SubscribeToExperiment(experimentId).ConfigureAwait(false);
+
             // Signal ready
             await _simulationEventBus.PublishSystemMessage(new SystemMessage()
             {

@@ -135,6 +135,8 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 OrchestratorState = OrchestratorState.Preloading;
                 OnExperimentStateChanged?.Invoke();
 
+                await _eventBus.CreateNewExperiment(CurrentExperiment.Id).ConfigureAwait(false);
+
                 ExperimentCancellationToken = new CancellationTokenSource();
                 var result = await SendSystemMessageAndWaitForResponseAsync(new SystemMessage()
                 {

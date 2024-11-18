@@ -64,7 +64,7 @@ public class FlightInjector
         foreach (var flightBatch in flightsToPublish)
         {
             await _eventBus.PublishFlightAsync(flightBatch, experimentId).ConfigureAwait(false);
-            if (++flightCount % 10 == 0)
+            if (++flightCount % 1000 == 0)
             {
                 logger?.LogDebug("Published {Count}/{Total} flights (untill {Untill}).",
                     flightCount,

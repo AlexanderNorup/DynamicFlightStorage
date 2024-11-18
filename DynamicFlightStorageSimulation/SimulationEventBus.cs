@@ -145,7 +145,7 @@ namespace DynamicFlightStorageSimulation
 
         public Task PublishFlightAsync(Flight flight, string experimentId)
         {
-            return PublishMessageInternalAsync($"{_eventBusConfig.WeatherTopic}.{experimentId}", MessagePackSerializer.Serialize(flight, _messagePackOptions));
+            return PublishMessageInternalAsync($"{_eventBusConfig.FlightTopic}.{experimentId}", MessagePackSerializer.Serialize(flight, _messagePackOptions));
         }
 
         public Task PublishWeatherAsync(Weather weather, string experimentId)

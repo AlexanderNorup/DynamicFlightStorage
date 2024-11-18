@@ -54,7 +54,7 @@ public class WeatherInjector
         foreach (var weatherBatch in weatherBatches)
         {
             await _eventBus.PublishWeatherAsync(weatherBatch, experimentId).ConfigureAwait(false);
-            if (++weatherCount % 10 == 0)
+            if (++weatherCount % 10_000 == 0)
             {
                 logger?.LogDebug("Published {Count}/{Total} weather batches (untill {Untill}).",
                     weatherCount,
