@@ -20,16 +20,13 @@ namespace DynamicFlightStorageSimulation
                 }
                 try
                 {
-                    var messages = MessagePackSerializer.Deserialize<TMessage[]>(ea.Body, messagePackOptions);
-                    var tasks = new List<Task>(messageHandlers.Count * messages.Length);
-                    if (messages is not null)
+                    var message = MessagePackSerializer.Deserialize<TMessage>(ea.Body, messagePackOptions);
+                    var tasks = new List<Task>(messageHandlers.Count);
+                    if (message is not null)
                     {
                         foreach (var handler in messageHandlers)
                         {
-                            foreach (var message in messages)
-                            {
-                                tasks.Add(handler(message));
-                            }
+                            tasks.Add(handler(message));
                         }
                     }
                     await Task.WhenAll(tasks).ConfigureAwait(false);

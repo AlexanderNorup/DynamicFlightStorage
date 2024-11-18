@@ -131,22 +131,22 @@ namespace DynamicFlightStorageSimulation
             systemMessageEventHandlers.Remove(handler);
         }
 
-        public Task PublishFlightAsync(params Flight[] flight)
+        public Task PublishFlightAsync(Flight flight)
         {
             return PublishMessageInternalAsync(_eventBusConfig.FlightTopic, MessagePackSerializer.Serialize(flight, _messagePackOptions));
         }
 
-        public Task PublishWeatherAsync(params Weather[] weather)
+        public Task PublishWeatherAsync(Weather weather)
         {
             return PublishMessageInternalAsync(_eventBusConfig.WeatherTopic, MessagePackSerializer.Serialize(weather, _messagePackOptions));
         }
 
-        public Task PublishRecalculationAsync(params Flight[] flight)
+        public Task PublishRecalculationAsync(Flight flight)
         {
             return PublishMessageInternalAsync(string.Empty, MessagePackSerializer.Serialize(flight, _messagePackOptions), _eventBusConfig.RecalculationTopic);
         }
 
-        public Task PublishSystemMessage(params SystemMessage[] systemMessage)
+        public Task PublishSystemMessage(SystemMessage systemMessage)
         {
             return PublishMessageInternalAsync(_eventBusConfig.SystemTopic, MessagePackSerializer.Serialize(systemMessage, _messagePackOptions));
         }

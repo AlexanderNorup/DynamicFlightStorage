@@ -39,8 +39,7 @@ public class WeatherInjector
 
     public async Task PublishWeatherUntil(DateTime date, ILogger? logger = null, CancellationToken cancellationToken = default)
     {
-        const int MaxWeatherBatch = 500;
-        var weatherBatches = GetWeatherUntill(date, cancellationToken).Chunk(MaxWeatherBatch).ToList();
+        var weatherBatches = GetWeatherUntill(date, cancellationToken).ToList();
 
         if (weatherBatches.Count == 0)
         {
@@ -48,17 +47,17 @@ public class WeatherInjector
             return;
         }
 
-        logger?.LogDebug("Publishing {BatchNum} weather batches (until {Untill}).",
+        logger?.LogDebug("Publishing {Count} weather batches (until {Untill}).",
             weatherBatches.Count,
             date);
-        int batchCount = 0;
+        int weatherCount = 0;
         foreach (var weatherBatch in weatherBatches)
         {
             await _eventBus.PublishWeatherAsync(weatherBatch).ConfigureAwait(false);
-            if (++batchCount % 10 == 0)
+            if (++weatherCount % 10 == 0)
             {
                 logger?.LogDebug("Published {Count}/{Total} weather batches (untill {Untill}).",
-                    batchCount,
+                    weatherCount,
                     weatherBatches.Count,
                     date);
             }

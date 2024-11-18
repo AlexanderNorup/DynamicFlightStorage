@@ -49,26 +49,25 @@ public class FlightInjector
 
     public async Task PublishFlightsUntil(DateTime date, ILogger? logger = null, CancellationToken cancellationToken = default)
     {
-        const int MaxFlightBatch = 200;
-        var flightsToPublish = GetFlightsUntill(date, cancellationToken).Chunk(MaxFlightBatch).ToList();
+        var flightsToPublish = GetFlightsUntill(date, cancellationToken).ToList();
         if (flightsToPublish.Count == 0)
         {
             //logger?.LogDebug("No flights to publish (untill {Untill}).", date);
             return;
         }
 
-        logger?.LogDebug("Publishing {BatchNum} flight batches (until {Untill}).",
+        logger?.LogDebug("Publishing {Count} flights (until {Untill}).",
             flightsToPublish.Count,
             date);
 
-        int batchCount = 0;
+        int flightCount = 0;
         foreach (var flightBatch in flightsToPublish)
         {
             await _eventBus.PublishFlightAsync(flightBatch).ConfigureAwait(false);
-            if (++batchCount % 10 == 0)
+            if (++flightCount % 10 == 0)
             {
-                logger?.LogDebug("Published {Count}/{Total} flight batches (untill {Untill}).",
-                    batchCount,
+                logger?.LogDebug("Published {Count}/{Total} flights (untill {Untill}).",
+                    flightCount,
                     flightsToPublish.Count,
                     date);
             }
