@@ -31,13 +31,65 @@ namespace DynamicFlightStorageSimulation
             _messagePackOptions = MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4Block);
         }
 
-
         private HashSet<Func<Flight, Task>> flightStorageEventHandlers = new();
         private HashSet<Func<Weather, Task>> weatherEventHandlers = new();
         private HashSet<Func<Flight, Task>> flightRecalculationEventHandlers = new();
         private HashSet<Func<SystemMessage, Task>> systemMessageEventHandlers = new();
 
+        public string CurrentExperimentId { get; private set; } = string.Empty;
+        public async Task SetExperimentId(string experimentId)
+        {
+            if (string.IsNullOrWhiteSpace(experimentId))
+            {
+                throw new ArgumentNullException(nameof(experimentId));
+            }
+            if (experimentId == CurrentExperimentId || _rabbitChannel is null)
+            {
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(CurrentExperimentId))
+            {
+                // We might already be bound to an experiment, so attempt to unbind first
+                await TryUnbindQueueFromExchange(FlightQueueName, $"{_eventBusConfig.FlightTopic}.{experimentId}");
+                await TryUnbindQueueFromExchange(WeatherQueueName, $"{_eventBusConfig.WeatherTopic}.{experimentId}");
+            }
+
+            CurrentExperimentId = experimentId;
+            await _rabbitChannel.QueuePurgeAsync(FlightQueueName);
+            await _rabbitChannel.QueueBindAsync(queue: FlightQueueName,
+                exchange: $"{_eventBusConfig.FlightTopic}.{experimentId}",
+                routingKey: string.Empty);
+
+            await _rabbitChannel.QueuePurgeAsync(WeatherQueueName);
+            await _rabbitChannel.QueueBindAsync(queue: WeatherQueueName,
+                exchange: $"{_eventBusConfig.WeatherTopic}.{experimentId}",
+                routingKey: string.Empty);
+            _logger?.LogInformation("Bound to new experiment {ExperimentId}", experimentId);
+        }
+
+        private async Task TryUnbindQueueFromExchange(string queue, string exchange)
+        {
+            if (_rabbitChannel is null)
+            {
+                return;
+            }
+            try
+            {
+                await _rabbitChannel.QueueUnbindAsync(queue: queue,
+                    exchange: exchange,
+                    routingKey: string.Empty);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error unbinding {Queue} from {Exchange} previous experiment {ExperimentId}", queue, exchange, CurrentExperimentId);
+            }
+        }
+
         public string ClientId => _rabbitConnection?.ClientProvidedName ?? string.Empty;
+        public string FlightQueueName => $"flight_{ClientId}";
+        public string WeatherQueueName => $"weather_{ClientId}";
+        public string SystemQueueName => $"system_{ClientId}";
 
         public void SubscribeToFlightStorageEvent(Func<Flight, Task> handler)
         {
@@ -108,10 +160,6 @@ namespace DynamicFlightStorageSimulation
 
             await _rabbitChannel.BasicPublishAsync(exchange: exchange, routingKey, payload);
         }
-
-        public string FlightQueueName => $"flight_{ClientId}";
-        public string WeatherQueueName => $"weather_{ClientId}";
-        public string SystemQueueName => $"system_{ClientId}";
 
         public async Task ConnectAsync()
         {
