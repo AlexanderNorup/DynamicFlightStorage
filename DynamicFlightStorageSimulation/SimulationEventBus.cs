@@ -31,28 +31,25 @@ namespace DynamicFlightStorageSimulation
             _messagePackOptions = MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4Block);
         }
 
-        public delegate Task FlightStorageEventHandler(Flight e);
-        public delegate Task WeatherEventHandler(Weather e);
-        public delegate Task FlightRecalculationEventHandler(Flight e);
 
-        private HashSet<FlightStorageEventHandler> flightStorageEventHandlers = new();
-        private HashSet<WeatherEventHandler> weatherEventHandlers = new();
-        private HashSet<FlightRecalculationEventHandler> flightRecalculationEventHandlers = new();
+        private HashSet<Func<Flight, Task>> flightStorageEventHandlers = new();
+        private HashSet<Func<Weather, Task>> weatherEventHandlers = new();
+        private HashSet<Func<Flight, Task>> flightRecalculationEventHandlers = new();
         private HashSet<Func<SystemMessage, Task>> systemMessageEventHandlers = new();
 
         public string ClientId => _rabbitConnection?.ClientProvidedName ?? string.Empty;
 
-        public void SubscribeToFlightStorageEvent(FlightStorageEventHandler handler)
+        public void SubscribeToFlightStorageEvent(Func<Flight, Task> handler)
         {
             flightStorageEventHandlers.Add(handler);
         }
 
-        public void SubscribeToWeatherEvent(WeatherEventHandler handler)
+        public void SubscribeToWeatherEvent(Func<Weather, Task> handler)
         {
             weatherEventHandlers.Add(handler);
         }
 
-        public void SubscribeToRecalculationEvent(FlightRecalculationEventHandler handler)
+        public void SubscribeToRecalculationEvent(Func<Flight, Task> handler)
         {
             flightRecalculationEventHandlers.Add(handler);
         }
@@ -62,17 +59,17 @@ namespace DynamicFlightStorageSimulation
             systemMessageEventHandlers.Add(handler);
         }
 
-        public void UnSubscribeToFlightStorageEvent(FlightStorageEventHandler handler)
+        public void UnSubscribeToFlightStorageEvent(Func<Flight, Task> handler)
         {
             flightStorageEventHandlers.Remove(handler);
         }
 
-        public void UnSubscribeToWeatherEvent(WeatherEventHandler handler)
+        public void UnSubscribeToWeatherEvent(Func<Weather, Task> handler)
         {
             weatherEventHandlers.Remove(handler);
         }
 
-        public void UnSubscribeToRecalculationEvent(FlightRecalculationEventHandler handler)
+        public void UnSubscribeToRecalculationEvent(Func<Flight, Task> handler)
         {
             flightRecalculationEventHandlers.Remove(handler);
         }
@@ -112,6 +109,10 @@ namespace DynamicFlightStorageSimulation
             await _rabbitChannel.BasicPublishAsync(exchange: exchange, routingKey, payload);
         }
 
+        public string FlightQueueName => $"flight_{ClientId}";
+        public string WeatherQueueName => $"weather_{ClientId}";
+        public string SystemQueueName => $"system_{ClientId}";
+
         public async Task ConnectAsync()
         {
             if (IsConnected())
@@ -125,79 +126,34 @@ namespace DynamicFlightStorageSimulation
 
             _rabbitChannel = await _rabbitConnection.CreateChannelAsync();
             await _rabbitChannel.ExchangeDeclareAsync(_eventBusConfig.SystemTopic, ExchangeType.Fanout);
-            var queueName = $"system_{ClientId}";
-            await _rabbitChannel.QueueDeclareAsync(queue: queueName);
-            await _rabbitChannel.QueueBindAsync(queue: queueName,
-                exchange: _eventBusConfig.SystemTopic,
-                routingKey: string.Empty);
+            await RegisterQueueAndHandleAsync(systemMessageEventHandlers, SystemQueueName, exchangeToBind: _eventBusConfig.SystemTopic);
+            await RegisterQueueAndHandleAsync(flightStorageEventHandlers, FlightQueueName);
+            await RegisterQueueAndHandleAsync(weatherEventHandlers, WeatherQueueName);
 
-            var systemConsumer = new AsyncEventingBasicConsumer(_rabbitChannel);
-            var systemMessageEventHandler = SimulationEventHandlerFactory.GetEventHandler(
-                systemMessageEventHandlers,
+            //TODO: Recalculation
+        }
+
+        private async Task RegisterQueueAndHandleAsync<TMessage>(HashSet<Func<TMessage, Task>> handler, string queueName, string? exchangeToBind = null)
+        {
+            if (_rabbitChannel is null)
+            {
+                return;
+            }
+            await _rabbitChannel.QueueDeclareAsync(queue: queueName);
+            if (exchangeToBind is { } ex)
+            {
+                await _rabbitChannel.QueueBindAsync(queue: queueName,
+                    exchange: ex,
+                    routingKey: string.Empty);
+            }
+            var consumer = new AsyncEventingBasicConsumer(_rabbitChannel);
+            var eventHandler = SimulationEventHandlerFactory.GetEventHandler(
+                handler,
                 _rabbitChannel,
                 _messagePackOptions,
                 _logger);
-
-            systemConsumer.ReceivedAsync += systemMessageEventHandler;
-            await _rabbitChannel.BasicConsumeAsync(queue: queueName, autoAck: false, consumer: systemConsumer);
-
-            //_rabbitConnection.ApplicationMessageReceivedAsync += async (e) =>
-            //{
-            //    e.AutoAcknowledge = true;
-            //    try
-            //    {
-            //        if (e.ApplicationMessage.Topic == _eventBusConfig.FlightTopic)
-            //        {
-            //            var flights = MessagePackSerializer.Deserialize<Flight[]>(e.ApplicationMessage.PayloadSegment, _messagePackOptions);
-            //            if (flights is not null)
-            //            {
-            //                foreach (var handler in flightStorageEventHandlers)
-            //                {
-            //                    foreach (var flight in flights)
-            //                    {
-            //                        await handler(new FlightStorageEvent(flight)).ConfigureAwait(false);
-            //                    }
-            //                }
-            //            }
-            //            e.IsHandled = true;
-            //        }
-            //        else if (e.ApplicationMessage.Topic == _eventBusConfig.WeatherTopic)
-            //        {
-            //            var weathers = MessagePackSerializer.Deserialize<Weather[]>(e.ApplicationMessage.PayloadSegment, _messagePackOptions);
-            //            if (weathers is not null)
-            //            {
-            //                foreach (var handler in weatherEventHandlers)
-            //                {
-            //                    foreach (var weather in weathers)
-            //                    {
-            //                        await handler(new WeatherEvent(weather)).ConfigureAwait(false);
-            //                    }
-            //                }
-            //            }
-            //            e.IsHandled = true;
-            //        }
-            //        else if (e.ApplicationMessage.Topic == _eventBusConfig.RecalculationTopic)
-            //        {
-            //            var flights = MessagePackSerializer.Deserialize<Flight[]>(e.ApplicationMessage.PayloadSegment, _messagePackOptions);
-            //            if (flights is not null)
-            //            {
-            //                foreach (var handler in flightRecalculationEventHandlers)
-            //                {
-            //                    foreach (var flight in flights)
-            //                    {
-            //                        await handler(new FlightRecalculationEvent(flight)).ConfigureAwait(false);
-            //                    }
-            //                }
-            //            }
-            //            e.IsHandled = true;
-            //        }
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        _logger?.LogError(ex, "Exception of type {Name} while processing message from {Topic}", ex.GetType().FullName, e.ApplicationMessage.Topic);
-            //        // TODO: Do something here, because this should invalidate the experiment.
-            //    }
-            //};
+            consumer.ReceivedAsync += eventHandler;
+            await _rabbitChannel.BasicConsumeAsync(queue: queueName, autoAck: false, consumer: consumer);
         }
 
         public async Task DisconnectAsync()
