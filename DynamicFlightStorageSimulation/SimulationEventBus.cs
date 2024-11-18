@@ -1,4 +1,5 @@
 ﻿using DynamicFlightStorageDTOs;
+using DynamicFlightStorageSimulation.ExperimentOrchestrator;
 using MessagePack;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
@@ -37,7 +38,7 @@ namespace DynamicFlightStorageSimulation
         private HashSet<Func<SystemMessage, Task>> systemMessageEventHandlers = new();
 
         public string CurrentExperimentId { get; private set; } = string.Empty;
-        public async Task SetExperimentId(string experimentId)
+        public async Task SubscribeToExperiment(string experimentId)
         {
             if (string.IsNullOrWhiteSpace(experimentId))
             {
@@ -86,6 +87,17 @@ namespace DynamicFlightStorageSimulation
             }
         }
 
+        public async Task CreateNewExperiment(string experimentId)
+        {
+            if (_rabbitChannel is null)
+            {
+                throw new InvalidOperationException("Not connected to the event bus");
+            }
+
+            await _rabbitChannel.ExchangeDeclareAsync($"{_eventBusConfig.FlightTopic}.{experimentId}", ExchangeType.Fanout, autoDelete: true);
+            await _rabbitChannel.ExchangeDeclareAsync($"{_eventBusConfig.WeatherTopic}.{experimentId}", ExchangeType.Fanout, autoDelete: true);
+        }
+
         public string ClientId => _rabbitConnection?.ClientProvidedName ?? string.Empty;
         public string FlightQueueName => $"flight_{ClientId}";
         public string WeatherQueueName => $"weather_{ClientId}";
@@ -131,14 +143,14 @@ namespace DynamicFlightStorageSimulation
             systemMessageEventHandlers.Remove(handler);
         }
 
-        public Task PublishFlightAsync(Flight flight)
+        public Task PublishFlightAsync(Flight flight, string experimentId)
         {
-            return PublishMessageInternalAsync(_eventBusConfig.FlightTopic, MessagePackSerializer.Serialize(flight, _messagePackOptions));
+            return PublishMessageInternalAsync($"{_eventBusConfig.WeatherTopic}.{experimentId}", MessagePackSerializer.Serialize(flight, _messagePackOptions));
         }
 
-        public Task PublishWeatherAsync(Weather weather)
+        public Task PublishWeatherAsync(Weather weather, string experimentId)
         {
-            return PublishMessageInternalAsync(_eventBusConfig.WeatherTopic, MessagePackSerializer.Serialize(weather, _messagePackOptions));
+            return PublishMessageInternalAsync($"{_eventBusConfig.WeatherTopic}.{experimentId}", MessagePackSerializer.Serialize(weather, _messagePackOptions));
         }
 
         public Task PublishRecalculationAsync(Flight flight)
