@@ -7,6 +7,8 @@ namespace DynamicFlightStorageSimulation
         [Required]
         public required string Host { get; set; }
 
+        public string? ApiHost { get; set; }
+
         [Required]
         public required string Username { get; set; }
 

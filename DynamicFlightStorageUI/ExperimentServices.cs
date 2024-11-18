@@ -25,6 +25,12 @@ namespace DynamicFlightStorageUI
 
             builder.Services.AddSingleton((s) =>
             {
+                var config = s.GetService<IOptions<EventBusConfig>>()!.Value;
+                return new ConsumingMonitor(config);
+            });
+
+            builder.Services.AddSingleton((s) =>
+            {
                 var eventBus = s.GetRequiredService<SimulationEventBus>();
                 var metar = builder.Configuration["WeatherMetarFiles"];
                 var taf = builder.Configuration["WeatherTafFiles"];

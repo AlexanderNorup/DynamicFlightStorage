@@ -15,15 +15,17 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
         private SimulationEventBus _eventBus;
         private LatencyTester _latencyTester;
+        private ConsumingMonitor _consumingMonitor;
         private WeatherInjector _weatherInjector;
         private FlightInjector _flightInjector;
         private EventLogger<Orchestrator> _logger;
         private System.Timers.Timer _experimentChecker;
         private SemaphoreSlim _experimentControllerSemaphore = new SemaphoreSlim(1, 1);
-        public Orchestrator(SimulationEventBus eventBus, LatencyTester latencyTester, WeatherInjector weatherInjector, FlightInjector flightInjector, ILogger<Orchestrator> logger)
+        public Orchestrator(SimulationEventBus eventBus, LatencyTester latencyTester, ConsumingMonitor consumingMonitor, WeatherInjector weatherInjector, FlightInjector flightInjector, ILogger<Orchestrator> logger)
         {
             _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
             _latencyTester = latencyTester ?? throw new ArgumentNullException(nameof(latencyTester));
+            _consumingMonitor = consumingMonitor ?? throw new ArgumentNullException(nameof(consumingMonitor));
             _weatherInjector = weatherInjector ?? throw new ArgumentNullException(nameof(weatherInjector));
             _flightInjector = flightInjector ?? throw new ArgumentNullException(nameof(flightInjector));
             _logger = new EventLogger<Orchestrator>(logger);
@@ -138,6 +140,8 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 await _eventBus.CreateNewExperiment(CurrentExperiment.Id).ConfigureAwait(false);
 
                 ExperimentCancellationToken = new CancellationTokenSource();
+                var minimumWaitPreloadWaitTime = Task.Delay(TimeSpan.FromSeconds(5));
+
                 var result = await SendSystemMessageAndWaitForResponseAsync(new SystemMessage()
                 {
                     Message = CurrentExperiment.Id,
@@ -172,10 +176,11 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
                 ExperimentCancellationToken.Token.ThrowIfCancellationRequested();
 
-                //TODO: Check Queue if clients are done with preloading
-                // Untill then we just wait a bit
                 _logger.LogInformation("Published all preload-data. Waiting for consumers to consume it all");
-                await Task.Delay(TimeSpan.FromSeconds(2), ExperimentCancellationToken.Token).ConfigureAwait(false);
+
+                await minimumWaitPreloadWaitTime; // Wait for the minium time of 5 seconds before checking if everything is consumed
+                await _consumingMonitor.WaitForExchangesToBeConsumedAsync(CurrentExperiment.Id, ExperimentCancellationToken.Token);
+
                 _logger.LogInformation("Preload done");
                 OrchestratorState = OrchestratorState.PreloadDone;
             }
@@ -376,6 +381,8 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
                 if (CurrentSimulationTime >= CurrentExperiment.SimulatedEndTime)
                 {
+                    _logger.LogInformation("Simulation Time done. Waiting for consumers to consume the rest of the data.");
+                    await _consumingMonitor.WaitForExchangesToBeConsumedAsync(CurrentExperiment.Id, ExperimentCancellationToken.Token);
                     CurrentExperimentResult.ExperimentEnded = DateTime.UtcNow;
                     CurrentExperimentResult.ExperimentSuccess = true;
                     _logger.LogInformation("Experiment {Id} ended successfully.", CurrentExperiment.Id);
