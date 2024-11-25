@@ -69,7 +69,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
         private HashSet<string> _experimentRunnerClientIds = new HashSet<string>();
         public HashSet<string> ExperimentRunnerClientIds
         {
-            get => _experimentRunnerClientIds;
+            get => new HashSet<string>(_experimentRunnerClientIds); // Copying to new HashSet to ensure immutability
             set
             {
                 if (value is not null)
@@ -152,7 +152,8 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 {
                     Message = CurrentExperiment.Id,
                     MessageType = SystemMessageType.NewExperiment,
-                    Source = _eventBus.ClientId
+                    Source = _eventBus.ClientId,
+                    Targets = ExperimentRunnerClientIds
                 }, SystemMessageType.NewExperimentReady, TimeSpan.FromSeconds(10))
                     .ConfigureAwait(false);
 

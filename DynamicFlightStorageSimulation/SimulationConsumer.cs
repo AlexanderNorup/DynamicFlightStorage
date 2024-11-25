@@ -80,6 +80,11 @@ namespace DynamicFlightStorageSimulation
 
         private async Task OnSystemMessage(SystemMessage message)
         {
+            if (message.Targets.Count > 0 && !message.Targets.Contains(_simulationEventBus.ClientId))
+            {
+                // Message not meant for this consumer.
+                return;
+            }
             switch (message.MessageType)
             {
                 case SystemMessage.SystemMessageType.LatencyRequest:
