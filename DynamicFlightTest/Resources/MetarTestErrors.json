@@ -1,5 +1,6 @@
 [
     {
+        "ID": "74a01152-4047-4dc9-99ca-7758dc6dea35",
         "Ident": "KMMK",
         "Autonomous": true,
         "Wind": {
@@ -49,6 +50,7 @@
         ]
     },
     {
+        "ID": "b1c5a694-9495-4fd5-b1fd-d184a029b646",
         "Ident": "VCRI",
         "Wind": {
             "SpeedKts": 3,
@@ -86,6 +88,7 @@
         ]
     },
     {
+        "ID": "c1ed6749-8811-4fb4-a59c-841d636560d6",
         "Ident": "KSXU",
         "Autonomous": true,
         "Wind": {
@@ -123,6 +126,7 @@
         ]
     },
     {
+        "ID": "3b846190-14de-4f4d-864f-bd21b98d6967",
         "Ident": "SBIZ",
         "Wind": {
             "SpeedKts": 3,
@@ -160,6 +164,7 @@
         ]
     },
     {
+        "ID": "d263b0d2-0c30-462c-8f97-c258697ee8bf",
         "Ident": "VISP",
         "Wind": {
             "Variable": true,
@@ -200,6 +205,7 @@
         ]
     },
     {
+        "ID": "a2ddf496-9fde-4116-b701-05663efe1709",
         "Ident": "VIUT",
         "Wind": {
             "SpeedKts": 4,
