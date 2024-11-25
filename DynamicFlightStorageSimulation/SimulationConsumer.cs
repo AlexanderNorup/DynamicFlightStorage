@@ -34,18 +34,19 @@ namespace DynamicFlightStorageSimulation
             }
         }
 
-        private async Task OnWeatherRecieved(Weather weather)
+        private async Task OnWeatherRecieved(WeatherEvent weatherEvent)
         {
             cleanState = false;
+            var weather = weatherEvent.Weather;
             _weatherService.AddWeather(weather);
             await _eventDataStore.AddWeatherAsync(weather).ConfigureAwait(false);
             //_logger?.LogDebug("Processed weather event: {Weather}", e.Weather);
         }
 
-        private async Task OnFlightRecieved(Flight flight)
+        private async Task OnFlightRecieved(FlightEvent flight)
         {
             cleanState = false;
-            await _eventDataStore.AddOrUpdateFlightAsync(flight).ConfigureAwait(false);
+            await _eventDataStore.AddOrUpdateFlightAsync(flight.Flight).ConfigureAwait(false);
             //_logger?.LogDebug("Processed flight event: {Flight}", e.Flight);
         }
 

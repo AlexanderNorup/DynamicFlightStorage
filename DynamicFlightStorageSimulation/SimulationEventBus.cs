@@ -31,8 +31,8 @@ namespace DynamicFlightStorageSimulation
             _messagePackOptions = MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4Block);
         }
 
-        private HashSet<Func<Flight, Task>> flightStorageEventHandlers = new();
-        private HashSet<Func<Weather, Task>> weatherEventHandlers = new();
+        private HashSet<Func<FlightEvent, Task>> flightStorageEventHandlers = new();
+        private HashSet<Func<WeatherEvent, Task>> weatherEventHandlers = new();
         private HashSet<Func<FlightRecalculation, Task>> flightRecalculationEventHandlers = new();
         private HashSet<Func<SystemMessage, Task>> systemMessageEventHandlers = new();
 
@@ -109,12 +109,12 @@ namespace DynamicFlightStorageSimulation
         public string SystemQueueName => $"system_{ClientId}";
         public string RecalculationQueueName => $"recalculation_{ClientId}";
 
-        public void SubscribeToFlightStorageEvent(Func<Flight, Task> handler)
+        public void SubscribeToFlightStorageEvent(Func<FlightEvent, Task> handler)
         {
             flightStorageEventHandlers.Add(handler);
         }
 
-        public void SubscribeToWeatherEvent(Func<Weather, Task> handler)
+        public void SubscribeToWeatherEvent(Func<WeatherEvent, Task> handler)
         {
             weatherEventHandlers.Add(handler);
         }
@@ -130,12 +130,12 @@ namespace DynamicFlightStorageSimulation
             systemMessageEventHandlers.Add(handler);
         }
 
-        public void UnSubscribeToFlightStorageEvent(Func<Flight, Task> handler)
+        public void UnSubscribeToFlightStorageEvent(Func<FlightEvent, Task> handler)
         {
             flightStorageEventHandlers.Remove(handler);
         }
 
-        public void UnSubscribeToWeatherEvent(Func<Weather, Task> handler)
+        public void UnSubscribeToWeatherEvent(Func<WeatherEvent, Task> handler)
         {
             weatherEventHandlers.Remove(handler);
         }
@@ -152,12 +152,22 @@ namespace DynamicFlightStorageSimulation
 
         public Task PublishFlightAsync(Flight flight, string experimentId)
         {
-            return PublishMessageInternalAsync(GetFlightExperimentExchange(experimentId), MessagePackSerializer.Serialize(flight, _messagePackOptions));
+            var flightEvent = new FlightEvent()
+            {
+                Flight = flight,
+                TimeStamp = DateTime.UtcNow
+            };
+            return PublishMessageInternalAsync(GetFlightExperimentExchange(experimentId), MessagePackSerializer.Serialize(flightEvent, _messagePackOptions));
         }
 
         public Task PublishWeatherAsync(Weather weather, string experimentId)
         {
-            return PublishMessageInternalAsync(GetWeatherExperimentExchange(experimentId), MessagePackSerializer.Serialize(weather, _messagePackOptions));
+            var weatherEvent = new WeatherEvent()
+            {
+                Weather = weather,
+                TimeStamp = DateTime.UtcNow
+            };
+            return PublishMessageInternalAsync(GetWeatherExperimentExchange(experimentId), MessagePackSerializer.Serialize(weatherEvent, _messagePackOptions));
         }
 
         public Task PublishRecalculationAsync(Flight flight)
