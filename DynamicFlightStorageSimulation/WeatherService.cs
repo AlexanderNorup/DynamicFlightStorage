@@ -9,6 +9,7 @@ namespace DynamicFlightStorageSimulation
         {
             var backupWeather = new Weather
             {
+                Id = Guid.NewGuid().ToString(),
                 Airport = airport,
                 ValidFrom = dateTime,
                 ValidTo = dateTime,
@@ -54,6 +55,7 @@ namespace DynamicFlightStorageSimulation
             }
             _weather[airport].Add(new Weather
             {
+                Id = weather.Id,
                 WeatherLevel = weatherLevel,
                 Airport = airport,
                 ValidFrom = start,

@@ -33,6 +33,7 @@
 @code {
     private Weather weather = new Weather()
     {
+        Id = Guid.NewGuid().ToString(),
         Airport = "EKCH",
         ValidFrom = DateTime.UtcNow,
         ValidTo = DateTime.UtcNow.AddHours(1)
@@ -45,6 +46,7 @@
     {
         weather = new Weather()
         {
+            Id = Guid.NewGuid().ToString(),
             Airport = "EKCH",
             ValidFrom = DateTime.UtcNow,
             ValidTo = DateTime.UtcNow.AddHours(1)

@@ -39,7 +39,13 @@ public static class WeatherCreator
             //Console.WriteLine("Full text is empty.");
             return weatherList;
         }
-        var identifier = fullText.Substring(0, 12);
+        
+        var identifier = data["ID"]?.ToString();
+        if (string.IsNullOrEmpty(identifier))
+        {
+            //Console.WriteLine($"Identifier is empty for {fullText}");
+            return weatherList;
+        }
         
         // Check for airport identifier
         var airportId = data["Ident"]?.ToString();
@@ -74,6 +80,7 @@ public static class WeatherCreator
             
             weatherList.Add(new Weather()
             {
+                Id = identifier,
                 ValidFrom = dateIssued,
                 ValidTo = dateIssued,
                 Airport = airportId,
@@ -128,6 +135,7 @@ public static class WeatherCreator
 
         // Maybe adjust loop such that the first iteration only really does the first line of the loop,
         // and then adds weather with baseline (as initial baseline is always the first condition
+        var idIterator = 0;
         foreach (var condition in conditions)
         {
             JsonNode? period = condition?["Period"];
@@ -160,15 +168,18 @@ public static class WeatherCreator
             {
                 weatherList.Add(new Weather()
                 {
+                    Id = identifier + "_" + idIterator++,
                     ValidFrom = previousEnd,
                     ValidTo = dateStart,
                     Airport = airportId,
                     WeatherLevel = baseline
                 });
+                
             }
             
             weatherList.Add(new Weather()
             {
+                Id = identifier + "_" + idIterator++,
                 ValidFrom = dateStart,
                 ValidTo = dateEnd,
                 Airport = airportId,
@@ -190,6 +201,7 @@ public static class WeatherCreator
         {
             weatherList.Add(new Weather()
             {
+                Id = identifier + "_" + idIterator,
                 ValidFrom = previousEnd,
                 ValidTo = validTo,
                 Airport = airportId,

@@ -31,65 +31,57 @@ public class WeatherCreationTest
     [Test]
     public void TafObjectsAreCreated()
     {
-        _tafWeatherList.Should().HaveCount(26);
+        _tafWeatherList.Should().HaveCount(7);
     }
 
     [Test]
     public void FirstTafIsHandled()
     {
-        _tafWeatherList[0].Airport.Should().Be("KMUO");
-        _tafWeatherList[0].WeatherLevel.Should().Be(WeatherCategory.VFR);
-        _tafWeatherList[0].ValidFrom.Should().Be(DateTime.Parse("2024-08-03T00:00:00Z"));
-        _tafWeatherList[0].ValidTo.Should().Be(DateTime.Parse("2024-08-03T13:00:00Z"));
+        _tafWeatherList[0].Airport.Should().Be("SAOU");
+        _tafWeatherList[0].WeatherLevel.Should().Be(WeatherCategory.LIFR);
+        _tafWeatherList[0].ValidFrom.Should().Be(DateTime.Parse("2024-10-10T02:00:00Z"));
+        _tafWeatherList[0].ValidTo.Should().Be(DateTime.Parse("2024-10-10T12:00:00Z"));
+        _tafWeatherList[0].Id.Should().Be("1d467ada-6b87-4673-b088-0be32d21a001_0");
         
-        _tafWeatherList[1].Airport.Should().Be("KMUO");
+        _tafWeatherList[1].Airport.Should().Be("SAOU");
         _tafWeatherList[1].WeatherLevel.Should().Be(WeatherCategory.VFR);
-        _tafWeatherList[1].ValidFrom.Should().Be(DateTime.Parse("2024-08-03T13:00:00Z"));
-        _tafWeatherList[1].ValidTo.Should().Be(DateTime.Parse("2024-08-03T14:00:00Z"));
+        _tafWeatherList[1].ValidFrom.Should().Be(DateTime.Parse("2024-10-10T12:00:00Z"));
+        _tafWeatherList[1].ValidTo.Should().Be(DateTime.Parse("2024-10-10T14:00:00Z"));
+        _tafWeatherList[1].Id.Should().Be("1d467ada-6b87-4673-b088-0be32d21a001_1");
         
-        _tafWeatherList[2].Airport.Should().Be("KMUO");
+        _tafWeatherList[2].Airport.Should().Be("SAOU");
         _tafWeatherList[2].WeatherLevel.Should().Be(WeatherCategory.VFR);
-        _tafWeatherList[2].ValidFrom.Should().Be(DateTime.Parse("2024-08-03T14:00:00Z"));
-        _tafWeatherList[2].ValidTo.Should().Be(DateTime.Parse("2024-08-03T15:00:00Z"));
+        _tafWeatherList[2].ValidFrom.Should().Be(DateTime.Parse("2024-10-10T14:00:00Z"));
+        _tafWeatherList[2].ValidTo.Should().Be(DateTime.Parse("2024-10-10T21:00:00Z"));
+        _tafWeatherList[2].Id.Should().Be("1d467ada-6b87-4673-b088-0be32d21a001_2");
         
-        _tafWeatherList[3].Airport.Should().Be("KMUO");
-        _tafWeatherList[3].WeatherLevel.Should().Be(WeatherCategory.VFR);
-        _tafWeatherList[3].ValidFrom.Should().Be(DateTime.Parse("2024-08-03T15:00:00Z"));
-        _tafWeatherList[3].ValidTo.Should().Be(DateTime.Parse("2024-08-04T00:00:00Z"));
+        _tafWeatherList[3].Airport.Should().Be("SAOU");
+        _tafWeatherList[3].WeatherLevel.Should().Be(WeatherCategory.LIFR);
+        _tafWeatherList[3].ValidFrom.Should().Be(DateTime.Parse("2024-10-10T21:00:00Z"));
+        _tafWeatherList[3].ValidTo.Should().Be(DateTime.Parse("2024-10-11T00:00:00Z"));
+        _tafWeatherList[3].Id.Should().Be("1d467ada-6b87-4673-b088-0be32d21a001_3");
     }
     
     [Test]
     public void LastTafIsHandled()
     {
-        _tafWeatherList[20].Airport.Should().Be("KHMN");
-        _tafWeatherList[20].WeatherLevel.Should().Be(WeatherCategory.VFR);
-        _tafWeatherList[20].ValidFrom.Should().Be(DateTime.Parse("2024-08-03T00:00:00Z"));
-        _tafWeatherList[20].ValidTo.Should().Be(DateTime.Parse("2024-08-03T00:00:00Z"));
+        _tafWeatherList[4].Airport.Should().Be("HJJJ");
+        _tafWeatherList[4].WeatherLevel.Should().Be(WeatherCategory.VFR);
+        _tafWeatherList[4].ValidFrom.Should().Be(DateTime.Parse("2024-10-10T06:00:00Z"));
+        _tafWeatherList[4].ValidTo.Should().Be(DateTime.Parse("2024-10-10T11:00:00Z"));
+        _tafWeatherList[4].Id.Should().Be("a20a02e8-c8c2-43d8-80e5-1d7ba33192b1_0");
         
-        _tafWeatherList[21].Airport.Should().Be("KHMN");
-        _tafWeatherList[21].WeatherLevel.Should().Be(WeatherCategory.MVFR);
-        _tafWeatherList[21].ValidFrom.Should().Be(DateTime.Parse("2024-08-03T00:00:00Z"));
-        _tafWeatherList[21].ValidTo.Should().Be(DateTime.Parse("2024-08-03T01:00:00Z"));
+        _tafWeatherList[5].Airport.Should().Be("HJJJ");
+        _tafWeatherList[5].WeatherLevel.Should().Be(WeatherCategory.MVFR);
+        _tafWeatherList[5].ValidFrom.Should().Be(DateTime.Parse("2024-10-10T11:00:00Z"));
+        _tafWeatherList[5].ValidTo.Should().Be(DateTime.Parse("2024-10-10T14:00:00Z"));
+        _tafWeatherList[5].Id.Should().Be("a20a02e8-c8c2-43d8-80e5-1d7ba33192b1_1");
         
-        _tafWeatherList[22].Airport.Should().Be("KHMN");
-        _tafWeatherList[22].WeatherLevel.Should().Be(WeatherCategory.VFR);
-        _tafWeatherList[22].ValidFrom.Should().Be(DateTime.Parse("2024-08-03T01:00:00Z"));
-        _tafWeatherList[22].ValidTo.Should().Be(DateTime.Parse("2024-08-03T02:00:00Z"));
-        
-        _tafWeatherList[23].Airport.Should().Be("KHMN");
-        _tafWeatherList[23].WeatherLevel.Should().Be(WeatherCategory.VFR);
-        _tafWeatherList[23].ValidFrom.Should().Be(DateTime.Parse("2024-08-03T02:00:00Z"));
-        _tafWeatherList[23].ValidTo.Should().Be(DateTime.Parse("2024-08-03T03:00:00Z"));
-        
-        _tafWeatherList[24].Airport.Should().Be("KHMN");
-        _tafWeatherList[24].WeatherLevel.Should().Be(WeatherCategory.VFR);
-        _tafWeatherList[24].ValidFrom.Should().Be(DateTime.Parse("2024-08-03T03:00:00Z"));
-        _tafWeatherList[24].ValidTo.Should().Be(DateTime.Parse("2024-08-03T16:00:00Z"));
-        
-        _tafWeatherList[25].Airport.Should().Be("KHMN");
-        _tafWeatherList[25].WeatherLevel.Should().Be(WeatherCategory.VFR);
-        _tafWeatherList[25].ValidFrom.Should().Be(DateTime.Parse("2024-08-03T16:00:00Z"));
-        _tafWeatherList[25].ValidTo.Should().Be(DateTime.Parse("2024-08-03T23:00:00Z"));
+        _tafWeatherList[6].Airport.Should().Be("HJJJ");
+        _tafWeatherList[6].WeatherLevel.Should().Be(WeatherCategory.MVFR);
+        _tafWeatherList[6].ValidFrom.Should().Be(DateTime.Parse("2024-10-10T14:00:00Z"));
+        _tafWeatherList[6].ValidTo.Should().Be(DateTime.Parse("2024-10-11T12:00:00Z"));
+        _tafWeatherList[6].Id.Should().Be("a20a02e8-c8c2-43d8-80e5-1d7ba33192b1_2");
     }
 
     [Test]
@@ -141,41 +133,23 @@ public class WeatherCreationTest
     [Test]
     public void MetarObjectsCreated()
     {
-        _metarWeatherList.Should().HaveCount(6);
+        _metarWeatherList.Should().HaveCount(2);
     }
     
     [Test]
     public void MetarWeatherIsHandled()
     {
-        _metarWeatherList[0].Airport.Should().Be("KMMK");
-        _metarWeatherList[0].WeatherLevel.Should().Be(WeatherCategory.IFR);
-        _metarWeatherList[0].ValidFrom.Should().Be(DateTime.Parse("2024-08-03T21:04:00Z"));
-        _metarWeatherList[0].ValidTo.Should().Be(DateTime.Parse("2024-08-03T21:04:00Z"));
+        _metarWeatherList[0].Id.Should().Be("f3263fcb-2a46-4b0d-8021-774196232374");
+        _metarWeatherList[0].Airport.Should().Be("BIGJ");
+        _metarWeatherList[0].WeatherLevel.Should().Be(WeatherCategory.MVFR);
+        _metarWeatherList[0].ValidFrom.Should().Be(DateTime.Parse("2024-10-11T14:03:00Z"));
+        _metarWeatherList[0].ValidTo.Should().Be(DateTime.Parse("2024-10-11T14:03:00Z"));
         
-        _metarWeatherList[1].Airport.Should().Be("VCRI");
-        _metarWeatherList[1].WeatherLevel.Should().Be(WeatherCategory.VFR);
-        _metarWeatherList[1].ValidFrom.Should().Be(DateTime.Parse("2024-08-03T21:10:00Z"));
-        _metarWeatherList[1].ValidTo.Should().Be(DateTime.Parse("2024-08-03T21:10:00Z"));
-        
-        _metarWeatherList[2].Airport.Should().Be("KSXU");
-        _metarWeatherList[2].WeatherLevel.Should().Be(WeatherCategory.VFR);
-        _metarWeatherList[2].ValidFrom.Should().Be(DateTime.Parse("2024-08-03T21:15:00Z"));
-        _metarWeatherList[2].ValidTo.Should().Be(DateTime.Parse("2024-08-03T21:15:00Z"));
-        
-        _metarWeatherList[3].Airport.Should().Be("SBIZ");
-        _metarWeatherList[3].WeatherLevel.Should().Be(WeatherCategory.VFR);
-        _metarWeatherList[3].ValidFrom.Should().Be(DateTime.Parse("2024-08-03T21:25:00Z"));
-        _metarWeatherList[3].ValidTo.Should().Be(DateTime.Parse("2024-08-03T21:25:00Z"));
-        
-        _metarWeatherList[4].Airport.Should().Be("VISP");
-        _metarWeatherList[4].WeatherLevel.Should().Be(WeatherCategory.MVFR);
-        _metarWeatherList[4].ValidFrom.Should().Be(DateTime.Parse("2024-08-03T21:30:00Z"));
-        _metarWeatherList[4].ValidTo.Should().Be(DateTime.Parse("2024-08-03T21:30:00Z"));
-        
-        _metarWeatherList[5].Airport.Should().Be("VIUT");
-        _metarWeatherList[5].WeatherLevel.Should().Be(WeatherCategory.MVFR);
-        _metarWeatherList[5].ValidFrom.Should().Be(DateTime.Parse("2024-08-03T21:30:00Z"));
-        _metarWeatherList[5].ValidTo.Should().Be(DateTime.Parse("2024-08-03T21:30:00Z"));
+        _metarWeatherList[1].Id.Should().Be("265f021a-ff72-477d-aff5-72879ebb2439");
+        _metarWeatherList[1].Airport.Should().Be("SBML");
+        _metarWeatherList[1].WeatherLevel.Should().Be(WeatherCategory.MVFR);
+        _metarWeatherList[1].ValidFrom.Should().Be(DateTime.Parse("2024-10-11T14:17:00Z"));
+        _metarWeatherList[1].ValidTo.Should().Be(DateTime.Parse("2024-10-11T14:17:00Z"));
     }
     
     [Test]
