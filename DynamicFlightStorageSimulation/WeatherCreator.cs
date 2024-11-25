@@ -43,7 +43,7 @@ public static class WeatherCreator
         var identifier = data["ID"]?.ToString();
         if (string.IsNullOrEmpty(identifier))
         {
-            //Console.WriteLine($"Airport identifier is empty for {identifier}");
+            //Console.WriteLine($"Identifier is empty for {fullText}");
             return weatherList;
         }
         
