@@ -126,22 +126,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @if (recalculationLogs.Any())
-                    {
-                        @foreach (var log in recalculationLogs)
-                        {
-                            <tr>
-                                <td>@log.Timestamp</td>
-                                <td>@log.Message</td>
-                            </tr>
-                        }
-                    }
-                    else
-                    {
-                        <tr>
-                            <td colspan="2" class="text-center">No flights signaled to be recalculated yet</td>
-                        </tr>
-                    }
+                    <tr>
+                        <td colspan="2" class="text-center">This does not work. TODO: update with javascript log thingy like above</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -167,7 +154,6 @@
 
 @code {
     private CancellationTokenSource cts = new();
-    private List<RecalculationLogEntry> recalculationLogs = new List<RecalculationLogEntry>();
     private List<LogEntry> orchestratorLogs = new List<LogEntry>();
     private SimulationConsumer? consumer;
     private LatencyTester? latencyTester;
@@ -177,7 +163,7 @@
 
     private readonly Experiment testExperiment = new Experiment()
     {
-        Name = "Test Experiment",
+        Name = "Test max speed Experiment",
         PreloadAllFlights = true,
         SimulatedStartTime = new DateTime(2024, 10, 11, 3, 00, 00, DateTimeKind.Utc),
         SimulatedEndTime = new DateTime(2024, 10, 12, 00, 00, 00, DateTimeKind.Utc),
@@ -187,7 +173,7 @@
         TimeScale = -1 // Negative value means "as fast as possible"
     };
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         if (orchestrator.CurrentExperiment is null)
         {
@@ -195,7 +181,6 @@
         }
         orchestrator.OnExperimentStateChanged += OnExperimentStateChanged;
         orchestrator.OnLogEvent += OnOrchestratorLog;
-        await eventbus.SubscribeToRecalculationEventAsync(OnRecalculationEvent);
         latencyTester = new LatencyTester(eventbus, loggerFactory.CreateLogger<LatencyTester>());
     }
 
@@ -341,15 +326,6 @@
             WriteIndented = true
         });
     }
-
-    private async Task OnRecalculationEvent(FlightRecalculation flight)
-    {
-        // TODO: Don't do this, as this becomes a race-condition because we both enumerate and add to the list at once.
-        recalculationLogs.Add(new(DateTime.UtcNow, flight.ToString()));
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private record RecalculationLogEntry(DateTime Timestamp, string Message);
 
     public void Dispose()
     {

@@ -10,8 +10,14 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
         public DbSet<ExperimentClientResult> ExperimentClientResults { get; set; }
         public DbSet<LatencyTestResult> LatencyTestResults { get; set; }
 
+        public DbSet<FlightEventLog> FlightEventLogs { get; set; }
+        public DbSet<WeatherEventLog> WeatherEventLogs { get; set; }
+        public DbSet<RecalculationEventLog> RecalculationEventLogs { get; set; }
+
         public DataCollectionContext(DbContextOptions<DataCollectionContext> context) : base(context)
-        { }
+        {
+            ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
+        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

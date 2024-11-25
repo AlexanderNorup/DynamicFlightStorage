@@ -269,6 +269,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 CurrentExperimentResult.UTCStartTime = DateTime.UtcNow;
 
                 await _experimentDataCollector.AddOrUpdateExperimentResultAsync(CurrentExperimentResult);
+                await _experimentDataCollector.MonitorExperimentAsync(CurrentExperiment.Id);
                 CurrentSimulationTime = CurrentExperiment.SimulatedStartTime;
                 OrchestratorState = OrchestratorState.Running;
                 ExperimentTask = ExperimentLoop(); // Don't wait
@@ -330,6 +331,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             ExperimentCancellationToken = new CancellationTokenSource();
             OrchestratorState = OrchestratorState.Idle;
             CurrentLag = new();
+            _experimentDataCollector.StopMonitoringExperiment();
             _experimentChecker.Stop();
             _flightInjector.ResetReader();
             _weatherInjector.ResetReader();
@@ -355,6 +357,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     currentResult.UTCEndTime = DateTime.UtcNow;
                     currentResult.ExperimentSuccess = false;
                     await _experimentDataCollector.AddOrUpdateExperimentResultAsync(CurrentExperimentResult);
+                    await _experimentDataCollector.FinishDataCollectionAsync();
                 }
                 if (ExperimentTask is not null)
                 {
@@ -410,6 +413,8 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     CurrentExperimentResult.UTCEndTime = DateTime.UtcNow;
                     CurrentExperimentResult.ExperimentSuccess = true;
                     await _experimentDataCollector.AddOrUpdateExperimentResultAsync(CurrentExperimentResult);
+                    await Task.Delay(TimeSpan.FromSeconds(5)); // Simply to ensure we get the rest of the recalculaitons if some of them were to be in the last dataset
+                    await _experimentDataCollector.FinishDataCollectionAsync();
                     _logger.LogInformation("Experiment {Id} ended successfully.", CurrentExperiment.Id);
                     ResetExperimentState();
                     return;
