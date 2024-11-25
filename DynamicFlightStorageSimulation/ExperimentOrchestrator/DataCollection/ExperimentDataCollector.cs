@@ -58,8 +58,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
             {
                 ExperimentId = _eventBus.CurrentExperimentId,
                 UtcTimeStamp = weatherEvent.TimeStamp,
-                //WeatherId = weatherEvent.Weather.Id TODO!!
-                WeatherId = "lol"
+                WeatherId = weatherEvent.Weather.Id
             });
 
             return Task.CompletedTask;
