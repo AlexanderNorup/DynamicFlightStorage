@@ -3,6 +3,7 @@
 @using System.Text.Json
 @using DynamicFlightStorageSimulation.Utilities
 @using System.Globalization
+@using System.Text.Json.Serialization
 @inject SimulationEventBus eventbus
 @inject Orchestrator orchestrator
 @inject ILoggerFactory loggerFactory
@@ -21,7 +22,7 @@
                && orchestrator.CurrentExperiment is { } currEx
                && orchestrator.CurrentExperimentResult is { } result)
             {
-                bool experimentDone = result.ExperimentEnded is not null;
+                bool experimentDone = result.UTCEndTime is not null;
                 string barColor = "";
                 if (experimentDone)
                 {
@@ -95,7 +96,7 @@
             {
                 <p>
                     Current Experiment results:<br />
-                    <pre>@(JsonSerializer.Serialize(results, new JsonSerializerOptions() { WriteIndented = true }))</pre>
+                    <pre>@(JsonSerializer.Serialize(results, new JsonSerializerOptions() { WriteIndented = true, ReferenceHandler = ReferenceHandler.Preserve }))</pre>
                 </p>
             }
         </div>
@@ -320,7 +321,7 @@
             return;
         }
         var results = await latencyTester.GetConsumersAndLatencyAsync(1, 1).ConfigureAwait(false);
-        KnownClientIds = results.Select(x => x.Clientid).ToHashSet();
+        KnownClientIds = results.Select(x => x.ClientId).ToHashSet();
         await InvokeAsync(StateHasChanged);
     }
 
@@ -334,7 +335,7 @@
         StateHasChanged();
 
         var results = await latencyTester.GetConsumersAndLatencyAsync(sample, delay, cts.Token);
-        KnownClientIds = results.Select(x => x.Clientid).ToHashSet();
+        KnownClientIds = results.Select(x => x.ClientId).ToHashSet();
         latencyTestResult = JsonSerializer.Serialize(results, new JsonSerializerOptions()
         {
             WriteIndented = true

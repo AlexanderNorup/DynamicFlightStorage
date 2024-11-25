@@ -1,6 +1,8 @@
 ﻿using DynamicFlightStorageSimulation.ExperimentOrchestrator;
 using DynamicFlightStorageSimulation;
 using Microsoft.Extensions.Options;
+using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection;
+using Microsoft.EntityFrameworkCore;
 
 namespace DynamicFlightStorageUI
 {
@@ -28,6 +30,17 @@ namespace DynamicFlightStorageUI
                 var config = s.GetService<IOptions<EventBusConfig>>()!.Value;
                 return new ConsumingMonitor(config);
             });
+
+            builder.Services.AddDbContext<DataCollectionContext>((s, options) =>
+            {
+                var serverVersion = new MariaDbServerVersion(new Version(10, 5));
+#if DEBUG
+                options.EnableSensitiveDataLogging();
+#endif
+                options.UseMySql(builder.Configuration.GetConnectionString("ExperimentDataCollection"), serverVersion);
+            }, ServiceLifetime.Singleton);
+
+            builder.Services.AddSingleton<ExperimentDataCollector>();
 
             builder.Services.AddSingleton((s) =>
             {

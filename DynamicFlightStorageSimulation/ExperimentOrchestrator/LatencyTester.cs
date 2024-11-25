@@ -1,4 +1,5 @@
 ﻿using DynamicFlightStorageDTOs;
+using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.Entities;
 using DynamicFlightStorageSimulation.Utilities;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
@@ -92,14 +93,16 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                         i++;
                     }
 
-                    experimentResults.Add(new LatencyTestResult(clientId,
-                        success,
-                        samplePoints,
-                        sampleDelayMs,
-                        latencyForClient.Average(),
-                        latencyForClient.Median(),
-                        latencyForClient.StdDev())
-                    );
+                    experimentResults.Add(new LatencyTestResult()
+                    {
+                        ClientId = clientId,
+                        Success = success,
+                        SamplePoints = samplePoints,
+                        SampleDelayMs = sampleDelayMs,
+                        AverageLatencyMs = latencyForClient.Average(),
+                        MedianLatencyMs = latencyForClient.Median(),
+                        StdDeviationLatency = latencyForClient.StdDev()
+                    });
                 }
                 return experimentResults;
             }

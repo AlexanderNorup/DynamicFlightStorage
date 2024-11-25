@@ -1,4 +1,6 @@
 ﻿using DynamicFlightStorageDTOs;
+using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection;
+using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.Entities;
 using DynamicFlightStorageSimulation.Utilities;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
@@ -17,16 +19,18 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
         private ConsumingMonitor _consumingMonitor;
         private WeatherInjector _weatherInjector;
         private FlightInjector _flightInjector;
+        private ExperimentDataCollector _experimentDataCollector;
         private EventLogger<Orchestrator> _logger;
         private System.Timers.Timer _experimentChecker;
         private SemaphoreSlim _experimentControllerSemaphore = new SemaphoreSlim(1, 1);
-        public Orchestrator(SimulationEventBus eventBus, LatencyTester latencyTester, ConsumingMonitor consumingMonitor, WeatherInjector weatherInjector, FlightInjector flightInjector, ILogger<Orchestrator> logger)
+        public Orchestrator(SimulationEventBus eventBus, LatencyTester latencyTester, ConsumingMonitor consumingMonitor, WeatherInjector weatherInjector, FlightInjector flightInjector, ExperimentDataCollector experimentDataCollector, ILogger<Orchestrator> logger)
         {
             _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
             _latencyTester = latencyTester ?? throw new ArgumentNullException(nameof(latencyTester));
             _consumingMonitor = consumingMonitor ?? throw new ArgumentNullException(nameof(consumingMonitor));
             _weatherInjector = weatherInjector ?? throw new ArgumentNullException(nameof(weatherInjector));
             _flightInjector = flightInjector ?? throw new ArgumentNullException(nameof(flightInjector));
+            _experimentDataCollector = experimentDataCollector ?? throw new ArgumentNullException(nameof(experimentDataCollector));
             _logger = new EventLogger<Orchestrator>(logger);
             _experimentChecker = new System.Timers.Timer(1000);
             _experimentChecker.Elapsed += (s, e) => CheckExperimentRunning();
@@ -144,6 +148,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 OnExperimentStateChanged?.Invoke();
 
                 await _eventBus.CreateNewExperiment(CurrentExperiment.Id).ConfigureAwait(false);
+                await _experimentDataCollector.AddOrUpdateExperimentAsync(CurrentExperiment);
 
                 ExperimentCancellationToken = new CancellationTokenSource();
                 var minimumWaitPreloadWaitTime = Task.Delay(TimeSpan.FromSeconds(5));
@@ -236,7 +241,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
                 CurrentExperimentResult = new ExperimentResult()
                 {
-                    Experiment = CurrentExperiment
+                    ExperimentId = CurrentExperiment.Id
                 };
 
                 _logger.LogInformation("Starting Experiment with Latency Test");
@@ -246,21 +251,24 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
                 _logger.LogInformation("Latency test results: {LatencyTestResults}",
                     string.Join(", ", latencyResults));
-                if (ExperimentRunnerClientIds.Except(latencyResults.Select(x => x.Clientid)).Any())
+                if (ExperimentRunnerClientIds.Except(latencyResults.Select(x => x.ClientId)).Any())
                 {
                     throw new InvalidOperationException("Latency test results do not contain results for all experiment runners.");
                 }
 
                 // Add Latency results to experiment result
-                CurrentExperimentResult.ClientResults = latencyResults.Where(x => ExperimentRunnerClientIds.Contains(x.Clientid))
-                    .ToDictionary(x => x.Clientid, x => new ExperimentClientResult()
+                CurrentExperimentResult.ClientResults = latencyResults.Where(x => ExperimentRunnerClientIds.Contains(x.ClientId))
+                    .Select(x => new ExperimentClientResult()
                     {
-                        ClientId = x.Clientid,
-                        LatencyTest = x
-                    });
+                        ClientId = x.ClientId,
+                        LatencyTest = x,
+                        ExperimentResult = CurrentExperimentResult
+                    }).ToList();
 
                 // Start the experiment clock
-                CurrentExperimentResult.ExperimentStarted = DateTime.UtcNow;
+                CurrentExperimentResult.UTCStartTime = DateTime.UtcNow;
+
+                await _experimentDataCollector.AddOrUpdateExperimentResultAsync(CurrentExperimentResult);
                 CurrentSimulationTime = CurrentExperiment.SimulatedStartTime;
                 OrchestratorState = OrchestratorState.Running;
                 ExperimentTask = ExperimentLoop(); // Don't wait
@@ -299,7 +307,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     if (CurrentExperimentResult is { } result)
                     {
                         result.ExperimentError = $"ExperimentTask threw exception of type {ExperimentTask.Exception.GetType().FullName}: {ExperimentTask.Exception?.Message}";
-                        result.ExperimentEnded = DateTime.UtcNow;
+                        result.UTCEndTime = DateTime.UtcNow;
                         result.ExperimentSuccess = false;
                     }
                     ResetExperimentState();
@@ -341,11 +349,12 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 {
                     ExperimentCancellationToken.Cancel();
                 }
-                if (CurrentExperimentResult is { ExperimentSuccess: false, ExperimentEnded: null } currentResult)
+                if (CurrentExperimentResult is { ExperimentSuccess: false, UTCEndTime: null } currentResult)
                 {
                     currentResult.ExperimentError = "Experiment aborted at " + DateTime.UtcNow;
-                    currentResult.ExperimentEnded = DateTime.UtcNow;
+                    currentResult.UTCEndTime = DateTime.UtcNow;
                     currentResult.ExperimentSuccess = false;
+                    await _experimentDataCollector.AddOrUpdateExperimentResultAsync(CurrentExperimentResult);
                 }
                 if (ExperimentTask is not null)
                 {
@@ -398,8 +407,9 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 {
                     _logger.LogInformation("Simulation Time done. Waiting for consumers to consume the rest of the data.");
                     await _consumingMonitor.WaitForExchangesToBeConsumedAsync(ExperimentRunnerClientIds.ToArray(), ExperimentCancellationToken.Token);
-                    CurrentExperimentResult.ExperimentEnded = DateTime.UtcNow;
+                    CurrentExperimentResult.UTCEndTime = DateTime.UtcNow;
                     CurrentExperimentResult.ExperimentSuccess = true;
+                    await _experimentDataCollector.AddOrUpdateExperimentResultAsync(CurrentExperimentResult);
                     _logger.LogInformation("Experiment {Id} ended successfully.", CurrentExperiment.Id);
                     ResetExperimentState();
                     return;
@@ -440,7 +450,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 CurrentLag = experimentLag;
                 foreach (var (clientId, lag) in experimentLag)
                 {
-                    if (CurrentExperimentResult.ClientResults.TryGetValue(clientId, out var result))
+                    if (CurrentExperimentResult.ClientResults.FirstOrDefault(x => x.ClientId == clientId) is { } result)
                     {
                         result.MaxFlightConsumerLag = Math.Max(result.MaxFlightConsumerLag, lag.flightLag);
                         result.MaxWeatherConsumerLag = Math.Max(result.MaxWeatherConsumerLag, lag.weatherLag);

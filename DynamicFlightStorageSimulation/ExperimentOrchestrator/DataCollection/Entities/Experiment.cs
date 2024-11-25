@@ -1,7 +1,12 @@
-﻿namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.Entities
 {
+    [Table("Experiment")]
     public class Experiment
     {
+        [Key]
         public string Id { get; init; } = Guid.NewGuid().ToString();
         public string? Name { get; set; }
         public DateTime SimulatedStartTime { get; init; }
