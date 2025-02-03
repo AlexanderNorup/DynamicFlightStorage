@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\DynamicFlightStorageSimulation\DynamicFlightStorageSimulation.csproj" />
     <ProjectReference Include="..\EventDataStores\BasicEventDataStore\BasicEventDataStore.csproj" />
+    <ProjectReference Include="..\EventDataStores\SimplePostgreSQLDataStore\SimplePostgreSQLDataStore.csproj" />
   </ItemGroup>
 
 </Project>

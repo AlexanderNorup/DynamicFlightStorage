@@ -81,7 +81,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
             {
                 ExperimentId = _eventBus.CurrentExperimentId,
                 UtcTimeStamp = flight.RecalculatedTime,
-                FlightId = flight.Flight.FlightIdentification
+                FlightId = flight.FlightIdentification
             });
 
             return Task.CompletedTask;

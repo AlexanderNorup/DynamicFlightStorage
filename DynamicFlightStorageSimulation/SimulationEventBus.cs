@@ -170,11 +170,11 @@ namespace DynamicFlightStorageSimulation
             return PublishMessageInternalAsync(GetWeatherExperimentExchange(experimentId), MessagePackSerializer.Serialize(weatherEvent, _messagePackOptions));
         }
 
-        public Task PublishRecalculationAsync(Flight flight)
+        public Task PublishRecalculationAsync(string flightIdentification)
         {
             var recalculation = new FlightRecalculation()
             {
-                Flight = flight,
+                FlightIdentification = flightIdentification,
                 ExperimentId = CurrentExperimentId,
                 RecalculatedTime = DateTime.UtcNow
             };

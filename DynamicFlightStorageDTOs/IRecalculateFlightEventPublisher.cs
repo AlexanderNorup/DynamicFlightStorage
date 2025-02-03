@@ -2,6 +2,6 @@
 {
     public interface IRecalculateFlightEventPublisher
     {
-        Task PublishRecalculationAsync(Flight flight);
+        Task PublishRecalculationAsync(string flightIdentification);
     }
 }
