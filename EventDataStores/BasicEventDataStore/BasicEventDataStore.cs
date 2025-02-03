@@ -50,7 +50,7 @@ namespace BasicEventDataStore
                         // We need to recalculate
                         Console.WriteLine($"Recalculate flight: {flight.FlightIdentification}");
                         flightWrapper.ToBeRecalculated = true;
-                        await _flightRecalculation.PublishRecalculationAsync(flight).ConfigureAwait(false);
+                        await _flightRecalculation.PublishRecalculationAsync(flight.FlightIdentification).ConfigureAwait(false);
                     }
                 }
             }

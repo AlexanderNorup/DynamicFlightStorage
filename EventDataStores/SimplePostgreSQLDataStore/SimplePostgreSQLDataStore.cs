@@ -31,7 +31,7 @@ namespace SimplePostgreSQLDataStore
 #if DEBUG
             Console.WriteLine("Simple Postgres Datastore ConnectionString: " + _container.GetConnectionString());
 #endif
-            }
+        }
 
         public async Task AddOrUpdateFlightAsync(Flight flight)
         {
@@ -106,14 +106,7 @@ namespace SimplePostgreSQLDataStore
                 Console.WriteLine($"Recalculate flight: {flight.FlightIdentification}");
                 flight.IsRecalculating = true;
 
-                // TODO: Fix this so we don't need to create a new flight object and can just send the id
-                var domainFlight = new Flight()
-                {
-                    FlightIdentification = flight.FlightIdentification,
-                    DepartureAirport = "zzzz",
-                    DestinationAirport = "zzzz",
-                };
-                await _flightRecalculation.PublishRecalculationAsync(domainFlight).ConfigureAwait(false);
+                await _flightRecalculation.PublishRecalculationAsync(flight.FlightIdentification).ConfigureAwait(false);
             }
             await _dbContext.SaveChangesAsync();
         }
