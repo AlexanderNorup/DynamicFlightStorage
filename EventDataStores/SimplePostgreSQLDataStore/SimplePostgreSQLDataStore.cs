@@ -28,7 +28,10 @@ namespace SimplePostgreSQLDataStore
 
             await _dbContext.Database.MigrateAsync();
             Console.WriteLine("Started and migrated database");
-        }
+#if DEBUG
+            Console.WriteLine("Simple Postgres Datastore ConnectionString: " + _container.GetConnectionString());
+#endif
+            }
 
         public async Task AddOrUpdateFlightAsync(Flight flight)
         {
@@ -90,11 +93,10 @@ namespace SimplePostgreSQLDataStore
 
             var affectedFlights = await _dbContext.Airports
                 .Where(x => x.ICAO == weather.Airport  // Get all airports matching the weather
-                          && !x.FlightEntity.IsRecalculating // Whose flights are not already being recalculated
-                          && (x.FlightEntity.ScheduledTimeOfArrival < weather.ValidFrom // And whose flights overlap with the weather
+                        && !x.FlightEntity.IsRecalculating // Whose flights are not already being recalculated
+                        && (x.FlightEntity.ScheduledTimeOfArrival < weather.ValidFrom // And whose flights overlap with the weather
                             || weather.ValidTo < x.FlightEntity.ScheduledTimeOfDeparture)
                           && x.LastSeenWeatherCategory < weather.WeatherLevel) // And those where the current wetter is now worse
-                .DistinctBy(x => x.FlightEntityId) // We only need to recalculate each flight once
                 .ToListAsync();
 
             foreach (var airport in affectedFlights)
