@@ -115,5 +115,7 @@ namespace BasicEventDataStore
             _flights.Clear();
             return Task.CompletedTask;
         }
+
+        public Task StartAsync() => Task.CompletedTask;
     }
 }

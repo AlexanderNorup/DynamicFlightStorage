@@ -174,7 +174,7 @@ namespace DynamicFlightStorageSimulation
         {
             var recalculation = new FlightRecalculation()
             {
-                Flight = flight,
+                Flight = flight, //TODO: Simply this to just the FlightId
                 ExperimentId = CurrentExperimentId,
                 RecalculatedTime = DateTime.UtcNow
             };
