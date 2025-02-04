@@ -1,0 +1,12 @@
+{
+    "FlightIdentification": "fc95b124-4bc7-43c2-a05b-a5794d4b4efa",
+    "DepartureAirport": "LINA",
+    "DestinationAirport": "LFYR",
+    "OtherRelatedAirports": {
+        "EHJE": "AdequateAirport",
+        "ENSU": "AdequateAirport"
+    },
+    "ScheduledTimeOfDeparture": "2025-01-10T23:47:00Z",
+    "ScheduledTimeOfArrival": "2025-01-11T03:00:00Z",
+    "DatePlanned": "2025-01-01T16:47:00Z"
+}

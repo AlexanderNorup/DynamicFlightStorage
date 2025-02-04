@@ -1,0 +1,12 @@
+{
+    "FlightIdentification": "7efbbc67-0c94-4bff-874c-a06e1282cf1a",
+    "DepartureAirport": "EGKB",
+    "DestinationAirport": "LRBC",
+    "OtherRelatedAirports": {
+        "EGGP": "AdequateAirport",
+        "LBPD": "AdequateAirport"
+    },
+    "ScheduledTimeOfDeparture": "2025-01-04T12:23:00Z",
+    "ScheduledTimeOfArrival": "2025-01-04T13:40:00Z",
+    "DatePlanned": "2025-01-01T22:23:00Z"
+}

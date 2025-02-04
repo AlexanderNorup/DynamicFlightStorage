@@ -1,0 +1,12 @@
+{
+    "FlightIdentification": "f2347a4b-d54e-4d74-8c2a-7710cdfb0d1e",
+    "DepartureAirport": "EGSC",
+    "DestinationAirport": "LHMC",
+    "OtherRelatedAirports": {
+        "LOWL": "AdequateAirport",
+        "LYSP": "AdequateAirport"
+    },
+    "ScheduledTimeOfDeparture": "2025-01-06T10:46:00Z",
+    "ScheduledTimeOfArrival": "2025-01-06T13:39:00Z",
+    "DatePlanned": "2025-01-01T20:46:00Z"
+}

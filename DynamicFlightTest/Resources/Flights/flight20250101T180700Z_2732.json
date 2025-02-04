@@ -1,0 +1,12 @@
+{
+    "FlightIdentification": "2732075b-c987-4069-8719-90584ca9910e",
+    "DepartureAirport": "ESOH",
+    "DestinationAirport": "LSXT",
+    "OtherRelatedAirports": {
+        "LSGT": "AdequateAirport",
+        "EHJF": "AdequateAirport"
+    },
+    "ScheduledTimeOfDeparture": "2025-01-14T22:07:00Z",
+    "ScheduledTimeOfArrival": "2025-01-15T00:25:00Z",
+    "DatePlanned": "2025-01-01T18:07:00Z"
+}

@@ -1,0 +1,12 @@
+{
+    "FlightIdentification": "2f792f69-9fb0-4be3-80e9-1fb879db3c18",
+    "DepartureAirport": "LIRU",
+    "DestinationAirport": "EDUO",
+    "OtherRelatedAirports": {
+        "LSPG": "AdequateAirport",
+        "LBBZ": "AdequateAirport"
+    },
+    "ScheduledTimeOfDeparture": "2025-01-11T08:35:00Z",
+    "ScheduledTimeOfArrival": "2025-01-11T10:27:00Z",
+    "DatePlanned": "2025-01-01T17:35:00Z"
+}

@@ -1,0 +1,12 @@
+{
+    "FlightIdentification": "2a801868-99d2-46b8-acd4-9b5411645870",
+    "DepartureAirport": "ENTR",
+    "DestinationAirport": "LKBO",
+    "OtherRelatedAirports": {
+        "EPKI": "AdequateAirport",
+        "ENMX": "AdequateAirport"
+    },
+    "ScheduledTimeOfDeparture": "2025-01-08T09:20:00Z",
+    "ScheduledTimeOfArrival": "2025-01-08T11:01:00Z",
+    "DatePlanned": "2025-01-01T20:20:00Z"
+}

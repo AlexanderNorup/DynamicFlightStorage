@@ -22,10 +22,12 @@ namespace DynamicFlightStorageDTOs
         public DateTime ValidFrom { get; set; }
         [Key(4)]
         public DateTime ValidTo { get; set; }
+        [Key(5)]
+        public DateTime DateIssued { get; set; }
 
         public override string ToString()
         {
-            return $"Weather for {Airport}: {WeatherLevel} @ {ValidFrom}-{ValidTo}";
+            return $"Weather for {Airport}: {WeatherLevel} @ {ValidFrom}-{ValidTo} issued at {DateIssued}";
         }
 
         private string GetDebuggerDisplay()

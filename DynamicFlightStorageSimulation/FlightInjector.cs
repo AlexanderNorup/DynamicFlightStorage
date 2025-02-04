@@ -28,6 +28,7 @@ public class FlightInjector
             Console.WriteLine($"The path {directoryPath} is not a directory!");
         }
         string[] files = Directory.GetFiles(directoryPath, "*.json");
+        Console.WriteLine($"Found {files.Length} files in {directoryPath}");
 
         var flightList = new List<Flight>();
 
