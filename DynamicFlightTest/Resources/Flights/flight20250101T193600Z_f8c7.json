@@ -1,0 +1,12 @@
+{
+    "FlightIdentification": "f8c7cd5f-0d1c-4f00-9be8-60d934168c14",
+    "DepartureAirport": "EGXW",
+    "DestinationAirport": "LTBQ",
+    "OtherRelatedAirports": {
+        "EDNQ": "AdequateAirport",
+        "LFKL": "AdequateAirport"
+    },
+    "ScheduledTimeOfDeparture": "2025-01-09T16:36:00Z",
+    "ScheduledTimeOfArrival": "2025-01-09T19:13:00Z",
+    "DatePlanned": "2025-01-01T19:36:00Z"
+}

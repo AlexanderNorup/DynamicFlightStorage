@@ -23,6 +23,6 @@ public class FlightInjectionTest
     [Test]
     public void TestAllFlightsCreated()
     {
-        _flightInjector.GetFlightsUntill(DateTime.MaxValue).Should().HaveCount(15);
+        _flightInjector.GetFlightsUntill(DateTime.MaxValue).Should().HaveCount(10);
     }
 }

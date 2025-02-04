@@ -1,82 +1,72 @@
 [
   {
-    "ID": "1d467ada-6b87-4673-b088-0be32d21a001",
-    "Ident": "SAOU",
-    "Text": "SAOU 100215Z 1002/1024 09010KT 0100 FG BKN007 TX22/1020Z TN12/1010Z BECMG 1012/1014 34010G20KT CAVOK BECMG 1021/1023 36005KT=",
+    "DateIssued": "2025-01-01T00:00:00Z",
+    "ID": "65eccfce-cac8-4cb5-a54a-6d974fa9470e",
+    "Ident": "LATI",
     "Period": {
-      "DateEnd": "2024-10-11T00:00:00Z",
-      "DateStart": "2024-10-10T02:00:00Z"
+      "DateStart": "2025-01-01T11:00:00Z",
+      "DateEnd": "2025-01-01T23:00:00Z"
     },
-    "Lon": -66.3563890530851,
-    "Lat": -33.273333026618666,
-    "DateIssued": "2024-10-10T02:15:00Z",
     "Conditions": [
       {
-        "FlightRules": "LIFR",
-        "Text": "TAF AMD SAOU 100215Z 1002/1024 09010KT 0100 FG BKN007 TX22/1020Z TN12/1010Z",
+        "FlightRules": "VFR",
         "Period": {
-          "DateEnd": "2024-10-10T12:00:00Z",
-          "DateStart": "2024-10-10T02:00:00Z"
+          "DateStart": "2025-01-01T11:00:00Z",
+          "DateEnd": "2025-01-01T19:00:00Z"
         }
       },
       {
         "FlightRules": "VFR",
-        "Text": "BECMG 1012/1014 34010G20KT CAVOK",
         "Period": {
-          "DateEnd": "2024-10-10T14:00:00Z",
-          "DateStart": "2024-10-10T12:00:00Z"
-        },
-        "Change": "BECOMING"
-      },
-      {
-        "FlightRules": "LIFR",
-        "Text": "BECMG 1021/1023 36005KT=",
-        "Period": {
-          "DateEnd": "2024-10-11T00:00:00Z",
-          "DateStart": "2024-10-10T21:00:00Z"
+          "DateStart": "2025-01-01T19:00:00Z",
+          "DateEnd": "2025-01-01T23:00:00Z"
         },
         "Change": "BECOMING"
       }
-    ]
+    ],
+    "Text": ""
   },
   {
-    "ID": "a20a02e8-c8c2-43d8-80e5-1d7ba33192b1",
-    "Ident": "HJJJ",
-    "Text": "HJJJ 100400Z 1006/1112 20002KT 9999 SCT040 BKN0140 BECMG 1011/1014 VRB02KT 8000 -TSRA FEW045CB SCT040 PROB30 TEMPO 1014/1020 25008G16KT 6000 TSRA FEW030CB BKN090 TEMPO 1021/1103 VRB03KT 9999 FEW030",
+    "DateIssued": "2025-01-01T20:00:00Z",
+    "ID": "248d4dff-9a4b-4bd0-b259-2203be47b4f8",
+    "Ident": "LATI",
     "Period": {
-      "DateEnd": "2024-10-11T12:00:00Z",
-      "DateStart": "2024-10-10T06:00:00Z"
+      "DateStart": "2025-01-02T06:00:00Z",
+      "DateEnd": "2025-01-02T18:00:00Z"
     },
-    "Lon": 31.601111025280886,
-    "Lat": 4.871944003897555,
-    "DateIssued": "2024-10-10T04:00:00Z",
     "Conditions": [
       {
         "FlightRules": "VFR",
-        "Text": "TAF HJJJ 100400Z 1006/1112 20002KT 9999 SCT040 BKN0140",
         "Period": {
-          "DateEnd": "2024-10-10T11:00:00Z",
-          "DateStart": "2024-10-10T06:00:00Z"
+          "DateStart": "2025-01-02T06:00:00Z",
+          "DateEnd": "2025-01-02T15:00:00Z"
         }
       },
       {
-        "FlightRules": "MVFR",
-        "Text": "BECMG 1011/1014 VRB02KT 8000 -TSRA FEW045CB SCT040",
+        "FlightRules": "VFR",
         "Period": {
-          "DateEnd": "2024-10-10T14:00:00Z",
-          "DateStart": "2024-10-10T11:00:00Z"
+          "DateStart": "2025-01-02T15:00:00Z",
+          "DateEnd": "2025-01-02T16:00:00Z"
         },
         "Change": "BECOMING"
       },
       {
-        "FlightRules": "MVFR",
-        "Text": "PROB30 TEMPO 1014/1020 25008G16KT 6000 TSRA FEW030CB BKN090 TEMPO 1021/1103 VRB03KT 9999 FEW030",
+        "FlightRules": "VFR",
         "Period": {
-          "DateEnd": "2024-10-11T12:00:00Z",
-          "DateStart": "2024-10-10T14:00:00Z"
+          "DateStart": "2025-01-02T16:00:00Z",
+          "DateEnd": "2025-01-02T17:00:00Z"
         },
-        "Change": "PROBABILITY30 TEMPORARY TEMPORARY"
+        "Change": "BECOMING"
+      },
+      {
+        "FlightRules": "VFR",
+        "Period": {
+          "DateStart": "2025-01-02T17:00:00Z",
+          "DateEnd": "2025-01-02T18:00:00Z"
+        },
+        "Change": "BECOMING"
       }
-    ]
+    ],
+    "Text": ""
   }
 ]

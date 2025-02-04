@@ -1,0 +1,12 @@
+{
+    "FlightIdentification": "24073205-0469-4aea-85d6-20b2dc5ec7b5",
+    "DepartureAirport": "LUCL",
+    "DestinationAirport": "EDLD",
+    "OtherRelatedAirports": {
+        "EIMN": "AdequateAirport",
+        "EDPA": "AdequateAirport"
+    },
+    "ScheduledTimeOfDeparture": "2025-01-07T15:22:00Z",
+    "ScheduledTimeOfArrival": "2025-01-07T17:37:00Z",
+    "DatePlanned": "2025-01-01T15:22:00Z"
+}

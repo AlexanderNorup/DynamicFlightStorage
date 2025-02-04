@@ -1,0 +1,12 @@
+{
+    "FlightIdentification": "ab7c11ee-250d-4458-b383-fc347b0ece79",
+    "DepartureAirport": "ETSA",
+    "DestinationAirport": "EDLJ",
+    "OtherRelatedAirports": {
+        "LFFT": "AdequateAirport",
+        "EDVP": "AdequateAirport"
+    },
+    "ScheduledTimeOfDeparture": "2025-01-04T13:50:00Z",
+    "ScheduledTimeOfArrival": "2025-01-04T17:34:00Z",
+    "DatePlanned": "2025-01-01T22:50:00Z"
+}

@@ -32,14 +32,6 @@ public static class WeatherCreator
     {
         var weatherList = new List<Weather>();
         
-        // Check for full metar/taf text
-        var fullText = data["Text"]?.ToString();
-        if (string.IsNullOrEmpty(fullText))
-        {
-            //Console.WriteLine("Full text is empty.");
-            return weatherList;
-        }
-        
         var identifier = data["ID"]?.ToString();
         if (string.IsNullOrEmpty(identifier))
         {

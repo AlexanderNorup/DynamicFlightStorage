@@ -1,20 +1,16 @@
 [
     {
-        "ID": "f3263fcb-2a46-4b0d-8021-774196232374",
-        "Ident": "BIGJ",
-        "DateIssued": "2024-10-11T14:03:00Z",
-        "Lon": -21.326944017061553,
-        "Lat": 65.99527805279622,
-        "FlightRules": "MVFR",
-        "Text": "METAR BIGJ 111403Z 28005KT 9999 OVC022 01/M06 Q1014"
+        "ID": "7e8ec733-df91-411a-b1c2-1a52c9e9e18e",
+        "Text": "",
+        "DateIssued": "2025-01-01T00:04:00Z",
+        "FlightRules": "VFR",
+        "Ident": "LATI"
     },
     {
-        "ID": "265f021a-ff72-477d-aff5-72879ebb2439",
-        "Ident": "SBML",
-        "DateIssued": "2024-10-11T14:17:00Z",
-        "Lon": -49.92638903994111,
-        "Lat": -22.196944017757552,
-        "FlightRules": "MVFR",
-        "Text": "SPECI SBML 111417Z 01014KT 5000 HZ FEW016 BKN080 26/21 Q1013"
+        "ID": "d1c1e889-4087-4399-bce9-4b3ecf708fd4",
+        "Text": "",
+        "DateIssued": "2025-01-01T01:04:00Z",
+        "FlightRules": "VFR",
+        "Ident": "LATI"
     }
 ]

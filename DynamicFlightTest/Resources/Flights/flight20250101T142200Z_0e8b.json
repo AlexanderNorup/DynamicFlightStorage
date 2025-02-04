@@ -1,0 +1,12 @@
+{
+    "FlightIdentification": "0e8b8fc4-c159-45e2-a62d-46dc54d3bb0a",
+    "DepartureAirport": "ENTY",
+    "DestinationAirport": "EDPT",
+    "OtherRelatedAirports": {
+        "LSTS": "AdequateAirport",
+        "EGDN": "AdequateAirport"
+    },
+    "ScheduledTimeOfDeparture": "2025-01-11T01:22:00Z",
+    "ScheduledTimeOfArrival": "2025-01-11T02:53:00Z",
+    "DatePlanned": "2025-01-01T14:22:00Z"
+}
