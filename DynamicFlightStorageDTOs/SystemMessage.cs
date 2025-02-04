@@ -18,6 +18,8 @@ namespace DynamicFlightStorageDTOs
         public HashSet<string> Targets { get; set; } = new();
         [Key(4)]
         public required SystemMessageType MessageType { get; set; }
+        [Key(5)]
+        public Dictionary<string, object>? Data { get; set; }
 
         public enum SystemMessageType
         {
@@ -25,7 +27,8 @@ namespace DynamicFlightStorageDTOs
             LatencyRequest = 1,
             LatencyResponse = 2,
             NewExperiment = 3,
-            NewExperimentReady = 4
+            NewExperimentReady = 4,
+            ExperimentComplete = 5,
         }
     }
 }

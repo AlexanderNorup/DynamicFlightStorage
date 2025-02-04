@@ -1,4 +1,5 @@
 ﻿@page "/"
+@using DynamicFlightStorageSimulation.DataCollection
 @using DynamicFlightStorageSimulation.ExperimentOrchestrator
 @using System.Text.Json
 @using DynamicFlightStorageSimulation.Utilities
@@ -6,6 +7,7 @@
 @using System.Text.Json.Serialization
 @inject SimulationEventBus eventbus
 @inject Orchestrator orchestrator
+@inject ConsumerDataLogger consumerDataLogger
 @inject ILoggerFactory loggerFactory
 @inject IJSRuntime jsRuntime
 @implements IDisposable
@@ -161,7 +163,6 @@
 
 @code {
     private CancellationTokenSource cts = new();
-    private List<LogEntry> orchestratorLogs = new List<LogEntry>();
     private bool consumerUpdating = false;
     private SimulationConsumer? consumer;
     private LatencyTester? latencyTester;
@@ -178,7 +179,8 @@
         // SimulatedEndTime = new DateTime(2024, 10, 12, 00, 00, 00, DateTimeKind.Utc),
         SimulatedPreloadStartTime = new DateTime(2024, 1, 1, 00, 00, 00, DateTimeKind.Utc),
         SimulatedPreloadEndTime = new DateTime(2024, 10, 11, 3, 00, 00, DateTimeKind.Utc),
-        TimeScale = 60 // Negative value means "as fast as possible"
+        TimeScale = -1, // Negative value means "as fast as possible"
+        LoggingEnabled = true
     };
 
     protected override void OnInitialized()
@@ -297,7 +299,8 @@
             OnOrchestratorLog(new LogEntry(LogLevel.Information, "Creating internal consumer", null));
             var newConsumer = new SimulationConsumer(eventbus,
                 weatherService,
-                new SimplePostgreSQLDataStore.SimplePostgreSQLDataStore(weatherService, eventbus),
+                consumerDataLogger,
+                new BasicEventDataStore.BasicEventDataStore(weatherService, eventbus),
                 loggerFactory.CreateLogger<SimulationConsumer>());
             await newConsumer.StartAsync();
 
@@ -375,6 +378,5 @@
         cts.Dispose();
         orchestrator.OnExperimentStateChanged -= OnExperimentStateChanged;
         orchestrator.OnLogEvent -= OnOrchestratorLog;
-        orchestratorLogs = null!;
     }
 }

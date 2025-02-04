@@ -158,7 +158,11 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     Message = CurrentExperiment.Id,
                     MessageType = SystemMessageType.NewExperiment,
                     Source = _eventBus.ClientId,
-                    Targets = ExperimentRunnerClientIds
+                    Targets = ExperimentRunnerClientIds,
+                    Data = new()
+                    {
+                        { nameof(Experiment.LoggingEnabled), CurrentExperiment.LoggingEnabled },
+                    }
                 }, SystemMessageType.NewExperimentReady, TimeSpan.FromSeconds(10))
                     .ConfigureAwait(false);
 
@@ -167,6 +171,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     throw new InvalidOperationException("One or more experiment runners did not respond in time.\n" +
                         $"Missing response(s) from {string.Join(",", ExperimentRunnerClientIds.Except(result.responses.Select(x => x.Source)))}");
                 }
+
 
                 // Do preload here.
                 var st = Stopwatch.StartNew();
@@ -360,7 +365,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     currentResult.UTCEndTime = DateTime.UtcNow;
                     currentResult.ExperimentSuccess = false;
                     await _experimentDataCollector.AddOrUpdateExperimentResultAsync(CurrentExperimentResult);
-                    await _experimentDataCollector.FinishDataCollectionAsync();
+                    await _experimentDataCollector.FinishDataCollectionAsync(ExperimentRunnerClientIds);
                 }
                 if (ExperimentTask is not null)
                 {
@@ -416,8 +421,8 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     CurrentExperimentResult.UTCEndTime = DateTime.UtcNow;
                     CurrentExperimentResult.ExperimentSuccess = true;
                     await _experimentDataCollector.AddOrUpdateExperimentResultAsync(CurrentExperimentResult);
-                    await Task.Delay(TimeSpan.FromSeconds(5)); // Simply to ensure we get the rest of the recalculaitons if some of them were to be in the last dataset
-                    await _experimentDataCollector.FinishDataCollectionAsync();
+                    await Task.Delay(TimeSpan.FromSeconds(15)); // Simply to ensure we get the rest of the recalculaitons if some of them were to be in the last dataset
+                    await _experimentDataCollector.FinishDataCollectionAsync(ExperimentRunnerClientIds);
                     _logger.LogInformation("Experiment {Id} ended successfully.", CurrentExperiment.Id);
                     ResetExperimentState();
                     return;

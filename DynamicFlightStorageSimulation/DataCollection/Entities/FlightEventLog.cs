@@ -3,8 +3,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.Entities
 {
-    [Table("EventLog_Weather")]
-    public class WeatherEventLog
+    [Table("EventLog_Flight")]
+    public class FlightEventLog
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -12,7 +12,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.E
 
         public required string ExperimentId { get; init; }
 
-        public required string WeatherId { get; init; }
+        public required byte[] FlightData { get; init; }
 
         public required DateTime UtcTimeStamp { get; init; }
     }

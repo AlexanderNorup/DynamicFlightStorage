@@ -2,7 +2,7 @@
 using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
-using System.Diagnostics;
+using Timer = System.Timers.Timer;
 
 namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
 {
@@ -10,69 +10,62 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
     {
         private SimulationEventBus _eventBus;
         private DataCollectionContext _context;
+
+        private ConcurrentBag<RecalculationEventLog> _recalculationLogs = new();
+
+        private Timer _updateTimer;
+        private DateTime _lastUpdated = DateTime.UtcNow;
+        private const int _updateIntervalMs = 30_000;
+        private SemaphoreSlim _updateSemaphore = new(1, 1);
+        private bool _updateIsPending = false;
+
         public ExperimentDataCollector(SimulationEventBus eventBus, DataCollectionContext context)
         {
             _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _updateTimer = new Timer();
+            _updateTimer.Interval = _updateIntervalMs;
+            _updateTimer.Elapsed += async (sender, e) =>
+            {
+                if (!_updateIsPending
+                    && _lastUpdated.AddMilliseconds(_updateIntervalMs) < DateTime.UtcNow)
+                {
+                    if (_recalculationLogs.Count > 0)
+                    {
+                        await SaveChangesAsyncSafely().ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        _lastUpdated = DateTime.UtcNow;
+                    }
+                }
+            };
         }
 
         public async Task MonitorExperimentAsync(string experimentId)
         {
-            // Capturing all events is a bit obsessive However if we wanted to do that, the code below can be enabled.
-            //await _eventBus.SubscribeToExperiment(experimentId);
-            //_eventBus.SubscribeToFlightStorageEvent(OnFlightRecieved);
-            //_eventBus.SubscribeToWeatherEvent(OnWeatherRecieved);
             await _eventBus.SubscribeToRecalculationEventAsync(OnRecalculationRecieved);
+            _updateTimer.Start();
         }
 
         public void StopMonitoringExperiment()
         {
-            //_eventBus.UnSubscribeToFlightStorageEvent(OnFlightRecieved);
-            //_eventBus.UnSubscribeToWeatherEvent(OnWeatherRecieved);
+            _updateTimer.Stop();
             _eventBus.UnSubscribeToRecalculationEvent(OnRecalculationRecieved);
+            _context.ChangeTracker.Clear();
         }
 
-        public async Task FinishDataCollectionAsync()
+        public async Task FinishDataCollectionAsync(HashSet<string> experimentClientIds)
         {
-            int totalCounnt = _flightLogs.Count + _weatherLogs.Count + _recalculationLogs.Count;
-            _context.FlightEventLogs.AddRange(_flightLogs);
-            _context.WeatherEventLogs.AddRange(_weatherLogs);
-            _context.RecalculationEventLogs.AddRange(_recalculationLogs);
-            _recalculationLogs = new();
-            _flightLogs = new();
-            _weatherLogs = new();
+            await _eventBus.PublishSystemMessage(new SystemMessage()
+            {
+                Message = _eventBus.CurrentExperimentId,
+                MessageType = SystemMessage.SystemMessageType.ExperimentComplete,
+                Source = _eventBus.ClientId,
+                Targets = experimentClientIds,
+                TimeStamp = DateTime.UtcNow
+            });
             await SaveChangesAsyncSafely().ConfigureAwait(false);
-        }
-
-        private ConcurrentBag<RecalculationEventLog> _recalculationLogs = new();
-        private ConcurrentBag<FlightEventLog> _flightLogs = new();
-        private ConcurrentBag<WeatherEventLog> _weatherLogs = new();
-
-        private DateTime _lastUpdated = DateTime.UtcNow;
-        private const int _updateIntervalMs = 10_000;
-        private SemaphoreSlim _updateSemaphore = new(1, 1);
-
-        private Task OnWeatherRecieved(WeatherEvent weatherEvent)
-        {
-            _weatherLogs.Add(new WeatherEventLog()
-            {
-                ExperimentId = _eventBus.CurrentExperimentId,
-                UtcTimeStamp = weatherEvent.TimeStamp,
-                WeatherId = weatherEvent.Weather.Id
-            });
-
-            return Task.CompletedTask;
-        }
-
-        private Task OnFlightRecieved(FlightEvent flight)
-        {
-            _flightLogs.Add(new FlightEventLog()
-            {
-                ExperimentId = _eventBus.CurrentExperimentId,
-                UtcTimeStamp = flight.TimeStamp,
-                FlightId = flight.Flight.FlightIdentification
-            });
-            return Task.CompletedTask;
         }
 
         private Task OnRecalculationRecieved(FlightRecalculation flight)
@@ -113,14 +106,35 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
 
         public async Task SaveChangesAsyncSafely()
         {
+            if (_updateIsPending)
+            {
+                // We're already updating and there is already a pending update
+                return;
+            }
+            _updateIsPending = true;
             await _updateSemaphore.WaitAsync().ConfigureAwait(false);
+
             try
             {
+                if (!_updateIsPending)
+                {
+                    return;
+                }
+
+                if (_recalculationLogs.Count > 0)
+                {
+                    var recalculationLogs = _recalculationLogs;
+                    _recalculationLogs = new();
+                    _context.RecalculationEventLogs.AddRange(recalculationLogs);
+                }
+
                 await _context.SaveChangesAsync().ConfigureAwait(false);
             }
             finally
             {
+                _updateIsPending = false;
                 _updateSemaphore.Release();
+                _lastUpdated = DateTime.UtcNow;
             }
         }
 

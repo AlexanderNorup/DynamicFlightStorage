@@ -1,6 +1,11 @@
 ﻿using DynamicFlightStorageSimulation;
+using DynamicFlightStorageSimulation.DataCollection;
+using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
+using Microsoft.Extensions.Options;
 using System.ComponentModel.DataAnnotations;
 
 namespace ExperimentRunner
@@ -27,13 +32,23 @@ namespace ExperimentRunner
             using var simulationEventBus = new SimulationEventBus(eventBusConfig, factory.CreateLogger<SimulationEventBus>());
             await simulationEventBus.ConnectAsync();
 
+            // DB Setup
+            var dbContextOptions = new DbContextOptionsBuilder<DataCollectionContext>();
+            var serverVersion = new MariaDbServerVersion(new Version(10, 5));
+#if DEBUG
+            dbContextOptions.EnableSensitiveDataLogging();
+#endif
+            dbContextOptions.UseMySql(configuration.GetConnectionString("ExperimentDataCollection"), serverVersion);
+            var dbContext = new DataCollectionContext(dbContextOptions.Options);
+            var consumerDataLogger = new ConsumerDataLogger(dbContext);
+
             var weatherService = new WeatherService();
 
             // The event store to experiment with. Change me!
             var eventDataStore = new BasicEventDataStore.BasicEventDataStore(weatherService, simulationEventBus);
 
             logger.LogInformation("Event data store of type {Type} ready", eventDataStore.GetType().FullName);
-            using var consumer = new SimulationConsumer(simulationEventBus, weatherService, eventDataStore, factory.CreateLogger<SimulationConsumer>());
+            using var consumer = new SimulationConsumer(simulationEventBus, weatherService, consumerDataLogger, eventDataStore, factory.CreateLogger<SimulationConsumer>());
 
             await consumer.StartAsync();
             logger.LogInformation("Simulation consumer started");
