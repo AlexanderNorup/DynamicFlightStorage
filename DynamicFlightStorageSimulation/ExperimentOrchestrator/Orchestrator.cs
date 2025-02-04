@@ -416,7 +416,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     CurrentExperimentResult.UTCEndTime = DateTime.UtcNow;
                     CurrentExperimentResult.ExperimentSuccess = true;
                     await _experimentDataCollector.AddOrUpdateExperimentResultAsync(CurrentExperimentResult);
-                    await Task.Delay(TimeSpan.FromSeconds(5)); // Simply to ensure we get the rest of the recalculaitons if some of them were to be in the last dataset
+                    await Task.Delay(TimeSpan.FromSeconds(15)); // Simply to ensure we get the rest of the recalculaitons if some of them were to be in the last dataset
                     await _experimentDataCollector.FinishDataCollectionAsync();
                     _logger.LogInformation("Experiment {Id} ended successfully.", CurrentExperiment.Id);
                     ResetExperimentState();

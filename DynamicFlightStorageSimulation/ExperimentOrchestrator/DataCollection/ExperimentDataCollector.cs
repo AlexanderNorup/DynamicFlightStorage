@@ -2,7 +2,7 @@
 using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
-using System.Diagnostics;
+using Timer = System.Timers.Timer;
 
 namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
 {
@@ -10,35 +10,55 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
     {
         private SimulationEventBus _eventBus;
         private DataCollectionContext _context;
+
+        private ConcurrentBag<RecalculationEventLog> _recalculationLogs = new();
+
+        private Timer _updateTimer;
+        private DateTime _lastUpdated = DateTime.UtcNow;
+        private const int _updateIntervalMs = 30_000;
+        private SemaphoreSlim _updateSemaphore = new(1, 1);
+        private bool _updateIsPending = false;
+
         public ExperimentDataCollector(SimulationEventBus eventBus, DataCollectionContext context)
         {
             _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _updateTimer = new Timer();
+            _updateTimer.Interval = _updateIntervalMs;
+            _updateTimer.Elapsed += async (sender, e) =>
+            {
+                if (!_updateIsPending
+                    && _lastUpdated.AddMilliseconds(_updateIntervalMs) < DateTime.UtcNow)
+                {
+                    if (_recalculationLogs.Count > 0)
+                    {
+                        await FinishDataCollectionAsync().ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        _lastUpdated = DateTime.UtcNow;
+                    }
+                }
+            };
         }
 
         public async Task MonitorExperimentAsync(string experimentId)
         {
             await _eventBus.SubscribeToRecalculationEventAsync(OnRecalculationRecieved);
+            _updateTimer.Start();
         }
 
         public void StopMonitoringExperiment()
         {
+            _updateTimer.Stop();
             _eventBus.UnSubscribeToRecalculationEvent(OnRecalculationRecieved);
+            _context.ChangeTracker.Clear();
         }
 
         public async Task FinishDataCollectionAsync()
         {
-            _context.RecalculationEventLogs.AddRange(_recalculationLogs);
-            _recalculationLogs = new();
             await SaveChangesAsyncSafely().ConfigureAwait(false);
         }
-
-        private ConcurrentBag<RecalculationEventLog> _recalculationLogs = new();
-
-        private DateTime _lastUpdated = DateTime.UtcNow;
-        private const int _updateIntervalMs = 10_000;
-        private SemaphoreSlim _updateSemaphore = new(1, 1);
-        private bool _updateIsPending = false;
 
         private Task OnRecalculationRecieved(FlightRecalculation flight)
         {
@@ -92,12 +112,21 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
                 {
                     return;
                 }
+
+                if (_recalculationLogs.Count > 0)
+                {
+                    var recalculationLogs = _recalculationLogs;
+                    _recalculationLogs = new();
+                    _context.RecalculationEventLogs.AddRange(recalculationLogs);
+                }
+
                 await _context.SaveChangesAsync().ConfigureAwait(false);
             }
             finally
             {
                 _updateIsPending = false;
                 _updateSemaphore.Release();
+                _lastUpdated = DateTime.UtcNow;
             }
         }
 

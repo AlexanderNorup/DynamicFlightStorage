@@ -161,7 +161,6 @@
 
 @code {
     private CancellationTokenSource cts = new();
-    private List<LogEntry> orchestratorLogs = new List<LogEntry>();
     private bool consumerUpdating = false;
     private SimulationConsumer? consumer;
     private LatencyTester? latencyTester;
@@ -297,7 +296,7 @@
             OnOrchestratorLog(new LogEntry(LogLevel.Information, "Creating internal consumer", null));
             var newConsumer = new SimulationConsumer(eventbus,
                 weatherService,
-                new SimplePostgreSQLDataStore.SimplePostgreSQLDataStore(weatherService, eventbus),
+                new BasicEventDataStore.BasicEventDataStore(weatherService, eventbus),
                 loggerFactory.CreateLogger<SimulationConsumer>());
             await newConsumer.StartAsync();
 
@@ -375,6 +374,5 @@
         cts.Dispose();
         orchestrator.OnExperimentStateChanged -= OnExperimentStateChanged;
         orchestrator.OnLogEvent -= OnOrchestratorLog;
-        orchestratorLogs = null!;
     }
 }
