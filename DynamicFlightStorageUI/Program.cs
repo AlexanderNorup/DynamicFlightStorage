@@ -36,6 +36,8 @@ namespace DynamicFlightStorageUI
             app.MapRazorComponents<App>()
                 .AddInteractiveServerRenderMode();
 
+            app.AddExperimentLogEndpoints();
+
             app.Run();
         }
     }
