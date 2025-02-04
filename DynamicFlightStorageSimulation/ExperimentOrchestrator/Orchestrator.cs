@@ -158,7 +158,11 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     Message = CurrentExperiment.Id,
                     MessageType = SystemMessageType.NewExperiment,
                     Source = _eventBus.ClientId,
-                    Targets = ExperimentRunnerClientIds
+                    Targets = ExperimentRunnerClientIds,
+                    Data = new()
+                    {
+                        { nameof(Experiment.LoggingEnabled), CurrentExperiment.LoggingEnabled },
+                    }
                 }, SystemMessageType.NewExperimentReady, TimeSpan.FromSeconds(10))
                     .ConfigureAwait(false);
 
@@ -167,6 +171,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     throw new InvalidOperationException("One or more experiment runners did not respond in time.\n" +
                         $"Missing response(s) from {string.Join(",", ExperimentRunnerClientIds.Except(result.responses.Select(x => x.Source)))}");
                 }
+
 
                 // Do preload here.
                 var st = Stopwatch.StartNew();

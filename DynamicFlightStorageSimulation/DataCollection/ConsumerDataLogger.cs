@@ -1,7 +1,6 @@
 ﻿using DynamicFlightStorageDTOs;
 using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection;
 using MessagePack;
-using Microsoft.EntityFrameworkCore;
 
 namespace DynamicFlightStorageSimulation.DataCollection
 {
@@ -14,21 +13,35 @@ namespace DynamicFlightStorageSimulation.DataCollection
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         }
 
+        public bool IsLoggingEnabled { get; set; } = false;
+
         private LinkedList<FlightLog> _flightLog = new();
         private LinkedList<WeatherLog> _weatherLog = new();
         public void LogFlightData(FlightEvent flight)
         {
-            _flightLog.AddLast(new FlightLog(DateTime.UtcNow, flight.TimeStamp, flight.Flight));
+            if (IsLoggingEnabled)
+            {
+                _flightLog.AddLast(new FlightLog(DateTime.UtcNow, flight.TimeStamp, flight.Flight));
+            }
         }
 
         public void LogWeatherData(WeatherEvent weather)
         {
-            _weatherLog.AddLast(new WeatherLog(DateTime.UtcNow, weather.TimeStamp, weather.Weather));
+            if (IsLoggingEnabled)
+            {
+                _weatherLog.AddLast(new WeatherLog(DateTime.UtcNow, weather.TimeStamp, weather.Weather));
+            }
         }
 
         public async Task PersistDataAsync(string experimentId)
         {
+            if (!IsLoggingEnabled)
+            {
+                return;
+            }
+
             ArgumentNullException.ThrowIfNull(experimentId, nameof(experimentId));
+
             var flightData = MessagePackSerializer.Serialize(_flightLog, MessagePackOptions);
             var weatherData = MessagePackSerializer.Serialize(_weatherLog, MessagePackOptions);
 

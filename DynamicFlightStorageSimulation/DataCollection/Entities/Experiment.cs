@@ -20,5 +20,10 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.E
         /// If value is 0 or negative, the simulation will run as fast as possible.
         /// </summary>
         public double TimeScale { get; init; } = 1.0;
+
+        /// <summary>
+        /// If enabled, will log all events when they're recieved by the Consumer to the database.
+        /// </summary>
+        public bool LoggingEnabled { get; init; } = false;
     }
 }

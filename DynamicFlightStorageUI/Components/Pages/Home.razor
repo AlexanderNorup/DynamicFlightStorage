@@ -179,7 +179,8 @@
         // SimulatedEndTime = new DateTime(2024, 10, 12, 00, 00, 00, DateTimeKind.Utc),
         SimulatedPreloadStartTime = new DateTime(2024, 1, 1, 00, 00, 00, DateTimeKind.Utc),
         SimulatedPreloadEndTime = new DateTime(2024, 10, 11, 3, 00, 00, DateTimeKind.Utc),
-        TimeScale = -1 // Negative value means "as fast as possible"
+        TimeScale = -1, // Negative value means "as fast as possible"
+        LoggingEnabled = true
     };
 
     protected override void OnInitialized()
