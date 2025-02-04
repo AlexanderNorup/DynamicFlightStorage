@@ -25,7 +25,8 @@ namespace DynamicFlightStorageDTOs
             LatencyRequest = 1,
             LatencyResponse = 2,
             NewExperiment = 3,
-            NewExperimentReady = 4
+            NewExperimentReady = 4,
+            ExperimentComplete = 5
         }
     }
 }

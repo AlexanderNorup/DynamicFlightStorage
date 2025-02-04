@@ -1,4 +1,5 @@
 ﻿using DynamicFlightStorageDTOs;
+using DynamicFlightStorageSimulation.DataCollection;
 using Microsoft.Extensions.Logging;
 
 namespace DynamicFlightStorageSimulation
@@ -9,14 +10,16 @@ namespace DynamicFlightStorageSimulation
         private SimulationEventBus _simulationEventBus;
         private WeatherService _weatherService;
         private IEventDataStore _eventDataStore;
+        private ConsumerDataLogger _consumerLogger;
         private bool cleanState;
         private bool disposedValue;
 
-        public SimulationConsumer(SimulationEventBus simulationEventBus, WeatherService weatherService, IEventDataStore eventDataStore, ILogger<SimulationConsumer> logger)
+        public SimulationConsumer(SimulationEventBus simulationEventBus, WeatherService weatherService, ConsumerDataLogger consumerDataLogger, IEventDataStore eventDataStore, ILogger<SimulationConsumer> logger)
         {
             _logger = logger;
             _simulationEventBus = simulationEventBus ?? throw new ArgumentNullException(nameof(simulationEventBus));
             _weatherService = weatherService ?? throw new ArgumentNullException(nameof(weatherService));
+            _consumerLogger = consumerDataLogger ?? throw new ArgumentNullException(nameof(consumerDataLogger));
             _eventDataStore = eventDataStore ?? throw new ArgumentNullException(nameof(eventDataStore));
             _simulationEventBus.SubscribeToFlightStorageEvent(OnFlightRecieved);
             _simulationEventBus.SubscribeToWeatherEvent(OnWeatherRecieved);
@@ -38,23 +41,24 @@ namespace DynamicFlightStorageSimulation
 
         private async Task OnWeatherRecieved(WeatherEvent weatherEvent)
         {
+            _consumerLogger.LogWeatherData(weatherEvent);
             cleanState = false;
             var weather = weatherEvent.Weather;
             _weatherService.AddWeather(weather);
             await _eventDataStore.AddWeatherAsync(weather).ConfigureAwait(false);
-            //_logger?.LogDebug("Processed weather event: {Weather}", e.Weather);
         }
 
         private async Task OnFlightRecieved(FlightEvent flight)
         {
+            _consumerLogger.LogFlightData(flight);
             cleanState = false;
             await _eventDataStore.AddOrUpdateFlightAsync(flight.Flight).ConfigureAwait(false);
-            //_logger?.LogDebug("Processed flight event: {Flight}", e.Flight);
         }
 
         private async Task ResetStateAsync(string experimentId)
         {
             _weatherService.Clear();
+            _consumerLogger.ResetLogger();
             if (!cleanState)
             {
                 // Try to reset the EventDataStore
@@ -101,6 +105,10 @@ namespace DynamicFlightStorageSimulation
                     break;
                 case SystemMessage.SystemMessageType.NewExperiment:
                     await ResetStateAsync(message.Message).ConfigureAwait(false);
+                    break;
+                case SystemMessage.SystemMessageType.ExperimentComplete:
+                    await _consumerLogger.PersistDataAsync(_simulationEventBus.CurrentExperimentId).ConfigureAwait(false);
+                    _consumerLogger.ResetLogger();
                     break;
                 default:
                     break;

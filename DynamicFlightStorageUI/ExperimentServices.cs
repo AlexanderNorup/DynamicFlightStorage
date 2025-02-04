@@ -3,6 +3,7 @@ using DynamicFlightStorageSimulation;
 using Microsoft.Extensions.Options;
 using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection;
 using Microsoft.EntityFrameworkCore;
+using DynamicFlightStorageSimulation.DataCollection;
 
 namespace DynamicFlightStorageUI
 {
@@ -40,6 +41,7 @@ namespace DynamicFlightStorageUI
                 options.UseMySql(builder.Configuration.GetConnectionString("ExperimentDataCollection"), serverVersion);
             }, ServiceLifetime.Singleton);
 
+            builder.Services.AddSingleton<ConsumerDataLogger>();
             builder.Services.AddSingleton<ExperimentDataCollector>();
 
             builder.Services.AddSingleton((s) =>

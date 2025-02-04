@@ -32,7 +32,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
                 {
                     if (_recalculationLogs.Count > 0)
                     {
-                        await FinishDataCollectionAsync().ConfigureAwait(false);
+                        await SaveChangesAsyncSafely().ConfigureAwait(false);
                     }
                     else
                     {
@@ -55,8 +55,16 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
             _context.ChangeTracker.Clear();
         }
 
-        public async Task FinishDataCollectionAsync()
+        public async Task FinishDataCollectionAsync(HashSet<string> experimentClientIds)
         {
+            await _eventBus.PublishSystemMessage(new SystemMessage()
+            {
+                Message = _eventBus.CurrentExperimentId,
+                MessageType = SystemMessage.SystemMessageType.ExperimentComplete,
+                Source = _eventBus.ClientId,
+                Targets = experimentClientIds,
+                TimeStamp = DateTime.UtcNow
+            });
             await SaveChangesAsyncSafely().ConfigureAwait(false);
         }
 

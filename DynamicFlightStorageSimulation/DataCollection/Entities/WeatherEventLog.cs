@@ -12,7 +12,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.E
 
         public required string ExperimentId { get; init; }
 
-        public required string WeatherId { get; init; }
+        public required byte[] WeatherData { get; init; }
 
         public required DateTime UtcTimeStamp { get; init; }
     }
