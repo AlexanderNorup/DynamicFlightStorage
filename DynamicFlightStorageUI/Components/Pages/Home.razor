@@ -103,16 +103,23 @@
 
         <div class="col-12 border rounded p-2">
             <h3>Consumer:</h3>
-            <p>The embedded consumer is enabled: @(consumer is not null)</p>            
-            @if(consumer is null)
+            <p>The embedded consumer is enabled: @(consumer is not null)</p>
+            @if(consumerUpdating)
             {
-
-                <button class="btn btn-success" @onclick="CreateConsumer">Enable embedded consumer?</button>
-            }
-            else
-            {
-                <p>Consumer id: <code>@consumer.ClientId</code></p>
-                <button class="btn btn-danger" @onclick="KillConsumer">Disable embedded consumer?</button>
+                <p>@(consumer is null ? "Starting" : "Stopping") the embedded consumer...</p>
+                <div class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">Loading</span>
+                </div>
+            }else{
+                @if(consumer is null)
+                {
+                    <button class="btn btn-success" @onclick="CreateConsumer">Enable embedded consumer?</button>
+                }
+                else
+                {
+                    <p>Consumer id: <code>@consumer.ClientId</code>. Type: <code>@consumer.EventDataStoreName</code></p>
+                    <button class="btn btn-danger" @onclick="KillConsumer">Disable embedded consumer?</button>
+                }
             }
         </div>
 
@@ -155,6 +162,7 @@
 @code {
     private CancellationTokenSource cts = new();
     private List<LogEntry> orchestratorLogs = new List<LogEntry>();
+    private bool consumerUpdating = false;
     private SimulationConsumer? consumer;
     private LatencyTester? latencyTester;
     private string? latencyTestResult;
@@ -168,9 +176,9 @@
         SimulatedStartTime = new DateTime(2024, 12, 14, 0, 00, 00, DateTimeKind.Utc),
         SimulatedEndTime = new DateTime(2025, 1, 10, 00, 00, 00, DateTimeKind.Utc),
         // SimulatedEndTime = new DateTime(2024, 10, 12, 00, 00, 00, DateTimeKind.Utc),
-        SimulatedPreloadStartTime = new DateTime(2024, 12, 1, 00, 00, 00, DateTimeKind.Utc),
-        SimulatedPreloadEndTime = new DateTime(2024, 12, 30, 0, 00, 00, DateTimeKind.Utc),
-        TimeScale = -1 // Negative value means "as fast as possible"
+        SimulatedPreloadStartTime = new DateTime(2024, 1, 1, 00, 00, 00, DateTimeKind.Utc),
+        SimulatedPreloadEndTime = new DateTime(2024, 10, 11, 3, 00, 00, DateTimeKind.Utc),
+        TimeScale = 60 // Negative value means "as fast as possible"
     };
 
     protected override void OnInitialized()
@@ -276,27 +284,59 @@
         orchestrator.ExperimentRunnerClientIds = newExperimentRunnerIds;
     }
 
-    private void CreateConsumer()
+    private async Task CreateConsumer()
     {
         if(consumer is not null)
         {
             return;
         }
-        var weatherService = new WeatherService();
-        consumer = new SimulationConsumer(eventbus,
-            weatherService,
-            new BasicEventDataStore.BasicEventDataStore(weatherService, eventbus),
-            loggerFactory.CreateLogger<SimulationConsumer>());
-        KnownClientIds.Add(consumer.ClientId);
+        consumerUpdating = true;
+        StateHasChanged();
+        try{
+            var weatherService = new WeatherService();
+            OnOrchestratorLog(new LogEntry(LogLevel.Information, "Creating internal consumer", null));
+            var newConsumer = new SimulationConsumer(eventbus,
+                weatherService,
+                new SimplePostgreSQLDataStore.SimplePostgreSQLDataStore(weatherService, eventbus),
+                loggerFactory.CreateLogger<SimulationConsumer>());
+            await newConsumer.StartAsync();
+
+            OnOrchestratorLog(new LogEntry(LogLevel.Information, $"Successfully started consumer of type {newConsumer.EventDataStoreName}", null));
+
+            consumer = newConsumer;
+            KnownClientIds.Add(consumer.ClientId);
+        }
+        finally
+        {
+            consumerUpdating = false;
+            StateHasChanged();
+        }
     }
 
-    private void KillConsumer()
+    private async Task KillConsumer()
     {
-        if(consumer is not null){
-            KnownClientIds.Remove(consumer.ClientId);
-            consumer.Dispose();
+        if(consumer is null)
+        {
+            return;
         }
-        consumer = null;
+
+        consumerUpdating = true;
+        StateHasChanged();
+        try
+        {
+            OnOrchestratorLog(new LogEntry(LogLevel.Information, $"Stopping consumer... Please wait", null));
+
+            KnownClientIds.Remove(consumer.ClientId);
+            await Task.Run(() => consumer.Dispose());
+
+            OnOrchestratorLog(new LogEntry(LogLevel.Information, $"Consumer stopped", null));
+            consumer = null;
+        }
+        finally
+        {
+            consumerUpdating = false;
+            StateHasChanged();
+        }
     }
 
     public async Task RefreshConsumers()

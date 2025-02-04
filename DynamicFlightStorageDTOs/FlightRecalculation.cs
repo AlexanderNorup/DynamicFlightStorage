@@ -8,7 +8,7 @@ namespace DynamicFlightStorageDTOs
     public class FlightRecalculation
     {
         [Key(0)]
-        public required Flight Flight { get; set; }
+        public required string FlightIdentification { get; set; }
 
         [Key(1)]
         public required DateTime RecalculatedTime { get; set; }
@@ -18,7 +18,7 @@ namespace DynamicFlightStorageDTOs
 
         public override string ToString()
         {
-            return $"Recaculation for {{{Flight}}}: @ {RecalculatedTime} (Experiment: {ExperimentId})";
+            return $"Recaculation for {{{FlightIdentification}}}: @ {RecalculatedTime} (Experiment: {ExperimentId})";
         }
 
         private string GetDebuggerDisplay()

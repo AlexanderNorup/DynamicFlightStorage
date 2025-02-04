@@ -151,7 +151,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 await _experimentDataCollector.AddOrUpdateExperimentAsync(CurrentExperiment);
 
                 ExperimentCancellationToken = new CancellationTokenSource();
-                var minimumWaitPreloadWaitTime = Task.Delay(TimeSpan.FromSeconds(5));
+                var minimumWaitPreloadWaitTime = Task.Delay(TimeSpan.FromSeconds(10));
 
                 var result = await SendSystemMessageAndWaitForResponseAsync(new SystemMessage()
                 {
@@ -171,7 +171,10 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 // Do preload here.
                 var st = Stopwatch.StartNew();
                 await _weatherInjector.PublishWeatherUntil(CurrentExperiment.SimulatedPreloadEndTime, CurrentExperiment.Id, _logger, ExperimentCancellationToken.Token).ConfigureAwait(false);
-                _logger.LogInformation("Finished preloading weather. Took {Time}", st.Elapsed);
+                _logger.LogInformation("Finished preloading weather. Took {Time}. Waiting to be consumed...", st.Elapsed);
+
+                await minimumWaitPreloadWaitTime; // Wait for the minium time of 10 seconds before checking if everything is consumed
+                await _consumingMonitor.WaitForExchangesToBeConsumedAsync(ExperimentRunnerClientIds.ToArray(), ExperimentCancellationToken.Token);
 
                 ExperimentCancellationToken.Token.ThrowIfCancellationRequested();
 
@@ -190,7 +193,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
                 _logger.LogInformation("Published all preload-data. Waiting for consumers to consume it all");
 
-                await minimumWaitPreloadWaitTime; // Wait for the minium time of 5 seconds before checking if everything is consumed
+                await minimumWaitPreloadWaitTime; // Wait for the minium time of 10 seconds before checking if everything is consumed
                 await _consumingMonitor.WaitForExchangesToBeConsumedAsync(ExperimentRunnerClientIds.ToArray(), ExperimentCancellationToken.Token);
 
                 _logger.LogInformation("Preload done");

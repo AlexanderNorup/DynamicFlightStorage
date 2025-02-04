@@ -25,6 +25,7 @@ namespace DynamicFlightStorageSimulation
         }
 
         public string ClientId => _simulationEventBus.ClientId;
+        public string EventDataStoreName => _eventDataStore.GetType()?.Name ?? "Unknown event-datastore";
 
         public async Task StartAsync()
         {
@@ -32,6 +33,7 @@ namespace DynamicFlightStorageSimulation
             {
                 await _simulationEventBus.ConnectAsync().ConfigureAwait(false);
             }
+            await _eventDataStore.StartAsync().ConfigureAwait(false);
         }
 
         private async Task OnWeatherRecieved(WeatherEvent weatherEvent)
