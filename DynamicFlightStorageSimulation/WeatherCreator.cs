@@ -76,7 +76,8 @@ public static class WeatherCreator
                 ValidFrom = dateIssued,
                 ValidTo = dateIssued,
                 Airport = airportId,
-                WeatherLevel = category
+                WeatherLevel = category,
+                DateIssued = dateIssued
             });
             return weatherList;
         }
@@ -84,6 +85,18 @@ public static class WeatherCreator
         // Handle taf
         if (conditions.Count > 1)
         {
+            // Check for valid period
+            DateTime dateIssued;
+            try
+            {
+                dateIssued = ParseDate(data["DateIssued"], identifier);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Invalid date in METAR {identifier}: {e.Message}");
+                return weatherList;
+            }
+            
             // Check for valid period
             JsonNode? validPeriod = data["Period"];
             if (validPeriod is null)
@@ -103,12 +116,12 @@ public static class WeatherCreator
                 return weatherList;
             }
             
-            return HandleTaf(conditions, identifier, validTo, airportId);
+            return HandleTaf(conditions, identifier, validTo, airportId, dateIssued);
         }
         return weatherList;
     }
 
-    private static List<Weather> HandleTaf(JsonArray conditions, string identifier, DateTime validTo, string airportId)
+    private static List<Weather> HandleTaf(JsonArray conditions, string identifier, DateTime validTo, string airportId, DateTime dateIssued)
     {
         var weatherList = new List<Weather>();
         
@@ -155,6 +168,8 @@ public static class WeatherCreator
                 continue;
             }
             
+            
+            
             // If there is a gap in the "timeline" fill it with the current baseline weather category
             if (previousEnd < dateStart)
             {
@@ -164,7 +179,8 @@ public static class WeatherCreator
                     ValidFrom = previousEnd,
                     ValidTo = dateStart,
                     Airport = airportId,
-                    WeatherLevel = baseline
+                    WeatherLevel = baseline,
+                    DateIssued = dateIssued,
                 });
                 
             }
@@ -175,7 +191,8 @@ public static class WeatherCreator
                 ValidFrom = dateStart,
                 ValidTo = dateEnd,
                 Airport = airportId,
-                WeatherLevel = weatherCategory
+                WeatherLevel = weatherCategory,
+                DateIssued = dateIssued,
             });
             
             var conditionChange = condition["Change"]?.ToString();
@@ -197,7 +214,8 @@ public static class WeatherCreator
                 ValidFrom = previousEnd,
                 ValidTo = validTo,
                 Airport = airportId,
-                WeatherLevel = baseline
+                WeatherLevel = baseline,
+                DateIssued = dateIssued,
             });
         }
         

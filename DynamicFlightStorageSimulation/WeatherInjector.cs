@@ -39,15 +39,15 @@ public class WeatherInjector
 
     public async Task PublishWeatherUntil(DateTime date, string experimentId, ILogger? logger = null, CancellationToken cancellationToken = default)
     {
-        var weatherBatches = GetWeatherUntill(date, cancellationToken).ToList();
+        var weatherBatches = GetWeatherUntil(date, cancellationToken).ToList();
 
         if (weatherBatches.Count == 0)
         {
-            //logger?.LogDebug("No weather data to publish (untill {Untill}).", date);
+            //logger?.LogDebug("No weather data to publish (until {Until}).", date);
             return;
         }
 
-        logger?.LogDebug("Publishing {Count} weather batches (until {Untill}).",
+        logger?.LogDebug("Publishing {Count} weather batches (until {Until}).",
             weatherBatches.Count,
             date);
         int weatherCount = 0;
@@ -56,7 +56,7 @@ public class WeatherInjector
             await _eventBus.PublishWeatherAsync(weatherBatch, experimentId).ConfigureAwait(false);
             if (++weatherCount % 10_000 == 0)
             {
-                logger?.LogDebug("Published {Count}/{Total} weather batches (untill {Untill}).",
+                logger?.LogDebug("Published {Count}/{Total} weather batches (until {Until}).",
                     weatherCount,
                     weatherBatches.Count,
                     date);
@@ -64,7 +64,7 @@ public class WeatherInjector
         }
     }
 
-    public IEnumerable<Weather> GetWeatherUntill(DateTime date, CancellationToken cancellationToken = default)
+    public IEnumerable<Weather> GetWeatherUntil(DateTime date, CancellationToken cancellationToken = default)
     {
         DateTime currentDate;
         if (_metar is null || _metar.Count < 1)
@@ -75,11 +75,11 @@ public class WeatherInjector
         // There might not be any METAR weather left, but we don't want to return yet as there might still be TAF
         if (_metar.Count > 0)
         {
-            currentDate = _metar.Peek().ValidTo;
+            currentDate = _metar.Peek().DateIssued;
 
             while (currentDate < date && _metar.Count > 0 && !cancellationToken.IsCancellationRequested)
             {
-                currentDate = _metar.Peek().ValidTo;
+                currentDate = _metar.Peek().DateIssued;
                 yield return _metar.Dequeue();
 
                 // If no more METAR then refill. If an empty queue is returned, the loop ends
@@ -95,11 +95,11 @@ public class WeatherInjector
             _taf = ReadNextFile(_tafFiles, "taf");
             if (_taf.Count < 1) { yield break; }
         }
-        currentDate = _taf.Peek().ValidTo;
+        currentDate = _taf.Peek().DateIssued;
 
         while (currentDate < date && _taf.Count > 0 && !cancellationToken.IsCancellationRequested)
         {
-            currentDate = _taf.Peek().ValidTo;
+            currentDate = _taf.Peek().DateIssued;
             yield return _taf.Dequeue();
 
             // If no more TAF then refill. If an empty queue is returned, the loop ends

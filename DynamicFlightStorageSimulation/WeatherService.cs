@@ -13,7 +13,8 @@ namespace DynamicFlightStorageSimulation
                 Airport = airport,
                 ValidFrom = dateTime,
                 ValidTo = dateTime,
-                WeatherLevel = WeatherCategory.Undefined
+                WeatherLevel = WeatherCategory.Undefined,
+                DateIssued = dateTime,
             };
 
             if (_weather.TryGetValue(airport, out var weatherInstances))
@@ -49,6 +50,7 @@ namespace DynamicFlightStorageSimulation
             var weatherLevel = weather.WeatherLevel;
             var start = weather.ValidFrom;
             var end = weather.ValidTo;
+            var dateIssued = weather.DateIssued;
             if (!_weather.ContainsKey(airport))
             {
                 _weather[airport] = new List<Weather>();
@@ -59,7 +61,8 @@ namespace DynamicFlightStorageSimulation
                 WeatherLevel = weatherLevel,
                 Airport = airport,
                 ValidFrom = start,
-                ValidTo = end
+                ValidTo = end,
+                DateIssued = dateIssued,
             });
         }
 
