@@ -39,7 +39,8 @@ namespace DynamicFlightStorageUI
                 options.EnableSensitiveDataLogging();
 #endif
                 options.UseMySql(builder.Configuration.GetConnectionString("ExperimentDataCollection"), serverVersion);
-            }, ServiceLifetime.Singleton);
+            }, ServiceLifetime.Transient, ServiceLifetime.Singleton);
+
 
             builder.Services.AddSingleton<ConsumerDataLogger>();
             builder.Services.AddSingleton<ExperimentDataCollector>();

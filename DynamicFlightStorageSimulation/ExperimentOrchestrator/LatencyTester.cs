@@ -66,6 +66,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     var clientId = group.Key;
+                    var clientType = group.First().message?.Data?.GetValueOrDefault("DataStoreName") as string ?? "Unreported client-type";
                     bool success = true;
                     var clientResponses = group.OrderBy(x => x.message.TimeStamp).ToList();
                     if (clientResponses.Count != samplePoints)
@@ -96,6 +97,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     experimentResults.Add(new LatencyTestResult()
                     {
                         ClientId = clientId,
+                        DataStoreType = clientType,
                         Success = success,
                         SamplePoints = samplePoints,
                         SampleDelayMs = sampleDelayMs,

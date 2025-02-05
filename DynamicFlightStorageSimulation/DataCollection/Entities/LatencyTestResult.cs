@@ -12,6 +12,8 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.E
         [NotMapped]
         public required string ClientId { get; set; }
         [NotMapped]
+        public required string DataStoreType { get; set; }
+        [NotMapped]
         public bool Success { get; set; }
         public int SamplePoints { get; set; }
         public int SampleDelayMs { get; set; }

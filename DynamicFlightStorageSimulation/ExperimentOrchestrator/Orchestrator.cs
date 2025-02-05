@@ -216,7 +216,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             }
         }
 
-        public async Task StartExperimentAsync()
+        public async Task StartExperimentAsync(string newExperimentDescription)
         {
             if (ExperimentRunnerClientIds.Count == 0)
             {
@@ -249,7 +249,8 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
                 CurrentExperimentResult = new ExperimentResult()
                 {
-                    ExperimentId = CurrentExperiment.Id
+                    ExperimentId = CurrentExperiment.Id,
+                    ExperimentRunDescription = newExperimentDescription,
                 };
 
                 _logger.LogInformation("Starting Experiment with Latency Test");
@@ -270,7 +271,8 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     {
                         ClientId = x.ClientId,
                         LatencyTest = x,
-                        ExperimentResult = CurrentExperimentResult
+                        ExperimentResult = CurrentExperimentResult,
+                        DataStoreType = x.DataStoreType,
                     }).ToList();
 
                 // Start the experiment clock

@@ -1,0 +1,82 @@
+﻿@using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
+@using Microsoft.EntityFrameworkCore;
+@page "/experiments/{id:int}"
+@inject DataCollectionContext dbContext
+<nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="experiments">Experiments</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Experiment Result @Id</li>
+    </ol>
+</nav>
+@if(ExperimentResult is { } result)
+{
+    <div class="container">
+        <h2>Experiment Result Details</h2>
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Experiment: @result.Experiment.Name</h5>
+                <p class="card-text"><strong>Description:</strong> @result.ExperimentRunDescription</p>
+                <p class="card-text"><strong>Experiment time:</strong> @result.UTCStartTime -> @result.UTCEndTime</p>
+                <p class="card-text"><strong>Experiment duration:</strong> @(result.UTCEndTime - result.UTCStartTime)</p>
+                <p class="card-text"><strong>Success:</strong> @(result.ExperimentSuccess ? "Yes" : "No")</p>
+                @if (!string.IsNullOrEmpty(result.ExperimentError))
+                {
+                    <p class="card-text text-danger"><strong>Error:</strong> @result.ExperimentError</p>
+                }
+            </div>
+        </div>
+
+        <h3>Client Results</h3>
+        @if (result.ClientResults.Count == 0)
+        {
+            <p>No client results available.</p>
+        }
+        else
+        {
+            <div class="list-group">
+                @foreach (var clientResult in result.ClientResults)
+                {
+                    <div class="list-group-item">
+                        <h5 class="mb-1">Client ID: @clientResult.ClientId</h5>
+                        <p class="mb-1"><strong>Data Store Type:</strong> @clientResult.DataStoreType</p>
+                        <p class="mb-1"><strong>Max Flight Consumer Lag:</strong> @clientResult.MaxFlightConsumerLag</p>
+                        <p class="mb-1"><strong>Max Weather Consumer Lag:</strong> @clientResult.MaxWeatherConsumerLag</p>
+                        @if (clientResult.LatencyTest != null)
+                        {
+                            <h5>Latency Test Result</h5>
+                            <p class="mb-1"><strong>Latency Test ID:</strong> @clientResult.LatencyTest.Id</p>
+                            <p class="mb-1"><strong>Sample Points:</strong> @clientResult.LatencyTest.SamplePoints</p>
+                            <p class="mb-1"><strong>Sample Delay:</strong> @clientResult.LatencyTest.SampleDelayMs.ToString(".00") ms.</p>
+                            <p class="mb-1"><strong>Average Latency:</strong> @clientResult.LatencyTest.AverageLatencyMs.ToString(".00") ms.</p>
+                            <p class="mb-1"><strong>Median Latency:</strong> @clientResult.LatencyTest.MedianLatencyMs.ToString(".00") ms.</p>
+                            <p class="mb-1"><strong>Standard Deviation Latency:</strong> @clientResult.LatencyTest.StdDeviationLatency</p>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+    
+
+
+}
+else
+{
+    <p>No experiment-result with id: @Id</p>
+}
+
+@code {
+
+    private ExperimentResult? ExperimentResult { get; set; }
+    protected async override Task OnInitializedAsync()
+    {
+        ExperimentResult = await dbContext.ExperimentResults
+            .Include(x=>x.Experiment)
+            .Include(x=>x.ClientResults)
+            .ThenInclude(x=>x.LatencyTest)
+            .FirstOrDefaultAsync(x => x.Id == Id);
+    }
+
+    [Parameter]
+    public int Id { get; set; }
+}

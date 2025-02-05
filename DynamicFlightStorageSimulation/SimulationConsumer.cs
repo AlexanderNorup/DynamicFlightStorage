@@ -29,7 +29,7 @@ namespace DynamicFlightStorageSimulation
         }
 
         public string ClientId => _simulationEventBus.ClientId;
-        public string EventDataStoreName => _eventDataStore.GetType()?.Name ?? "Unknown event-datastore";
+        public string EventDataStoreName => _eventDataStore.GetType()?.FullName ?? "Unknown event-datastore";
 
         public async Task StartAsync()
         {
@@ -97,7 +97,7 @@ namespace DynamicFlightStorageSimulation
             {
                 Message = experimentId,
                 MessageType = SystemMessage.SystemMessageType.NewExperimentReady,
-                Source = _simulationEventBus.ClientId
+                Source = _simulationEventBus.ClientId,
             });
         }
 
@@ -116,7 +116,11 @@ namespace DynamicFlightStorageSimulation
                         Message = message.Message,
                         TimeStamp = message.TimeStamp,
                         MessageType = SystemMessage.SystemMessageType.LatencyResponse,
-                        Source = _simulationEventBus.ClientId
+                        Source = _simulationEventBus.ClientId,
+                        Data = new Dictionary<string, object>()
+                        {
+                            { "DataStoreName", EventDataStoreName }
+                        },
                     }).ConfigureAwait(false);
                     break;
                 case SystemMessage.SystemMessageType.NewExperiment:

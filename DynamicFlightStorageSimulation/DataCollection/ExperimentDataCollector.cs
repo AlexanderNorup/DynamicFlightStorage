@@ -19,10 +19,10 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
         private SemaphoreSlim _updateSemaphore = new(1, 1);
         private bool _updateIsPending = false;
 
-        public ExperimentDataCollector(SimulationEventBus eventBus, DataCollectionContext context)
+        public ExperimentDataCollector(SimulationEventBus eventBus, DbContextOptions<DataCollectionContext> dbContextOptions)
         {
             _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
-            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _context = new DataCollectionContext(dbContextOptions ?? throw new ArgumentNullException(nameof(dbContextOptions)));
             _updateTimer = new Timer();
             _updateTimer.Interval = _updateIntervalMs;
             _updateTimer.Elapsed += async (sender, e) =>

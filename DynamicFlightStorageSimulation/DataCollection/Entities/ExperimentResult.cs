@@ -9,6 +9,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.E
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
+        public required string ExperimentRunDescription { get; set; } = string.Empty;
         public required string ExperimentId { get; init; }
         public DateTime? UTCStartTime { get; set; }
         public DateTime? UTCEndTime { get; set; }
@@ -16,5 +17,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.E
         public bool ExperimentSuccess { get; set; }
 
         public List<ExperimentClientResult> ClientResults { get; set; } = new();
+
+        public Experiment Experiment { get; init; } = null!;
     }
 }

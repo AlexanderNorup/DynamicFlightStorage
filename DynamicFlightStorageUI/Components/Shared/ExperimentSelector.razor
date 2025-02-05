@@ -1,0 +1,208 @@
+﻿@using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
+@using Microsoft.EntityFrameworkCore;
+@inject DataCollectionContext dbContext
+<h3>Current Experiment:</h3>
+@if(Experiment is not null)
+{
+    <p>Experiment: <input type="text" @bind="Experiment.Name" /> <i class="bi bi-floppy cursor-pointer" @onclick="UpdateName"></i> (<code>@Experiment.Id</code>)</p>
+    <ul>
+        <li class="m-0"><b>Simulated Time</b>: @Experiment.SimulatedStartTime -> @Experiment.SimulatedEndTime (Duration: @(Experiment.SimulatedEndTime - Experiment.SimulatedStartTime))</li>
+        <li class="m-0"><b>Preload Time</b>: @Experiment.SimulatedPreloadStartTime -> @Experiment.SimulatedPreloadEndTime (Duration: @(Experiment.SimulatedPreloadEndTime - Experiment.SimulatedPreloadStartTime))</li>
+        <li class="m-0"><b>Preload all flights</b>: @Experiment.PreloadAllFlights</li>
+        <li class="m-0"><b>Logging enabled</b>: @Experiment.LoggingEnabled</li>
+        <li class="m-0"><b>Time-Scale</b>: @(Experiment.TimeScale <= 0 ? "Max Speed" : Experiment.TimeScale)</li>
+    </ul>
+}
+else
+{
+    <p>No experiment loaded</p>
+}
+
+<details class="border-2 rounded">
+    <summary>Select another experiment:</summary>
+    <div class="row">
+        <div class="col-6">
+            <h4>Choose existing experiment: </h4>
+            <select class="form-select" @bind="SelectedExperimentId">
+                <option selected value="-1">Please choose</option>
+                @foreach(var experiment in Experiments)
+                {
+                    <option value="@experiment.Id">@experiment.Name (Id: @experiment.Id)</option>
+                }
+            </select>
+
+            <button class="btn btn-primary" @onclick="SetSelectedExperiment">Choose experiment</button>
+        </div>
+        <div class="col-6">
+            <h4>New experiment:</h4>
+            <EditForm Model="_newExperimentModel" OnValidSubmit="CreateNewExperiment">
+                <div class="row mb-3">
+                    <label for="name" class="col-sm-4 col-form-label">Name</label>
+                    <div class="col-sm-8">
+                        <InputText @bind-Value="_newExperimentModel.Name" class="form-control" id="name" />
+                        <div class="form-text">
+                            The name should describe the experiment scenario!
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <label for="simulatedStartTime" class="col-sm-4 col-form-label">Simulated Start Time</label>
+                    <div class="col-sm-8">
+                        <InputDate Type="InputDateType.DateTimeLocal" @bind-Value="_newExperimentModel.SimulatedStartTime" class="form-control" id="simulatedStartTime" />
+                        <div class="form-text">
+                            As UTC time
+                        </div>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <label for="simulatedEndTime" class="col-sm-4 col-form-label">Simulated End Time</label>
+                    <div class="col-sm-8">
+                        <InputDate Type="InputDateType.DateTimeLocal" @bind-Value="_newExperimentModel.SimulatedEndTime" class="form-control" id="simulatedEndTime" />
+                        <div class="form-text">
+                            As UTC time
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <label for="preloadStartTime" class="col-sm-4 col-form-label">Preload Start Time</label>
+                    <div class="col-sm-8">
+                        <InputDate Type="InputDateType.DateTimeLocal" @bind-Value="_newExperimentModel.SimulatedPreloadStartTime" class="form-control" id="preloadStartTime" />
+                        <div class="form-text">
+                            As UTC time
+                        </div>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <label for="preloadEndTime" class="col-sm-4 col-form-label">Preload End Time</label>
+                    <div class="col-sm-8">
+                        <InputDate Type="InputDateType.DateTimeLocal" @bind-Value="_newExperimentModel.SimulatedPreloadEndTime" class="form-control" id="preloadEndTime" />
+                        <div class="form-text">
+                            As UTC time
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <label for="timeScale" class="col-sm-4 col-form-label">TimeScale</label>
+                    <div class="col-sm-8">
+                        <InputNumber @bind-Value="_newExperimentModel.TimeScale" disabled="@_newExperimentModel.TimeMaxSpeed" class="form-control" id="timeScale" />
+                        <div class="form-text">
+                            Set to <code>1.0</code> for real-time simulation
+                        </div>
+                        <hr />
+                        <div class="form-check">
+                            <InputCheckbox @bind-Value="_newExperimentModel.TimeMaxSpeed" class="form-check-input" id="maxSpeed" />
+                            <label class="form-check-label" for="maxSpeed">
+                                Ingest data as fast as possible
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="form-check">
+                        <InputCheckbox @bind-Value="_newExperimentModel.PreloadAllFlights" class="form-check-input" id="preloadAll" />
+                        <label class="form-check-label" for="preloadAll">
+                            Preload all flights
+                        </label>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="form-check">
+                        <InputCheckbox @bind-Value="_newExperimentModel.LoggingEnabled" class="form-check-input" id="enableLogging" />
+                        <label class="form-check-label" for="enableLogging">
+                            Log messages on consumer-side?
+                        </label>
+
+                    </div>
+                    <div class="form-text">
+                        Please disable this for testing, thanks :)
+                    </div>
+                </div>
+
+
+                <button type="submit" class="btn btn-primary">Save</button>
+                <button type="button" class="btn btn-warning" @onclick="() => _newExperimentModel = new()">Reset form</button>
+            </EditForm>
+        </div>
+    </div>
+</details>
+@code {
+    private ExperimentModel _newExperimentModel = new();
+    private string SelectedExperimentId { get; set; } = string.Empty;
+    private List<Experiment> Experiments { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadExperiments();
+    }
+
+    private async Task LoadExperiments()
+    {
+        Experiments = await dbContext.Experiments.ToListAsync();
+    }
+
+    private async Task UpdateName()
+    {
+        if(Experiment is null)
+        {
+            return;
+        }
+        dbContext.Experiments.Update(Experiment);
+        await dbContext.SaveChangesAsync();
+        await LoadExperiments();
+    }
+
+    private async Task SetSelectedExperiment()
+    {
+        if(Experiments.FirstOrDefault(x=> x.Id == SelectedExperimentId) is { } newExperiment)
+        {
+            await OnExperimentChanged.InvokeAsync(newExperiment);
+        }
+    }
+
+    private async Task CreateNewExperiment()
+    {
+        var newExperiment = new Experiment()
+        {
+            Name = _newExperimentModel.Name,
+            SimulatedStartTime = DateTime.SpecifyKind(_newExperimentModel.SimulatedStartTime,DateTimeKind.Utc),
+            SimulatedEndTime = DateTime.SpecifyKind(_newExperimentModel.SimulatedEndTime, DateTimeKind.Utc),
+            SimulatedPreloadStartTime = DateTime.SpecifyKind(_newExperimentModel.SimulatedPreloadStartTime, DateTimeKind.Utc),
+            SimulatedPreloadEndTime = DateTime.SpecifyKind(_newExperimentModel.SimulatedPreloadEndTime, DateTimeKind.Utc),
+            PreloadAllFlights = _newExperimentModel.PreloadAllFlights,
+            TimeScale = _newExperimentModel.TimeMaxSpeed ? -1 : _newExperimentModel.TimeScale,
+            LoggingEnabled = _newExperimentModel.LoggingEnabled
+        };
+
+        dbContext.Experiments.Add(newExperiment);
+        await dbContext.SaveChangesAsync();
+        await LoadExperiments();
+        await OnExperimentChanged.InvokeAsync(newExperiment);
+    }
+
+    [Parameter]
+    public Experiment? Experiment {get; set;}
+
+    [Parameter]
+    public EventCallback<Experiment> OnExperimentChanged {get; set;}
+
+    private class ExperimentModel()
+    {
+        public string Name { get; set; } = string.Empty;
+        public DateTime SimulatedStartTime { get; set; } = new DateTime(2024, 10, 11, 03, 00, 00, DateTimeKind.Local);
+        public DateTime SimulatedEndTime { get; set; } = new DateTime(2024, 10, 12, 00, 00, 00, DateTimeKind.Local);
+
+        public DateTime SimulatedPreloadStartTime { get; set; } = new DateTime(2024, 1, 1, 00, 00, 00, DateTimeKind.Local);
+        public DateTime SimulatedPreloadEndTime { get; set; } = new DateTime(2024, 10, 11, 3, 00, 00, DateTimeKind.Local);
+        public bool PreloadAllFlights { get; set; }
+
+        public double TimeScale { get; set; } = 1.0;
+        public bool TimeMaxSpeed { get; set; } = false;
+
+        public bool LoggingEnabled { get; set; } = false;
+    }
+}

@@ -21,6 +21,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<Experiment>().HasMany(x => x.ExperimentResults).WithOne(x => x.Experiment);
             modelBuilder.Entity<ExperimentResult>().HasMany(x => x.ClientResults).WithOne(x => x.ExperimentResult);
         }
     }
