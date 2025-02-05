@@ -6,10 +6,8 @@
 {
     <p>Experiment: <input type="text" @bind="Experiment.Name" /> <i class="bi bi-floppy cursor-pointer" @onclick="UpdateName"></i> (<code>@Experiment.Id</code>)</p>
     <ul>
-        <li class="m-0"><b>Simulated Start Time</b>: @Experiment.SimulatedStartTime</li>
-        <li class="m-0"><b>Simulated End Time</b>: @Experiment.SimulatedEndTime</li>
-        <li class="m-0"><b>Preload Start Time</b>: @Experiment.SimulatedPreloadStartTime</li>
-        <li class="m-0"><b>Preload End Time</b>: @Experiment.SimulatedPreloadEndTime</li>
+        <li class="m-0"><b>Simulated Time</b>: @Experiment.SimulatedStartTime -> @Experiment.SimulatedEndTime (Duration: @(Experiment.SimulatedEndTime - Experiment.SimulatedStartTime))</li>
+        <li class="m-0"><b>Preload Time</b>: @Experiment.SimulatedPreloadStartTime -> @Experiment.SimulatedPreloadEndTime (Duration: @(Experiment.SimulatedPreloadEndTime - Experiment.SimulatedPreloadStartTime))</li>
         <li class="m-0"><b>Preload all flights</b>: @Experiment.PreloadAllFlights</li>
         <li class="m-0"><b>Logging enabled</b>: @Experiment.LoggingEnabled</li>
         <li class="m-0"><b>Time-Scale</b>: @(Experiment.TimeScale <= 0 ? "Max Speed" : Experiment.TimeScale)</li>

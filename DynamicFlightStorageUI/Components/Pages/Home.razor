@@ -25,7 +25,7 @@
             <ExperimentSelector Experiment="orchestrator.CurrentExperiment" OnExperimentChanged="orchestrator.SetExperiment" />
         </div>
         <div class="col-12 border rounded p-2">
-            <h3>Experiment Orchestrator: <button class="btn btn-sm" @onclick="StateHasChanged">Refresh state</button></h3>
+            <h3>Run an experiment: <button class="btn btn-sm" @onclick="StateHasChanged">Refresh state</button></h3>
             <p>An experiment is running: @(orchestrator.CheckExperimentRunning())</p>
             @if(orchestrator.CurrentSimulationTime is { } simTime
                && orchestrator.CurrentExperiment is { } currEx
@@ -94,6 +94,11 @@
                     }
                 </ul>
             </p>
+            <div class="mb-2">
+                <label for="experimentDescription" class="form-label">Name for this experiment run:</label>
+                <input disabled="@(orchestrator.OrchestratorState > OrchestratorState.PreloadDone)" type="text" id="experimentDescription" @bind="CurrentExperimentDecription" />
+            </div>
+
             <button class="btn btn-outline-primary" @onclick="PreloadExperiment">Preload Data</button>
             <button class="btn btn-primary" @onclick="StartExperiment">Start Experiment</button>
             <button class="btn btn-danger" @onclick="AbortExpxeriment">Abort Experiment</button>
@@ -175,6 +180,8 @@
     private LatencyTester? latencyTester;
     private string? latencyTestResult;
 
+    private string CurrentExperimentDecription { get; set; } = string.Empty;
+
     private HashSet<string> KnownClientIds = new HashSet<string>();
 
     protected override void OnInitialized()
@@ -182,6 +189,10 @@
         orchestrator.OnExperimentStateChanged += OnExperimentStateChanged;
         orchestrator.OnLogEvent += OnOrchestratorLog;
         latencyTester = new LatencyTester(eventbus, loggerFactory.CreateLogger<LatencyTester>());
+        if(orchestrator.CurrentExperimentResult is not null)
+        {
+            CurrentExperimentDecription = orchestrator.CurrentExperimentResult.ExperimentRunDescription;
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -235,7 +246,7 @@
     {
         try
         {
-            await orchestrator.StartExperimentAsync();
+            await orchestrator.StartExperimentAsync(CurrentExperimentDecription);
         }
         catch (Exception e)
         {
@@ -261,6 +272,7 @@
         {
             return;
         }
+        CurrentExperimentDecription = string.Empty;
         try
         {
             orchestrator.SetExperiment(orchestrator.CurrentExperiment);

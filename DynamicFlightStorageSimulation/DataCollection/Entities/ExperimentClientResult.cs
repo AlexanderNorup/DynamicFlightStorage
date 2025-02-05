@@ -12,6 +12,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.E
         [ForeignKey("ExperimentResultId")]
         public ExperimentResult ExperimentResult { get; set; }
         public required string ClientId { get; set; }
+        public required string DataStoreType { get; set; }
         [ForeignKey("LatencyTestId")]
         public LatencyTestResult? LatencyTest { get; set; }
         public int MaxFlightConsumerLag { get; set; } = -1;
