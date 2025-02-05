@@ -16,5 +16,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.E
         public bool ExperimentSuccess { get; set; }
 
         public List<ExperimentClientResult> ClientResults { get; set; } = new();
+
+        public Experiment Experiment { get; init; } = null!;
     }
 }

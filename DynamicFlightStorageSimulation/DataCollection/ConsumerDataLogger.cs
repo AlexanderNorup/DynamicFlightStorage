@@ -1,16 +1,19 @@
 ﻿using DynamicFlightStorageDTOs;
 using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection;
 using MessagePack;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DynamicFlightStorageSimulation.DataCollection
 {
     public class ConsumerDataLogger
     {
-        private readonly DataCollectionContext _dbContext;
+        private readonly DbContextOptions<DataCollectionContext> _dbContextOptions;
         public static readonly MessagePackSerializerOptions MessagePackOptions = MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4BlockArray);
-        public ConsumerDataLogger(DataCollectionContext dbContext)
+
+        public ConsumerDataLogger(DbContextOptions<DataCollectionContext> dbContextOptions)
         {
-            _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+            _dbContextOptions = dbContextOptions ?? throw new ArgumentNullException(nameof(dbContextOptions));
         }
 
         public bool IsLoggingEnabled { get; set; } = false;
@@ -50,20 +53,22 @@ namespace DynamicFlightStorageSimulation.DataCollection
             await File.WriteAllBytesAsync(Path.Combine(outputPath, "flights.bin"), flightData);
             await File.WriteAllBytesAsync(Path.Combine(outputPath, "weather.bin"), weatherData);
 
-            _dbContext.WeatherEventLogs.Add(new ExperimentOrchestrator.DataCollection.Entities.WeatherEventLog()
+            using var dbContext = new DataCollectionContext(_dbContextOptions);
+
+            dbContext.WeatherEventLogs.Add(new ExperimentOrchestrator.DataCollection.Entities.WeatherEventLog()
             {
                 ExperimentId = experimentId,
                 WeatherData = weatherData,
                 UtcTimeStamp = DateTime.UtcNow
             });
-            _dbContext.FlightEventLogs.Add(new ExperimentOrchestrator.DataCollection.Entities.FlightEventLog()
+            dbContext.FlightEventLogs.Add(new ExperimentOrchestrator.DataCollection.Entities.FlightEventLog()
             {
                 ExperimentId = experimentId,
                 FlightData = flightData,
                 UtcTimeStamp = DateTime.UtcNow
             });
 
-            await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+            await dbContext.SaveChangesAsync().ConfigureAwait(false);
         }
 
         public void ResetLogger()

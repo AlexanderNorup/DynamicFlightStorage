@@ -39,8 +39,7 @@ namespace ExperimentRunner
             dbContextOptions.EnableSensitiveDataLogging();
 #endif
             dbContextOptions.UseMySql(configuration.GetConnectionString("ExperimentDataCollection"), serverVersion);
-            var dbContext = new DataCollectionContext(dbContextOptions.Options);
-            var consumerDataLogger = new ConsumerDataLogger(dbContext);
+            var consumerDataLogger = new ConsumerDataLogger(dbContextOptions.Options);
 
             var weatherService = new WeatherService();
 

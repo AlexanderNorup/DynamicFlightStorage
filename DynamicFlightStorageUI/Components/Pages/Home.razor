@@ -2,6 +2,8 @@
 @using DynamicFlightStorageSimulation.DataCollection
 @using DynamicFlightStorageSimulation.ExperimentOrchestrator
 @using System.Text.Json
+@using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
+@using Microsoft.EntityFrameworkCore;
 @using DynamicFlightStorageSimulation.Utilities
 @using System.Globalization
 @using System.Text.Json.Serialization
@@ -10,6 +12,7 @@
 @inject ConsumerDataLogger consumerDataLogger
 @inject ILoggerFactory loggerFactory
 @inject IJSRuntime jsRuntime
+@inject DataCollectionContext dbContext
 @implements IDisposable
 
 <PageTitle>Home</PageTitle>
@@ -17,8 +20,12 @@
 <h1>Prototyping Dashboard!</h1>
 <div class="container mb-2">
     <div class="row g-2">
+        
         <div class="col-12 border rounded p-2">
-            <h3>Orchestrator: <button class="btn btn-sm" @onclick="StateHasChanged">Refresh state</button></h3>
+            <ExperimentSelector Experiment="orchestrator.CurrentExperiment" OnExperimentChanged="orchestrator.SetExperiment" />
+        </div>
+        <div class="col-12 border rounded p-2">
+            <h3>Experiment Orchestrator: <button class="btn btn-sm" @onclick="StateHasChanged">Refresh state</button></h3>
             <p>An experiment is running: @(orchestrator.CheckExperimentRunning())</p>
             @if(orchestrator.CurrentSimulationTime is { } simTime
                && orchestrator.CurrentExperiment is { } currEx
@@ -170,25 +177,8 @@
 
     private HashSet<string> KnownClientIds = new HashSet<string>();
 
-    private readonly Experiment testExperiment = new Experiment()
-    {
-        Name = "Test max speed Experiment",
-        PreloadAllFlights = true,
-        SimulatedStartTime = new DateTime(2024, 12, 14, 0, 00, 00, DateTimeKind.Utc),
-        SimulatedEndTime = new DateTime(2025, 1, 10, 00, 00, 00, DateTimeKind.Utc),
-        // SimulatedEndTime = new DateTime(2024, 10, 12, 00, 00, 00, DateTimeKind.Utc),
-        SimulatedPreloadStartTime = new DateTime(2024, 1, 1, 00, 00, 00, DateTimeKind.Utc),
-        SimulatedPreloadEndTime = new DateTime(2024, 10, 11, 3, 00, 00, DateTimeKind.Utc),
-        TimeScale = -1, // Negative value means "as fast as possible"
-        LoggingEnabled = true
-    };
-
     protected override void OnInitialized()
     {
-        if (orchestrator.CurrentExperiment is null)
-        {
-            orchestrator.SetExperiment(testExperiment);
-        }
         orchestrator.OnExperimentStateChanged += OnExperimentStateChanged;
         orchestrator.OnLogEvent += OnOrchestratorLog;
         latencyTester = new LatencyTester(eventbus, loggerFactory.CreateLogger<LatencyTester>());
@@ -206,6 +196,15 @@
             catch
             {
                 // Ignore
+            }
+            if (orchestrator.CurrentExperiment is null)
+            {
+                if (await dbContext.ExperimentResults.Include(x => x.Experiment)
+                    .OrderBy(x => x.UTCEndTime)
+                    .LastOrDefaultAsync() is { } lastExperimentResult)
+                {
+                    orchestrator.SetExperiment(lastExperimentResult.Experiment);
+                }
             }
         }
         await base.OnAfterRenderAsync(firstRender);
@@ -258,9 +257,13 @@
 
     public void ResetExperiment()
     {
+        if(orchestrator.CurrentExperiment is null)
+        {
+            return;
+        }
         try
         {
-            orchestrator.SetExperiment(testExperiment);
+            orchestrator.SetExperiment(orchestrator.CurrentExperiment);
         }
         catch (Exception e)
         {
