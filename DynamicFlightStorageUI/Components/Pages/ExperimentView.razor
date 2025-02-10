@@ -116,7 +116,12 @@ else
             .ThenInclude(x => x.LatencyTest)
             .FirstOrDefaultAsync(x => x.Id == Id);
 
-        var clientIds = ExperimentResult!.ClientResults.Select(x => x.ClientId).Distinct().ToList();
+        if(ExperimentResult is null)
+        {
+            return;
+        }
+
+        var clientIds = ExperimentResult.ClientResults.Select(x => x.ClientId).Distinct().ToList();
 
         WeatherData = (await dbContext.WeatherEventLogs
             .Where(x => clientIds.Contains(x.ClientId))
