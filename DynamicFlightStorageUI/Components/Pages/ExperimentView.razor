@@ -2,6 +2,7 @@
 @using Microsoft.EntityFrameworkCore;
 @page "/experiments/{id:int}"
 @inject DataCollectionContext dbContext
+@inject NavigationManager navManager
 <nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a href="experiments">Experiments</a></li>
@@ -41,6 +42,14 @@
                         <p class="mb-1"><strong>Data Store Type:</strong> @clientResult.DataStoreType</p>
                         <p class="mb-1"><strong>Max Flight Consumer Lag:</strong> @clientResult.MaxFlightConsumerLag</p>
                         <p class="mb-1"><strong>Max Weather Consumer Lag:</strong> @clientResult.MaxWeatherConsumerLag</p>
+                        @if(RecalculationCount.TryGetValue(clientResult.ClientId, out var count))
+                        {
+                            <p class="mb-1"><strong>Recalculation Events:</strong> @RecalculationCount[clientResult.ClientId]</p>
+                        }
+                        else
+                        {
+                            <p class="mb-1"><strong>Recalculation Events:</strong> <span style="color:red">No recalculation-events are stored for this client-id</span></p>
+                        }
                         @if (clientResult.LatencyTest != null)
                         {
                             <h5>Latency Test Result</h5>
@@ -51,14 +60,40 @@
                             <p class="mb-1"><strong>Median Latency:</strong> @clientResult.LatencyTest.MedianLatencyMs.ToString(".00") ms.</p>
                             <p class="mb-1"><strong>Standard Deviation Latency:</strong> @clientResult.LatencyTest.StdDeviationLatency</p>
                         }
+                        @if(WeatherData.TryGetValue(clientResult.ClientId, out var weatherData))
+                        {
+                            <h5>Collected Weather Data</h5>
+                            <ul>
+                            @foreach (var data in weatherData)
+                            {
+                                 <li><a href="@GetWeatherDownloadUrl(data.DownloadId)">@data.Desc</a></li>
+                            }
+                            </ul>
+                        }
+                        else
+                        {
+                            <p>There is no available weather data</p>
+                        }
+                        @if (FlightData.TryGetValue(clientResult.ClientId, out var flightData))
+                        {
+                            <h5>Collected Flight Data</h5>
+                            <ul>
+                                @foreach (var data in flightData)
+                                {
+                                    <li><a href="@GetFlightDownloadUrl(data.DownloadId)">@data.Desc</a></li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <p>There is no available flight data</p>
+                        }
+
                     </div>
                 }
             </div>
         }
     </div>
-    
-
-
 }
 else
 {
@@ -66,16 +101,51 @@ else
 }
 
 @code {
+    private const string FlightDownloadTemplate = "api/flightlogs/{0}";
+    private const string WeatherDownloadTemplate = "api/weatherlogs/{0}";
 
     private ExperimentResult? ExperimentResult { get; set; }
+    private Dictionary<string, List<(int DownloadId, string ClientId, string Desc)>> WeatherData = new ();
+    private Dictionary<string, List<(int DownloadId, string ClientId, string Desc)>> FlightData = new();
+    private Dictionary<string, int> RecalculationCount { get; set; } = new();
     protected async override Task OnInitializedAsync()
     {
         ExperimentResult = await dbContext.ExperimentResults
-            .Include(x=>x.Experiment)
-            .Include(x=>x.ClientResults)
-            .ThenInclude(x=>x.LatencyTest)
+            .Include(x => x.Experiment)
+            .Include(x => x.ClientResults)
+            .ThenInclude(x => x.LatencyTest)
             .FirstOrDefaultAsync(x => x.Id == Id);
+
+        var clientIds = ExperimentResult!.ClientResults.Select(x => x.ClientId).Distinct().ToList();
+
+        WeatherData = (await dbContext.WeatherEventLogs
+            .Where(x => clientIds.Contains(x.ClientId))
+            .Select(x => new { x.Id, x.ClientId, x.UtcTimeStamp, Size = x.WeatherData.Length })
+            .ToListAsync())
+                .Select(x => (x.Id, x.ClientId, $"{x.UtcTimeStamp} (~{BytesToMb(x.Size)} MB)"))
+                .GroupBy(x => x.ClientId)
+                .ToDictionary(x => x.Key, x => x.ToList());
+
+        FlightData = (await dbContext.FlightEventLogs
+            .Where(x => clientIds.Contains(x.ClientId))
+            .Select(x => new { x.Id, x.ClientId, x.UtcTimeStamp, Size = x.FlightData.Length })
+            .ToListAsync())
+                .Select(x => (x.Id, x.ClientId, $"{x.UtcTimeStamp} (~{BytesToMb(x.Size)} MB)"))
+                .GroupBy(x => x.ClientId)
+                .ToDictionary(x => x.Key, x => x.ToList());
+
+        RecalculationCount = (await dbContext.RecalculationEventLogs
+                                .Where(x => clientIds.Contains(x.ClientId))
+                                .GroupBy(x=>x.ClientId)
+                                .Select(x => new { Id = x.Key, Count = x.Count() })
+                                .ToListAsync())
+                                    .ToDictionary(x => x.Id, x => x.Count);
     }
+
+    private double BytesToMb(int bytes) => Math.Round(bytes / 1024d / 1024d, 2);
+
+    private string GetFlightDownloadUrl(int id) => navManager.BaseUri + string.Format(FlightDownloadTemplate, id);
+    private string GetWeatherDownloadUrl(int id) => navManager.BaseUri + string.Format(WeatherDownloadTemplate, id);
 
     [Parameter]
     public int Id { get; set; }

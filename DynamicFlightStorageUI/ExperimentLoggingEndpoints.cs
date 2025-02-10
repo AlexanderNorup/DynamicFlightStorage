@@ -11,18 +11,10 @@ namespace DynamicFlightStorageUI
         public static void AddExperimentLogEndpoints(this WebApplication app)
         {
             // TODO: Either don't deploy this somewhere public or add authentication
-            app.MapGet("/api/experiment", async (DataCollectionContext context, HttpContext httpContext) =>
-            {
-                httpContext.Response.ContentType = "application/json";
-                return Results.Ok(await context.Experiments.ToListAsync());
-            });
-
-            app.MapGet("/api/experiment/{experimentId}/flightlogs", async (DataCollectionContext context, HttpContext httpContext, string experimentId) =>
+            app.MapGet("/api/flightlogs/{id:int}", async (DataCollectionContext context, HttpContext httpContext, int id) =>
             {
                 var logs = await context.FlightEventLogs
-                    .Where(log => log.ExperimentId == experimentId)
-                    .OrderBy(log => log.UtcTimeStamp)
-                    .FirstOrDefaultAsync();
+                    .FirstOrDefaultAsync(x => x.Id == id);
 
                 if (logs is null)
                 {
@@ -33,15 +25,13 @@ namespace DynamicFlightStorageUI
 
                 return Results.File(System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(logList)),
                     "application/json",
-                    $"flightlogs_{experimentId}.json");
-            });
+                    $"flightlogs_{logs.ExperimentId}_{logs.ClientId}.json");
+            }).WithName("flightlog_download");
 
-            app.MapGet("/api/experiment/{experimentId}/weatherlogs", async (DataCollectionContext context, HttpContext httpContext, string experimentId) =>
+            app.MapGet("/api/weatherlogs/{id:int}", async (DataCollectionContext context, HttpContext httpContext, int id) =>
             {
                 var logs = await context.WeatherEventLogs
-                    .Where(log => log.ExperimentId == experimentId)
-                    .OrderBy(log => log.UtcTimeStamp)
-                    .FirstOrDefaultAsync();
+                    .FirstOrDefaultAsync(x => x.Id == id);
 
                 if (logs is null)
                 {
@@ -52,8 +42,8 @@ namespace DynamicFlightStorageUI
 
                 return Results.File(System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(logList)),
                     "application/json",
-                    $"weatherlogs_{experimentId}.json");
-            });
+                    $"weatherlogs_{logs.ExperimentId}_{logs.ClientId}.json");
+            }).WithName("weatherlog_download");
         }
     }
 }
