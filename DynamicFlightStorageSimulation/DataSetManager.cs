@@ -57,7 +57,7 @@
             }
 
             var tafFolder = Path.Combine(dataSetPath, WeatherDirectory, WeatherTaf);
-            if (!Directory.Exists(metarFolder))
+            if (!Directory.Exists(tafFolder))
             {
                 throw new DirectoryNotFoundException($"The dataset '{dataSetName}' contained no weather tafs.");
             }
