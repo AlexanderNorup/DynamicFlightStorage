@@ -188,6 +188,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
                 // Do preload here.
                 var st = Stopwatch.StartNew();
+                _weatherInjector.SkipWeatherUntil(CurrentExperiment.SimulatedPreloadStartTime, ExperimentCancellationToken.Token);
                 await _weatherInjector.PublishWeatherUntil(CurrentExperiment.SimulatedPreloadEndTime, CurrentExperiment.Id, _logger, ExperimentCancellationToken.Token).ConfigureAwait(false);
                 _logger.LogInformation("Finished preloading weather. Took {Time}. Waiting to be consumed...", st.Elapsed);
 
@@ -197,6 +198,9 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 ExperimentCancellationToken.Token.ThrowIfCancellationRequested();
 
                 st.Restart();
+
+                _flightInjector.SkipFlightsUntil(CurrentExperiment.SimulatedPreloadStartTime, ExperimentCancellationToken.Token);
+
                 if (CurrentExperiment.PreloadAllFlights)
                 {
                     await _flightInjector.PublishFlightsUntil(DateTime.MaxValue, CurrentExperiment.Id, _logger, ExperimentCancellationToken.Token).ConfigureAwait(false);
@@ -294,6 +298,10 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
                 // Start the experiment clock
                 CurrentExperimentResult.UTCStartTime = DateTime.UtcNow;
+
+                // Skip ahead to simulation start
+                _flightInjector.SkipFlightsUntil(CurrentExperiment.SimulatedStartTime, ExperimentCancellationToken.Token);
+                _weatherInjector.SkipWeatherUntil(CurrentExperiment.SimulatedStartTime, ExperimentCancellationToken.Token);
 
                 await _experimentDataCollector.AddOrUpdateExperimentResultAsync(CurrentExperimentResult);
                 await _experimentDataCollector.MonitorExperimentAsync(CurrentExperiment.Id);
