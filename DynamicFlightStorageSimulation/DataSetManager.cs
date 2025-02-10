@@ -18,7 +18,7 @@
         {
             var dataSets = new List<string>();
             foreach (var dataSetName in Directory.GetDirectories(_dataSetsPath)
-                .Select(Path.GetDirectoryName)
+                .Select(Path.GetFileName)
                 .OfType<string>()) // Filters away null
             {
                 if (Directory.Exists(Path.Combine(_dataSetsPath, dataSetName, FlightDirectory))

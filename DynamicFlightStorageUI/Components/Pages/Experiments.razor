@@ -28,7 +28,7 @@
                             {
                                 <span class="badge rounded-pill bg-danger me-2" style="width:4rem;">Failed</span>
                             }
-                            <a href="experiments/@result.Id"><b>@result.Id</b>: @result.ExperimentRunDescription</a>
+                            <a href="experiments/@result.Id"><b>@result.Id</b>: @result.ExperimentRunDescription (Started @result.UTCStartTime)</a>
                         </li> 
                     }
                 </ul>
@@ -38,6 +38,7 @@
                     <ul>
                         <li><b>Simulated Time</b>: @experiment.SimulatedStartTime -> @experiment.SimulatedEndTime (Duration: @(experiment.SimulatedEndTime - experiment.SimulatedStartTime))</li>
                         <li><b>Preload Time</b>: @experiment.SimulatedPreloadStartTime -> @experiment.SimulatedPreloadEndTime (Duration: @(experiment.SimulatedPreloadEndTime - experiment.SimulatedPreloadStartTime))</li>
+                        <li><b>Data-set</b>: @experiment.DataSetName</li>
                         <li><b>Preload all flights</b>: @experiment.PreloadAllFlights</li>
                         <li><b>Logging enabled</b>: @experiment.LoggingEnabled</li>
                         <li><b>Time-Scale</b>: @(experiment.TimeScale <= 0 ? "Max Speed" : experiment.TimeScale)</li>
@@ -64,6 +65,10 @@ else
 
     private async Task LoadExperiments()
     {
-        AllExperiments = await dbContext.Experiments.Include(x=>x.ExperimentResults).ToListAsync();
+        AllExperiments = (await dbContext.Experiments
+            .Include(x=>x.ExperimentResults)
+            .ToListAsync())
+                .OrderByDescending(x=>x.ExperimentResults.LastOrDefault()?.UTCEndTime ?? DateTime.MinValue)
+                .ToList();
     }
 }

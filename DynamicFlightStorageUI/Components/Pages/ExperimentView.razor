@@ -17,6 +17,7 @@
             <div class="card-body">
                 <h5 class="card-title">Experiment: @result.Experiment.Name</h5>
                 <p class="card-text"><strong>Description:</strong> @result.ExperimentRunDescription</p>
+                <p class="card-text"><strong>Data Set:</strong> @result.Experiment.DataSetName</p>
                 <p class="card-text"><strong>Experiment time:</strong> @result.UTCStartTime -> @result.UTCEndTime</p>
                 <p class="card-text"><strong>Experiment duration:</strong> @(result.UTCEndTime - result.UTCStartTime)</p>
                 <p class="card-text"><strong>Success:</strong> @(result.ExperimentSuccess ? "Yes" : "No")</p>

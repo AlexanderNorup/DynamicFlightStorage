@@ -214,7 +214,13 @@
                     .OrderBy(x => x.UTCEndTime)
                     .LastOrDefaultAsync() is { } lastExperimentResult)
                 {
-                    orchestrator.SetExperiment(lastExperimentResult.Experiment);
+                    try{
+                        orchestrator.SetExperiment(lastExperimentResult.Experiment);
+                    }
+                    catch(Exception e)
+                    {
+                        OnOrchestratorLog(new LogEntry(LogLevel.Error, "Failed to auto-load last experiment", e));
+                    }
                 }
             }
         }
