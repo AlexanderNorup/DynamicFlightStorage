@@ -1,0 +1,69 @@
+﻿@using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
+@using Microsoft.EntityFrameworkCore;
+
+@page "/experiments"
+@inject DataCollectionContext dbContext
+<h3>Experiments</h3>
+
+@if (AllExperiments.Count > 0)
+{
+    @foreach(var experiment in AllExperiments)
+    {
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>@experiment.Name</h5>
+            </div>
+            <div class="card-body">
+                
+                <h5>Results</h5>
+                <ul>
+                    @foreach(var result in experiment.ExperimentResults.OrderBy(x=>x.UTCEndTime))
+                    {
+                        <li>
+                            @if (result.ExperimentSuccess)
+                            {
+                                <span class="badge rounded-pill bg-success me-2" style="width:4rem;">Success</span>
+                            }
+                            else
+                            {
+                                <span class="badge rounded-pill bg-danger me-2" style="width:4rem;">Failed</span>
+                            }
+                            <a href="experiments/@result.Id"><b>@result.Id</b>: @result.ExperimentRunDescription</a>
+                        </li> 
+                    }
+                </ul>
+                <hr />
+                <details>
+                    <summary>Experiment details</summary>
+                    <ul>
+                        <li><b>Simulated Time</b>: @experiment.SimulatedStartTime -> @experiment.SimulatedEndTime (Duration: @(experiment.SimulatedEndTime - experiment.SimulatedStartTime))</li>
+                        <li><b>Preload Time</b>: @experiment.SimulatedPreloadStartTime -> @experiment.SimulatedPreloadEndTime (Duration: @(experiment.SimulatedPreloadEndTime - experiment.SimulatedPreloadStartTime))</li>
+                        <li><b>Preload all flights</b>: @experiment.PreloadAllFlights</li>
+                        <li><b>Logging enabled</b>: @experiment.LoggingEnabled</li>
+                        <li><b>Time-Scale</b>: @(experiment.TimeScale <= 0 ? "Max Speed" : experiment.TimeScale)</li>
+                    </ul>
+                </details>
+            </div>
+        </div>
+    
+    }
+}
+else
+{
+    <p>No experiments in the database</p>
+}
+
+
+@code {
+    private List<Experiment> AllExperiments { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadExperiments();
+    }
+
+    private async Task LoadExperiments()
+    {
+        AllExperiments = await dbContext.Experiments.Include(x=>x.ExperimentResults).ToListAsync();
+    }
+}

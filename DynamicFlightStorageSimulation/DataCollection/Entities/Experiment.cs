@@ -25,5 +25,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.E
         /// If enabled, will log all events when they're recieved by the Consumer to the database.
         /// </summary>
         public bool LoggingEnabled { get; init; } = false;
+
+        public ICollection<ExperimentResult> ExperimentResults { get; init; } = new List<ExperimentResult>();
     }
 }
