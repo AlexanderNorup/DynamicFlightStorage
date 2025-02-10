@@ -3,6 +3,7 @@ using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection;
 using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.Entities;
 using DynamicFlightStorageSimulation.Utilities;
 using Microsoft.Extensions.Logging;
+using System.Data;
 using System.Diagnostics;
 using static DynamicFlightStorageDTOs.SystemMessage;
 
@@ -17,19 +18,21 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
         private SimulationEventBus _eventBus;
         private LatencyTester _latencyTester;
         private ConsumingMonitor _consumingMonitor;
-        private WeatherInjector _weatherInjector;
-        private FlightInjector _flightInjector;
+        private DataSetManager _dataSetManager;
         private ExperimentDataCollector _experimentDataCollector;
         private EventLogger<Orchestrator> _logger;
         private System.Timers.Timer _experimentChecker;
         private SemaphoreSlim _experimentControllerSemaphore = new SemaphoreSlim(1, 1);
-        public Orchestrator(SimulationEventBus eventBus, LatencyTester latencyTester, ConsumingMonitor consumingMonitor, WeatherInjector weatherInjector, FlightInjector flightInjector, ExperimentDataCollector experimentDataCollector, ILogger<Orchestrator> logger)
+
+        private WeatherInjector? _weatherInjector;
+        private FlightInjector? _flightInjector;
+
+        public Orchestrator(SimulationEventBus eventBus, LatencyTester latencyTester, ConsumingMonitor consumingMonitor, DataSetManager dataSetManager, ExperimentDataCollector experimentDataCollector, ILogger<Orchestrator> logger)
         {
             _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
             _latencyTester = latencyTester ?? throw new ArgumentNullException(nameof(latencyTester));
             _consumingMonitor = consumingMonitor ?? throw new ArgumentNullException(nameof(consumingMonitor));
-            _weatherInjector = weatherInjector ?? throw new ArgumentNullException(nameof(weatherInjector));
-            _flightInjector = flightInjector ?? throw new ArgumentNullException(nameof(flightInjector));
+            _dataSetManager = dataSetManager ?? throw new ArgumentNullException(nameof(dataSetManager));
             _experimentDataCollector = experimentDataCollector ?? throw new ArgumentNullException(nameof(experimentDataCollector));
             _logger = new EventLogger<Orchestrator>(logger);
             _experimentChecker = new System.Timers.Timer(1000);
@@ -111,8 +114,14 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             {
                 throw new InvalidOperationException($"An experiment can only be set when the state is {OrchestratorState.Idle}.");
             }
+
+            var injectors = _dataSetManager.GetInjectorsForDataSet(experiment.DataSetName);
+            _flightInjector = injectors.FlightInjector;
+            _weatherInjector = injectors.WeatherInjector;
+
             CurrentExperiment = experiment;
             CurrentExperimentResult = null;
+
             ResetExperimentState();
         }
 
@@ -126,6 +135,10 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             if (CurrentExperiment is null)
             {
                 throw new InvalidOperationException("No experiment is currently set.");
+            }
+            if (_flightInjector is null || _weatherInjector is null)
+            {
+                throw new InvalidOperationException("FlightInjector and WeatherInjector are not set.");
             }
             if (CheckExperimentRunning())
             {
@@ -226,6 +239,10 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             if (CurrentExperiment is null)
             {
                 throw new InvalidOperationException("No experiment is currently set.");
+            }
+            if (_flightInjector is null || _weatherInjector is null)
+            {
+                throw new InvalidOperationException("FlightInjector and WeatherInjector are not set.");
             }
             if (CheckExperimentRunning())
             {
@@ -343,8 +360,8 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             CurrentLag = new();
             _experimentDataCollector.StopMonitoringExperiment();
             _experimentChecker.Stop();
-            _flightInjector.ResetReader();
-            _weatherInjector.ResetReader();
+            _flightInjector?.ResetReader();
+            _weatherInjector?.ResetReader();
             OnExperimentStateChanged?.Invoke();
         }
 
@@ -394,7 +411,11 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
         private async Task ExperimentLoop()
         {
-            if (CurrentExperiment is null || CurrentExperimentResult is null || CurrentSimulationTime is null)
+            if (CurrentExperiment is null
+                || CurrentExperimentResult is null
+                || CurrentSimulationTime is null
+                || _flightInjector is null
+                || _weatherInjector is null)
             {
                 _logger.LogWarning("Experiment Loop is called without a valid experiment, experiment result or simulation time.");
                 return;

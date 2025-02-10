@@ -1,6 +1,7 @@
 ﻿@using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
 @using Microsoft.EntityFrameworkCore;
 @inject DataCollectionContext dbContext
+@inject DataSetManager dataSetManager
 <h3>Current Experiment:</h3>
 @if(Experiment is not null)
 {
@@ -9,6 +10,7 @@
         <li class="m-0"><b>Simulated Time</b>: @Experiment.SimulatedStartTime -> @Experiment.SimulatedEndTime (Duration: @(Experiment.SimulatedEndTime - Experiment.SimulatedStartTime))</li>
         <li class="m-0"><b>Preload Time</b>: @Experiment.SimulatedPreloadStartTime -> @Experiment.SimulatedPreloadEndTime (Duration: @(Experiment.SimulatedPreloadEndTime - Experiment.SimulatedPreloadStartTime))</li>
         <li class="m-0"><b>Preload all flights</b>: @Experiment.PreloadAllFlights</li>
+        <li class="m-0"><b>Data Set:</b> @Experiment.DataSetName</li>
         <li class="m-0"><b>Logging enabled</b>: @Experiment.LoggingEnabled</li>
         <li class="m-0"><b>Time-Scale</b>: @(Experiment.TimeScale <= 0 ? "Max Speed" : Experiment.TimeScale)</li>
     </ul>
@@ -27,7 +29,10 @@ else
                 <option selected value="-1">Please choose</option>
                 @foreach(var experiment in Experiments)
                 {
-                    <option value="@experiment.Id">@experiment.Name (Id: @experiment.Id)</option>
+                    var datasetAvailable = AvailableDataSets.Contains(experiment.DataSetName);
+                    <option disabled="@(!datasetAvailable)" value="@experiment.Id">@experiment.Name
+                        (Data: @experiment.DataSetName@(datasetAvailable ? "" : " [NOT FOUND!]"), Id: @experiment.Id)
+                    </option>
                 }
             </select>
 
@@ -43,6 +48,18 @@ else
                         <div class="form-text">
                             The name should describe the experiment scenario!
                         </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <label for="name" class="col-sm-4 col-form-label">Data-Set:</label>
+                    <div class="col-sm-8">
+                        <InputSelect class="form-select" @bind-Value="_newExperimentModel.DataSetName">
+                            @foreach(var dataSet in AvailableDataSets)
+                            {
+                                <option value="@dataSet">@dataSet</option>
+                            }
+                        </InputSelect>
                     </div>
                 </div>
 
@@ -134,6 +151,7 @@ else
     private ExperimentModel _newExperimentModel = new();
     private string SelectedExperimentId { get; set; } = string.Empty;
     private List<Experiment> Experiments { get; set; } = new();
+    private HashSet<string> AvailableDataSets { get; set; } = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -143,6 +161,7 @@ else
     private async Task LoadExperiments()
     {
         Experiments = await dbContext.Experiments.ToListAsync();
+        AvailableDataSets = dataSetManager.GetAvailableDatasets().ToHashSet();
     }
 
     private async Task UpdateName()
@@ -169,6 +188,7 @@ else
         var newExperiment = new Experiment()
         {
             Name = _newExperimentModel.Name,
+            DataSetName = _newExperimentModel.DataSetName,
             SimulatedStartTime = DateTime.SpecifyKind(_newExperimentModel.SimulatedStartTime,DateTimeKind.Utc),
             SimulatedEndTime = DateTime.SpecifyKind(_newExperimentModel.SimulatedEndTime, DateTimeKind.Utc),
             SimulatedPreloadStartTime = DateTime.SpecifyKind(_newExperimentModel.SimulatedPreloadStartTime, DateTimeKind.Utc),
@@ -193,6 +213,7 @@ else
     private class ExperimentModel()
     {
         public string Name { get; set; } = string.Empty;
+        public string DataSetName { get; set; } = string.Empty;
         public DateTime SimulatedStartTime { get; set; } = new DateTime(2024, 10, 11, 03, 00, 00, DateTimeKind.Local);
         public DateTime SimulatedEndTime { get; set; } = new DateTime(2024, 10, 12, 00, 00, 00, DateTimeKind.Local);
 

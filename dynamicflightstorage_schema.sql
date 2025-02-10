@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Vært: hosting.alexandernorup.com
--- Genereringstid: 10. 02 2025 kl. 10:14:56
+-- Genereringstid: 10. 02 2025 kl. 10:55:14
 -- Serverversion: 10.5.23-MariaDB-0+deb11u1-log
 -- PHP-version: 8.3.16
 
@@ -72,6 +72,7 @@ CREATE TABLE `EventLog_Weather` (
 CREATE TABLE `Experiment` (
   `Id` varchar(36) NOT NULL,
   `Name` varchar(50) NOT NULL,
+  `DataSetName` varchar(255) NOT NULL DEFAULT 'default',
   `TimeScale` double NOT NULL,
   `LoggingEnabled` tinyint(1) NOT NULL DEFAULT 0,
   `SimulatedStartTime` datetime NOT NULL,

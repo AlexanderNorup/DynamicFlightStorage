@@ -16,6 +16,8 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.E
         public DateTime SimulatedPreloadEndTime { get; init; }
         public bool PreloadAllFlights { get; init; }
 
+        public required string DataSetName { get; init; }
+
         /// <summary>
         /// If value is 0 or negative, the simulation will run as fast as possible.
         /// </summary>
