@@ -48,6 +48,15 @@ public class FlightInjector
         return flightList.OrderBy(x => x.DatePlanned).ToList();
     }
 
+    public void SkipFlightsUntil(DateTime date, CancellationToken cancellationToken = default)
+    {
+        // This is ugly, but it works
+        foreach (var _ in GetFlightsUntill(date, cancellationToken))
+        {
+            // Don't do anything
+        }
+    }
+
     public async Task PublishFlightsUntil(DateTime date, string experimentId, ILogger? logger = null, CancellationToken cancellationToken = default)
     {
         var flightsToPublish = GetFlightsUntill(date, cancellationToken).ToList();
