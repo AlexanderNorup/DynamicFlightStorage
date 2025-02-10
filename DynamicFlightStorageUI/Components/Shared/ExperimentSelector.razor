@@ -2,6 +2,8 @@
 @using Microsoft.EntityFrameworkCore;
 @inject DataCollectionContext dbContext
 @inject DataSetManager dataSetManager
+@inject IJSRuntime jsRuntime
+@inject ILogger<ExperimentSelector> logger
 <h3>Current Experiment:</h3>
 @if(Experiment is not null)
 {
@@ -179,7 +181,14 @@ else
     {
         if(Experiments.FirstOrDefault(x=> x.Id == SelectedExperimentId) is { } newExperiment)
         {
-            await OnExperimentChanged.InvokeAsync(newExperiment);
+            try{
+                await OnExperimentChanged.InvokeAsync(newExperiment);
+            }
+            catch(Exception ex)
+            {
+                logger.LogError(ex, "Failed to set new experiment");
+                await jsRuntime.InvokeVoidAsync("alert", "Failed to set new experiment\n" + ex.Message);
+            }
         }
     }
 

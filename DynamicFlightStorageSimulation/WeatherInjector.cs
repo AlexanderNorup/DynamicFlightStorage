@@ -37,6 +37,15 @@ public class WeatherInjector
         _tafFiles = new(FindFiles(_tafPath));
     }
 
+    public void SkipWeatherUntil(DateTime date, CancellationToken cancellationToken = default)
+    {
+        // This is ugly, but it works
+        foreach (var _ in GetWeatherUntil(date, cancellationToken))
+        {
+            // Don't do anything
+        }
+    }
+
     public async Task PublishWeatherUntil(DateTime date, string experimentId, ILogger? logger = null, CancellationToken cancellationToken = default)
     {
         var weatherBatches = GetWeatherUntil(date, cancellationToken).ToList();
