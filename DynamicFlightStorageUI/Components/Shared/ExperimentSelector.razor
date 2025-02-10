@@ -31,7 +31,7 @@ else
                 {
                     var datasetAvailable = AvailableDataSets.Contains(experiment.DataSetName);
                     <option disabled="@(!datasetAvailable)" value="@experiment.Id">@experiment.Name
-                        (Data: @experiment.DataSetName @(datasetAvailable ? "" : "[NOT FOUND!]"), Id: @experiment.Id)
+                        (Data: @experiment.DataSetName@(datasetAvailable ? "" : " [NOT FOUND!]"), Id: @experiment.Id)
                     </option>
                 }
             </select>
