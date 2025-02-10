@@ -36,7 +36,7 @@ namespace DynamicFlightStorageSimulation.DataCollection
             }
         }
 
-        public async Task PersistDataAsync(string experimentId)
+        public async Task PersistDataAsync(string experimentId, string clientId)
         {
             if (!IsLoggingEnabled)
             {
@@ -44,6 +44,7 @@ namespace DynamicFlightStorageSimulation.DataCollection
             }
 
             ArgumentNullException.ThrowIfNull(experimentId, nameof(experimentId));
+            ArgumentNullException.ThrowIfNull(clientId, nameof(clientId));
 
             var flightData = MessagePackSerializer.Serialize(_flightLog, MessagePackOptions);
             var weatherData = MessagePackSerializer.Serialize(_weatherLog, MessagePackOptions);
@@ -58,12 +59,14 @@ namespace DynamicFlightStorageSimulation.DataCollection
             dbContext.WeatherEventLogs.Add(new ExperimentOrchestrator.DataCollection.Entities.WeatherEventLog()
             {
                 ExperimentId = experimentId,
+                ClientId = clientId,
                 WeatherData = weatherData,
                 UtcTimeStamp = DateTime.UtcNow
             });
             dbContext.FlightEventLogs.Add(new ExperimentOrchestrator.DataCollection.Entities.FlightEventLog()
             {
                 ExperimentId = experimentId,
+                ClientId = clientId,
                 FlightData = flightData,
                 UtcTimeStamp = DateTime.UtcNow
             });

@@ -127,7 +127,7 @@ namespace DynamicFlightStorageSimulation
                     await ResetStateAsync(message).ConfigureAwait(false);
                     break;
                 case SystemMessage.SystemMessageType.ExperimentComplete:
-                    await _consumerLogger.PersistDataAsync(_simulationEventBus.CurrentExperimentId).ConfigureAwait(false);
+                    await _consumerLogger.PersistDataAsync(_simulationEventBus.CurrentExperimentId, ClientId).ConfigureAwait(false);
                     _consumerLogger.ResetLogger();
                     break;
                 default:
