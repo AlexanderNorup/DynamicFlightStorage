@@ -73,6 +73,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
             _recalculationLogs.Add(new RecalculationEventLog()
             {
                 ExperimentId = _eventBus.CurrentExperimentId,
+                ClientId = _eventBus.ClientId,
                 UtcTimeStamp = flight.RecalculatedTime,
                 FlightId = flight.FlightIdentification
             });
