@@ -2,7 +2,6 @@
 using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection;
 using MessagePack;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace DynamicFlightStorageSimulation.DataCollection
 {
@@ -88,6 +87,6 @@ namespace DynamicFlightStorageSimulation.DataCollection
         [MessagePackObject]
         public record WeatherLog([property: Key(0)] DateTime ReceivedTimestamp,
             [property: Key(1)] DateTime SentTimestamp,
-            [property: Key(2)] Weather Flight);
+            [property: Key(2)] Weather Weather);
     }
 }
