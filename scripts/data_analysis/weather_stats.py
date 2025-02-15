@@ -37,7 +37,7 @@ metar_df = pd.DataFrame(metar_dates, columns=['DateIssued'])
 
 # Filter out entries before 2024-10-11 00:00:00 and after 2024-10-11 22:59:59
 metar_start_date = datetime(2024, 10, 11, 0, 0, 0)
-metar_end_date = datetime(2024, 10, 11, 22, 59, 59)
+metar_end_date = datetime(2024, 10, 11, 21, 59, 59)
 metar_df = metar_df[(metar_df['DateIssued'] >= metar_start_date) & (metar_df['DateIssued'] <= metar_end_date)]
 
 # Create hour buckets and count the number of METAR reports per hour
@@ -79,14 +79,16 @@ print(f'taf errors: {taf_errors}')
 taf_df = pd.DataFrame(taf_dates, columns=['DateIssued', 'DateStart', 'DateEnd', 'Ident'])
 # taf_df = pd.DataFrame(taf_dates, columns=['DateIssued', 'DateEnd', 'Ident', 'DateString'])
 
+
 # Create hour buckets and count the number of TAF reports per hour
 taf_df['DateHourStart'] = taf_df['DateStart'].dt.strftime('%Y-%m-%d %H')
 taf_df['DateHourIssued'] = taf_df['DateIssued'].dt.strftime('%Y-%m-%d %H')
 
-# Filter out entries before 2024-10-11 00:00:00 and after 2024-10-11 22:59:59
-taf_start_date = datetime(2024, 10, 10, 22, 0, 0)
+# Filter out entries before 2024-10-10 20:00:00 and after 2024-10-11 20:59:59, both for issue date and start date
+taf_start_date = datetime(2024, 10, 10, 20, 0, 0)
 taf_end_date = datetime(2024, 10, 11, 20, 59, 59)
-taf_df_filtered = taf_df[(taf_df['DateIssued'] >= taf_start_date) & (taf_df['DateIssued'] <= taf_end_date)]
+taf_temp = taf_df[(taf_df['DateIssued'] >= taf_start_date) & (taf_df['DateIssued'] <= taf_end_date)]
+taf_df_filtered = taf_temp[(taf_df['DateStart'] >= taf_start_date) & (taf_df['DateStart'] <= taf_end_date)]
 
 
 
@@ -111,8 +113,12 @@ def metar_stats():
 
 def taf_stats_6h():
     ####################    Inspecting the surges that happen every 6 hours
-    # taf_df_6h = taf_df_filtered[(taf_df_filtered['DateHourStart'].isin(['2024-10-10 00', '2024-10-11 06', '2024-10-11 12', '2024-10-11 18']))]
-    taf_df_6h = taf_df_filtered[~taf_df_filtered['DateHourStart'].str.contains(' 00| 06| 12| 18')]
+    # taf_df_6h = taf_df_filtered[(taf_df_filtered['DateHourStart'].isin(['2024-10-11 00', '2024-10-11 06', '2024-10-11 12', '2024-10-11 18']))].copy()
+    taf_df_6h = taf_df_filtered[taf_df_filtered['DateHourStart'].str.contains(' 00| 06| 12| 18')].copy()
+    
+    taf_df_6h['10MinBucket'] = (taf_df_6h['DateIssued'].dt.floor('10min'))
+    taf_5min_counts_6h = taf_df_6h['10MinBucket'].value_counts().sort_index()
+
     taf_hourly_counts_6h = taf_df_6h['DateHourStart'].value_counts().sort_index()
     taf_df_6h['ForecastLength'] = (taf_df_6h['DateEnd'] - taf_df_6h['DateStart']).abs()
     taf_df_6h['PreLength'] = (taf_df_6h['DateStart'] - taf_df_6h['DateIssued']).abs()
@@ -122,14 +128,6 @@ def taf_stats_6h():
     print(f'Minimum TAF reports in 6-hour intervals: {taf_hourly_counts_6h.min()}')
     print(f'Mean TAF reports in 6-hour intervals: {taf_hourly_counts_6h.mean()}')
     print(f'Median TAF reports in 6-hour intervals: {taf_hourly_counts_6h.median()}')
-
-    # Count the distinct Ident values in the 6-hour dataframe
-    ident_counts_6h = taf_df_6h['Ident'].value_counts()
-
-    # Print the top 10 Ident values
-    # print()
-    # print('Top 10 Ident values in 6-hour intervals:')
-    # print(ident_counts_6h.head(10))
 
     # Print differences
     print()
@@ -162,16 +160,23 @@ def taf_stats_6h():
     plt.tight_layout()
     plt.show()
 
+    # Plot the 5min counts
+    plt.figure(figsize=(12, 6))
+    taf_5min_counts_6h.plot(kind='bar', color='skyblue')
+    plt.xlabel('5 minutes')
+    plt.ylabel('Number of TAF Reports')
+    plt.title('Number of TAF Reports per Hour (head and tail removed, only the 6h intervals)')
+    plt.xticks(rotation=90)
+    plt.tight_layout()
+    plt.show()
+
 
 def taf_stats_6h_inverse():
     ####################    Inspecting everything BUT those 6h surges
-    taf_df_6h = taf_df_filtered[~taf_df_filtered['DateHourStart'].str.contains(' 00| 06| 12| 18')]
+    taf_df_6h = taf_df_filtered[~taf_df_filtered['DateHourStart'].str.contains(' 00| 06| 12| 18')].copy()
     taf_hourly_counts_6h = taf_df_6h['DateHourStart'].value_counts().sort_index()
     taf_df_6h['ForecastLength'] = (taf_df_6h['DateEnd'] - taf_df_6h['DateStart']).abs()
     taf_df_6h['PreLength'] = (taf_df_6h['DateStart'] - taf_df_6h['DateIssued']).abs()
-
-    taf_min_date = taf_df_filtered['DateIssued'].min().floor('h')
-    taf_max_date = taf_df_filtered['DateIssued'].max().ceil('h')
 
     # Plot the hourly counts
     plt.figure(figsize=(12, 6))
@@ -353,11 +358,9 @@ def taf_stats_below_24h():
 def taf_stats_overall():
     ####################    Inspecting hourly reports overall
     # Create a full timeline from min DateIssued to max DateIssued
-    taf_hourly_counts = taf_df['DateHourIssued'].value_counts().sort_index()
+    taf_hourly_counts = taf_df_filtered['DateHourStart'].value_counts().sort_index()
 
-    taf_min_date = taf_df_filtered['DateIssued'].min().floor('h')
-    taf_max_date = taf_df_filtered['DateIssued'].max().ceil('h')
-    taf_full_timeline = pd.date_range(start=taf_min_date, end=taf_max_date, freq='h').strftime('%Y-%m-%d %H')
+    taf_full_timeline = pd.date_range(start=taf_start_date, end=taf_end_date, freq='h').strftime('%Y-%m-%d %H')
 
     # Reindex the hourly counts to include all hours in the timeline
     taf_hourly_counts = taf_hourly_counts.reindex(taf_full_timeline, fill_value=0)
@@ -384,8 +387,8 @@ def main():
     # taf_stats_above_24h()
     # taf_stats_below_24h()
     # taf_stats_6h()
-    taf_stats_6h_inverse()
-    # taf_stats_forecast_diff()
+    # taf_stats_6h_inverse()
+    taf_stats_forecast_diff()
     # metar_stats()
     # print("The end")
 
