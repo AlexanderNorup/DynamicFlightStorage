@@ -2,9 +2,6 @@ import json, os
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
-# import matplotlib.dates as mdates
-# import pytz
 
 # Adjust as needed
 #metar_dir = '/home/sebastian/Desktop/thesis/DynamicFlightStorage/scripts/fake_data_generation/metar'
