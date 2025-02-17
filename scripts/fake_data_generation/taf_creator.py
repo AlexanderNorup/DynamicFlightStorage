@@ -2,6 +2,8 @@ import json
 import uuid
 import random
 from datetime import datetime, timedelta
+import numpy as np
+from scipy.stats import truncnorm
 
 # SETTINGS
 file_start_date = datetime(2025, 1, 1)
@@ -15,13 +17,16 @@ hours_spacing = 4
 flightrule_list = ["VFR"]
 changes_list = ["BECOMING", "TEMPORARY"]
 
-with open('europe_airports.json', 'r') as f:
+with open('/home/sebastian/Desktop/thesis/DynamicFlightStorage/scripts/fake_data_generation/europe_airports.json', 'r') as f:
     airports_data = json.load(f)
 airports = [airport['ICAO'] for airport in airports_data]
 
 
 def create_taf_conditions(date_start, date_end):
     conditions = []
+    # Get number of conditions (based on weights from data analysis)
+
+    # Create end of first condition, which is minimum 1 hour after start, maximum "date_end - num_of_conditions*1h"
 
     # Create the end of the first condition, minimum 1 hour after start, maximum the amount of hours left of the forecast
     random_hours_after_start = random.randint(1, int((date_end - date_start).total_seconds() // 3600) )
@@ -79,13 +84,23 @@ def get_taf_for_airport(icao):
     return taf_objects
 
 
+def create_base_layer():
+    min_prhr, max_prhr, mean_prhr, median_prhr, std_prhr = 210, 4025, 1048, 698, 1139
+    min_forecast, max_forecast, mean_forecast, median_forecast, std_forecast = 0, 510, 44, 52, 33 # minutes
+    min_length, max_length, mean_length, median_length, std_length = 1, 33, 15.5, 12, 8 # hours
+
+    for hour in range(0, 24):
+        #for i in range(10):  # Assuming you want to generate 10 random values per hour
+            print(round(get_random_value(mean_prhr, median_prhr, min_prhr, max_prhr, std_prhr)))
+
+
+def get_random_value(mean, median, min, max, std):
+    a,b = (min - mean) / std, (max - mean) / std
+    return truncnorm.rvs(a, b, loc=mean, scale=std)
+
+
 def main():
-    all_tafs = []
-    for airport in airports:
-        all_tafs.extend(get_taf_for_airport(airport))
-    
-    with open('taf/taf_data.json', 'w') as outfile:
-        json.dump(all_tafs, outfile, indent=4)
+    create_base_layer()
 
 
 if __name__ == "__main__":
