@@ -40,7 +40,7 @@ namespace SimplePostgreSQLDataStore
                 throw new InvalidOperationException("Database is not ready");
             }
 
-            var weather = GetWeatherCategoriesForFlight(flight);
+            var weather = _weatherService.GetWeatherCategoriesForFlight(flight);
             if (await _dbContext.Flights.FirstOrDefaultAsync(x => x.FlightIdentification == flight.FlightIdentification) is { } foundFlight)
             {
                 // Update the flight in the datastore
@@ -120,26 +120,6 @@ namespace SimplePostgreSQLDataStore
             var flight = new FlightEntity() { FlightIdentification = id };
             _dbContext.Flights.Remove(flight);
             await _dbContext.SaveChangesAsync();
-        }
-
-        private Dictionary<string, WeatherCategory> GetWeatherCategoriesForFlight(Flight flight)
-        {
-            var weather = new Dictionary<string, WeatherCategory>()
-            {
-                { flight.DepartureAirport, _weatherService.GetWeather(flight.DepartureAirport, flight.ScheduledTimeOfDeparture).WeatherLevel }
-            };
-
-            if (flight.DepartureAirport != flight.DestinationAirport)
-            {
-                weather.Add(flight.DestinationAirport, _weatherService.GetWeather(flight.DestinationAirport, flight.ScheduledTimeOfArrival).WeatherLevel);
-            }
-
-            var timeMiddleOfFlight = flight.ScheduledTimeOfDeparture + ((flight.ScheduledTimeOfArrival - flight.ScheduledTimeOfDeparture) / 2);
-            foreach (var airport in flight.OtherRelatedAirports.Keys.Where(x => !weather.ContainsKey(x)).Distinct())
-            {
-                weather.Add(airport, _weatherService.GetWeather(airport, timeMiddleOfFlight).WeatherLevel);
-            }
-            return weather;
         }
 
         public async Task ResetAsync()

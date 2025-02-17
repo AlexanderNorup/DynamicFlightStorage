@@ -50,5 +50,15 @@ namespace DynamicFlightStorageDTOs
         {
             return ToString();
         }
+
+        public IEnumerable<string> GetAllAirports()
+        {
+            yield return DepartureAirport;
+            yield return DestinationAirport;
+            foreach (var airport in OtherRelatedAirports.Keys)
+            {
+                yield return airport;
+            }
+        }
     }
 }

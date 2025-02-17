@@ -18,7 +18,7 @@ namespace BasicEventDataStore
             if (_flights.FirstOrDefault(x => x.Flight.FlightIdentification == flight.FlightIdentification) is { } foundFlight)
             {
                 // Update the flight in the datastore
-                foundFlight.LastSeenCategories = GetWeatherCategoriesForFlight(flight);
+                foundFlight.LastSeenCategories = _weatherService.GetWeatherCategoriesForFlight(flight);
                 foundFlight.ToBeRecalculated = false;
             }
             else
@@ -27,7 +27,7 @@ namespace BasicEventDataStore
                 _flights.Add(new FlightWrapper()
                 {
                     Flight = flight,
-                    LastSeenCategories = GetWeatherCategoriesForFlight(flight)
+                    LastSeenCategories = _weatherService.GetWeatherCategoriesForFlight(flight)
                 });
             }
 
@@ -60,26 +60,6 @@ namespace BasicEventDataStore
         {
             _flights.RemoveWhere(f => f.Flight.FlightIdentification == id);
             return Task.CompletedTask;
-        }
-
-        private Dictionary<string, WeatherCategory> GetWeatherCategoriesForFlight(Flight flight)
-        {
-            var weather = new Dictionary<string, WeatherCategory>()
-            {
-                { flight.DepartureAirport, _weatherService.GetWeather(flight.DepartureAirport, flight.ScheduledTimeOfDeparture).WeatherLevel }
-            };
-
-            if (flight.DepartureAirport != flight.DestinationAirport)
-            {
-                weather.Add(flight.DestinationAirport, _weatherService.GetWeather(flight.DestinationAirport, flight.ScheduledTimeOfArrival).WeatherLevel);
-            }
-
-            var timeMiddleOfFlight = flight.ScheduledTimeOfDeparture + ((flight.ScheduledTimeOfArrival - flight.ScheduledTimeOfDeparture) / 2);
-            foreach (var airport in flight.OtherRelatedAirports.Keys.Where(x => !weather.ContainsKey(x)).Distinct())
-            {
-                weather.Add(airport, _weatherService.GetWeather(airport, timeMiddleOfFlight).WeatherLevel);
-            }
-            return weather;
         }
 
         private static bool WeatherOverlapsFlight(Flight flight, Weather weather)
