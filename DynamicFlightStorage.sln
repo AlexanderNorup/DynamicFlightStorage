@@ -25,6 +25,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FlightGenerator", "scripts\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimplePostgreSQLDataStore", "EventDataStores\SimplePostgreSQLDataStore\SimplePostgreSQLDataStore.csproj", "{00240B2D-2701-4ED0-B92C-240121B6F7DF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OptimizedPostgreSQLDataStore", "EventDataStores\OptimizedPostgreSQLDataStore\OptimizedPostgreSQLDataStore.csproj", "{511915AD-0643-41F9-8E17-F66EF1AD3F23}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -67,6 +69,10 @@ Global
 		{00240B2D-2701-4ED0-B92C-240121B6F7DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{00240B2D-2701-4ED0-B92C-240121B6F7DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{00240B2D-2701-4ED0-B92C-240121B6F7DF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{511915AD-0643-41F9-8E17-F66EF1AD3F23}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{511915AD-0643-41F9-8E17-F66EF1AD3F23}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{511915AD-0643-41F9-8E17-F66EF1AD3F23}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{511915AD-0643-41F9-8E17-F66EF1AD3F23}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -76,6 +82,7 @@ Global
 		{6BE40818-4AF0-4587-A8CC-DCB14D7ADE4A} = {F618F1D0-7CB1-442B-8CCA-C90FF84D66AE}
 		{4D18D77F-5706-4738-A4BC-EF7F0F8AAF28} = {FAAA45D3-B333-4765-8E9C-154273EA7A2B}
 		{00240B2D-2701-4ED0-B92C-240121B6F7DF} = {F618F1D0-7CB1-442B-8CCA-C90FF84D66AE}
+		{511915AD-0643-41F9-8E17-F66EF1AD3F23} = {F618F1D0-7CB1-442B-8CCA-C90FF84D66AE}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B1900E86-D897-43A4-8BD5-B4074AF1F004}

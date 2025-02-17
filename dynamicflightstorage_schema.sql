@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Vært: hosting.alexandernorup.com
--- Genereringstid: 10. 02 2025 kl. 10:55:14
+-- Genereringstid: 17. 02 2025 kl. 14:54:52
 -- Serverversion: 10.5.23-MariaDB-0+deb11u1-log
 -- PHP-version: 8.3.16
 
@@ -240,7 +240,7 @@ ALTER TABLE `EventLog_Flight`
 -- Begrænsninger for tabel `EventLog_Recalculation`
 --
 ALTER TABLE `EventLog_Recalculation`
-  ADD CONSTRAINT `experiment_clientid_recalculation` FOREIGN KEY (`ClientId`) REFERENCES `ExperimentClientResult` (`ClientId`),
+  ADD CONSTRAINT `experiment_clientid_recalculation` FOREIGN KEY (`ClientId`) REFERENCES `ExperimentClientResult` (`ClientId`) ON DELETE CASCADE,
   ADD CONSTRAINT `experiment_results_recalculationevent` FOREIGN KEY (`ExperimentId`) REFERENCES `Experiment` (`Id`) ON DELETE CASCADE;
 
 --

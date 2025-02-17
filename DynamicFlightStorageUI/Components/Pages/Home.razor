@@ -20,7 +20,7 @@
 <h1>Prototyping Dashboard!</h1>
 <div class="container mb-2">
     <div class="row g-2">
-        
+
         <div class="col-12 border rounded p-2">
             <ExperimentSelector Experiment="orchestrator.CurrentExperiment" OnExperimentChanged="orchestrator.SetExperiment" />
         </div>
@@ -28,8 +28,8 @@
             <h3>Run an experiment: <button class="btn btn-sm" @onclick="StateHasChanged">Refresh state</button></h3>
             <p>An experiment is running: @(orchestrator.CheckExperimentRunning())</p>
             @if(orchestrator.CurrentSimulationTime is { } simTime
-               && orchestrator.CurrentExperiment is { } currEx
-               && orchestrator.CurrentExperimentResult is { } result)
+             && orchestrator.CurrentExperiment is { } currEx
+             && orchestrator.CurrentExperimentResult is { } result)
             {
                 bool experimentDone = result.UTCEndTime is not null;
                 string barColor = "";
@@ -42,8 +42,8 @@
 
                 <p>Experiment time: <code>@(orchestrator.CurrentSimulationTime)</code> (TimeScale: @timeScaleText)</p>
                 <p>Experiment time left: @(currEx.SimulatedEndTime - simTime)
-                <div class="progress" role="progressbar">
-                    <div
+                    <div class="progress" role="progressbar">
+                        <div
                         class="progress-bar progress-bar-striped @barColor @(!experimentDone ? "progress-bar-animated" : "")" 
                         style="width: @(experimentProgress.ToString(CultureInfo.InvariantCulture))%">
                             @if (experimentDone)
@@ -51,7 +51,7 @@
                                 <span style="animation: fadeIn ease 1s">Experiment succeded: @result.ExperimentSuccess!</span>
                             }
                         </div>
-                </div>
+                    </div>
                 </p>
             }
             <p>Orchestrator State: @(orchestrator.OrchestratorState)</p>
@@ -127,7 +127,15 @@
             }else{
                 @if(consumer is null)
                 {
-                    <button class="btn btn-success" @onclick="CreateConsumer">Enable embedded consumer?</button>
+                    <div class="input-group">
+                        <select class="form-select" @bind="SelectedDataStore">
+                            @foreach (var dataStore in DataStores)
+                            {
+                                <option value="@dataStore.Key">@dataStore.Key</option>
+                            }
+                        </select>
+                        <button class="btn btn-success" @onclick="CreateConsumer">Enable embedded consumer?</button>
+                    </div>
                 }
                 else
                 {
@@ -154,7 +162,7 @@
             </table>
         </div>
 
-       <div class="col-12 border rounded p-2">
+        <div class="col-12 border rounded p-2">
             <h3>Latency Tester:</h3>
             <p>The latency tester is ready: @(latencyTester is not null)</p>
             @if (latencyTester is not null)
@@ -307,25 +315,42 @@
         orchestrator.ExperimentRunnerClientIds = newExperimentRunnerIds;
     }
 
+    private string SelectedDataStore { get; set; } = DataStores.Keys.FirstOrDefault() ?? string.Empty;
+    private static readonly Dictionary<string, Func<IWeatherService, IRecalculateFlightEventPublisher, IEventDataStore>> DataStores = new()
+    {
+        { "Basic in-memory data-store", (w, e) => new BasicEventDataStore.BasicEventDataStore(w, e) },
+        { "Simple PostgreSQL (EF-Core backed)", (w, e) => new SimplePostgreSQLDataStore.SimplePostgreSQLDataStore(w, e) },
+        { "Optimized PostgreSQL (BTree indexes)", (w, e) => new OptimizedPostgreSQLDataStore.BTreePostgrreSQLDataStore(w, e) },
+    };
+
     private async Task CreateConsumer()
     {
-        if(consumer is not null)
+        if(consumer is not null || string.IsNullOrWhiteSpace(SelectedDataStore))
         {
             return;
         }
         consumerUpdating = true;
         StateHasChanged();
         try{
+            if (!DataStores.TryGetValue(SelectedDataStore, out var dataStoreFactory))
+            {
+                OnOrchestratorLog(new LogEntry(LogLevel.Error, $"Failed to find data store {SelectedDataStore}", null));
+                return;
+            }
+            
             var weatherService = new WeatherService();
-            OnOrchestratorLog(new LogEntry(LogLevel.Information, "Creating internal consumer", null));
+            OnOrchestratorLog(new LogEntry(LogLevel.Information, $"Creating internal consumer of type {SelectedDataStore}", null));
+            
+            IEventDataStore dataStore = dataStoreFactory(weatherService, eventbus);
+
             var newConsumer = new SimulationConsumer(eventbus,
                 weatherService,
                 consumerDataLogger,
-                new BasicEventDataStore.BasicEventDataStore(weatherService, eventbus),
+                dataStore,
                 loggerFactory.CreateLogger<SimulationConsumer>());
             await newConsumer.StartAsync();
 
-            OnOrchestratorLog(new LogEntry(LogLevel.Information, $"Successfully started consumer of type {newConsumer.EventDataStoreName}", null));
+            OnOrchestratorLog(new LogEntry(LogLevel.Information, $"Successfully started consumer of type {SelectedDataStore} ({newConsumer.EventDataStoreName})", null));
 
             consumer = newConsumer;
             KnownClientIds.Add(consumer.ClientId);
