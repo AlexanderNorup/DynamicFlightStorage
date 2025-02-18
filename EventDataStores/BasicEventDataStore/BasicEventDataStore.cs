@@ -4,7 +4,7 @@ namespace BasicEventDataStore
 {
     public class BasicEventDataStore : IEventDataStore
     {
-        private readonly HashSet<FlightWrapper> _flights = new HashSet<FlightWrapper>();
+        private readonly Dictionary<String, FlightWrapper> _flights = new Dictionary<String, FlightWrapper>();
         private readonly IWeatherService _weatherService;
         private readonly IRecalculateFlightEventPublisher _flightRecalculation;
         public BasicEventDataStore(IWeatherService weatherService, IRecalculateFlightEventPublisher recalculateFlightEventPublisher)
@@ -15,7 +15,8 @@ namespace BasicEventDataStore
 
         public Task AddOrUpdateFlightAsync(Flight flight)
         {
-            if (_flights.FirstOrDefault(x => x.Flight.FlightIdentification == flight.FlightIdentification) is { } foundFlight)
+            //if (_flights.FirstOrDefault(x => x.Flight.FlightIdentification == flight.FlightIdentification) is { } foundFlight)
+            if (_flights.GetValueOrDefault(flight.FlightIdentification) is { } foundFlight)
             {
                 // Update the flight in the datastore
                 foundFlight.LastSeenCategories = _weatherService.GetWeatherCategoriesForFlight(flight);
@@ -24,7 +25,8 @@ namespace BasicEventDataStore
             else
             {
                 // Add the flight 
-                _flights.Add(new FlightWrapper()
+                _flights.Add(flight.FlightIdentification,
+                    new FlightWrapper()
                 {
                     Flight = flight,
                     LastSeenCategories = _weatherService.GetWeatherCategoriesForFlight(flight)
@@ -36,7 +38,7 @@ namespace BasicEventDataStore
 
         public async Task AddWeatherAsync(Weather weather)
         {
-            foreach (var flightWrapper in _flights)
+            foreach (var flightWrapper in _flights.Values)
             {
                 var flight = flightWrapper.Flight;
                 if (WeatherOverlapsFlight(flight, weather)
@@ -58,7 +60,8 @@ namespace BasicEventDataStore
 
         public Task DeleteFlightAsync(string id)
         {
-            _flights.RemoveWhere(f => f.Flight.FlightIdentification == id);
+            _flights.Remove(id);
+            //_flights.RemoveWhere(f => f.Flight.FlightIdentification == id);
             return Task.CompletedTask;
         }
 
