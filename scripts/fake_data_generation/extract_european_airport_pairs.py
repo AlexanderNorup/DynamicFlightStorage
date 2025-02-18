@@ -1,7 +1,7 @@
 import csv
 import json
 
-input_file = 'Complete.EU.Mixed.csv'
+input_file = 'fake_data_generation/Complete.EU.Mixed.csv'
 output_file = 'european_airport_pairs.json'
 
 airport_dict = {}

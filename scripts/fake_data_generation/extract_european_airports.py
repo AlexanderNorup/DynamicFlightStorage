@@ -1,6 +1,6 @@
 import json
 
-with open("main_Airport.json") as json_file:
+with open("fake_data_generation/main_Airport.json") as json_file:
     data = json.load(json_file)
 
 eu_airports = []
