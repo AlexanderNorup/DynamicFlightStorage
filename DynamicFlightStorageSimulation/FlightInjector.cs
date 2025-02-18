@@ -27,7 +27,7 @@ public class FlightInjector
     public void SkipFlightsUntil(DateTime date, CancellationToken cancellationToken = default)
     {
         // This is ugly, but it works
-        foreach (var _ in GetFlightsUntill(date, cancellationToken))
+        foreach (var _ in GetFlightsUntil(date, cancellationToken))
         {
             // Don't do anything
         }
@@ -35,14 +35,14 @@ public class FlightInjector
 
     public async Task PublishFlightsUntil(DateTime date, string experimentId, ILogger? logger = null, CancellationToken cancellationToken = default)
     {
-        var flightsToPublish = GetFlightsUntill(date, cancellationToken).ToList();
+        var flightsToPublish = GetFlightsUntil(date, cancellationToken).ToList();
         if (flightsToPublish.Count == 0)
         {
-            //logger?.LogDebug("No flights to publish (untill {Untill}).", date);
+            //logger?.LogDebug("No flights to publish (until {Until}).", date);
             return;
         }
 
-        logger?.LogDebug("Publishing {Count} flights (until {Untill}).",
+        logger?.LogDebug("Publishing {Count} flights (until {Until}).",
             flightsToPublish.Count,
             date);
 
@@ -52,7 +52,7 @@ public class FlightInjector
             await _eventBus.PublishFlightAsync(flightBatch, experimentId).ConfigureAwait(false);
             if (++flightCount % 1000 == 0)
             {
-                logger?.LogDebug("Published {Count}/{Total} flights (untill {Untill}).",
+                logger?.LogDebug("Published {Count}/{Total} flights (until {Until}).",
                     flightCount,
                     flightsToPublish.Count,
                     date);
@@ -60,7 +60,7 @@ public class FlightInjector
         }
     }
 
-    public IEnumerable<Flight> GetFlightsUntill(DateTime date, CancellationToken cancellationToken = default)
+    public IEnumerable<Flight> GetFlightsUntil(DateTime date, CancellationToken cancellationToken = default)
     {
         if (_flights is null)
         {

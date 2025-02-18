@@ -303,7 +303,7 @@
     {
         { "Basic in-memory data-store", (w, e) => new BasicEventDataStore.BasicEventDataStore(w, e) },
         { "Simple PostgreSQL (EF-Core backed)", (w, e) => new SimplePostgreSQLDataStore.SimplePostgreSQLDataStore(w, e) },
-        { "Optimized PostgreSQL (BTree indexes)", (w, e) => new OptimizedPostgreSQLDataStore.BTreePostgrreSQLDataStore(w, e) },
+        { "Optimized PostgreSQL (BTree indexes)", (w, e) => new OptimizedPostgreSQLDataStore.BTreePostgreSQLDataStore(w, e) },
     };
 
     private async Task CreateConsumer()

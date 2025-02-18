@@ -27,21 +27,21 @@ namespace FlightGenerator
         static void LaunchGeneration(string outputDirPath)
         {
             var airportJsonPath = Path.Combine("Resources", "Airports.json");
-            
-            var airports = JsonSerializer.Deserialize<Airport[]>(File.ReadAllText(airportJsonPath));
-            
+
+            var airports = JsonSerializer.Deserialize<Airport[]>(File.ReadAllText(airportJsonPath)) ?? throw new InvalidDataException($"{airportJsonPath} could not be deserialized");
+
             var dateStart = DateTime.Parse("2024-10-11T00:00:00Z");
             var dateEnd = DateTime.Parse("2024-10-11T23:00:00Z");
 
             var flights = GenerateRandomFlights(4000, airports, dateStart, dateEnd);
-            
+
             WriteFlights(flights, outputDirPath);
         }
 
         static Flight[] GenerateRandomFlights(int count, Airport[] airports, DateTime start, DateTime end)
         {
             Random random = new Random();
-            
+
             var flights = new Flight[count];
 
             for (int i = 0; i < flights.Length; i++)
@@ -49,7 +49,7 @@ namespace FlightGenerator
                 var startDate = GetRandomDate(start, end);
                 var flightLength = random.NextDouble() * (MaxFlightLengthHours - MinFlightLengthHours) + MinFlightLengthHours;
                 var endDate = startDate.AddHours(flightLength);
-                
+
                 flights[i] = new Flight()
                 {
                     FlightIdentification = Guid.NewGuid().ToString(),
@@ -60,7 +60,7 @@ namespace FlightGenerator
                     ScheduledTimeOfArrival = endDate
                 };
             }
-            
+
             return flights;
         }
 
@@ -83,8 +83,8 @@ namespace FlightGenerator
                 Console.WriteLine($"Generated {fileOutPath}");
                 Console.ResetColor();
             }
-            
-            
+
+
         }
 
         static DateTime GetRandomDate(DateTime startDate, DateTime endDate)
@@ -95,7 +95,7 @@ namespace FlightGenerator
             DateTime randomDate = new DateTime(startDate.Ticks + randomTicks);
             return randomDate;
         }
-        
+
         static string GetFileName(Flight flight)
         {
             return $"flight{flight.DatePlanned:yyyyMMddTHHmmssff}";

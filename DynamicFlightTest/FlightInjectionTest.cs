@@ -17,12 +17,12 @@ public class FlightInjectionTest
     [Test]
     public void TestNotEmpty()
     {
-        _flightInjector.GetFlightsUntill(DateTime.MaxValue).Should().HaveCountGreaterThan(0);
+        _flightInjector.GetFlightsUntil(DateTime.MaxValue).Should().HaveCountGreaterThan(0);
     }
 
     [Test]
     public void TestAllFlightsCreated()
     {
-        _flightInjector.GetFlightsUntill(DateTime.MaxValue).Should().HaveCount(10);
+        _flightInjector.GetFlightsUntil(DateTime.MaxValue).Should().HaveCount(10);
     }
 }
