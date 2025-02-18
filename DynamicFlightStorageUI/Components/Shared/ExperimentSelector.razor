@@ -56,8 +56,9 @@ else
                 <div class="row mb-3">
                     <label for="name" class="col-sm-4 col-form-label">Data-Set:</label>
                     <div class="col-sm-8">
-                        <InputSelect class="form-select" @bind-Value="_newExperimentModel.DataSetName">
-                            @foreach(var dataSet in AvailableDataSets)
+                        <InputSelect required class="form-select" @bind-Value="_newExperimentModel.DataSetName">
+                            <option value="" selected>Please select</option>
+                            @foreach (var dataSet in AvailableDataSets)
                             {
                                 <option value="@dataSet">@dataSet</option>
                             }
