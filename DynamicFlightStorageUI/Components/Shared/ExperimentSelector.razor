@@ -142,6 +142,18 @@ else
                     </div>
                 </div>
 
+                <div class="row mb-3">
+                    <div class="form-check">
+                        <InputCheckbox @bind-Value="_newExperimentModel.DoRecalculationBounce" class="form-check-input" id="simulateRecalculations" />
+                        <label class="form-check-label" for="simulateRecalculations">
+                            Simulate recalculations?
+                        </label>
+                    </div>
+                    <div class="form-text">
+                        If enabled, recalculations are sent back to the consumer as "recalculated flights" after @(DynamicFlightStorageSimulation.ExperimentOrchestrator.Orchestrator.TimeToRecalculateMs / 1000d) seconds.<br />
+                        The experiment is more realistic but it becomes harder to compare results between different event data stores.
+                    </div>
+                </div>
 
                 <button type="submit" class="btn btn-primary">Save</button>
                 <button type="button" class="btn btn-warning" @onclick="() => _newExperimentModel = new()">Reset form</button>
@@ -204,7 +216,8 @@ else
             SimulatedPreloadEndTime = DateTime.SpecifyKind(_newExperimentModel.SimulatedPreloadEndTime, DateTimeKind.Utc),
             PreloadAllFlights = _newExperimentModel.PreloadAllFlights,
             TimeScale = _newExperimentModel.TimeMaxSpeed ? -1 : _newExperimentModel.TimeScale,
-            LoggingEnabled = _newExperimentModel.LoggingEnabled
+            LoggingEnabled = _newExperimentModel.LoggingEnabled,
+            DoRecalculationBounce = _newExperimentModel.DoRecalculationBounce
         };
 
         dbContext.Experiments.Add(newExperiment);
@@ -234,5 +247,6 @@ else
         public bool TimeMaxSpeed { get; set; } = false;
 
         public bool LoggingEnabled { get; set; } = false;
+        public bool DoRecalculationBounce { get; set; } = false;
     }
 }

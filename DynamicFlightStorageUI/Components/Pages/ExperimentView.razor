@@ -11,16 +11,18 @@
 </nav>
 @if(ExperimentResult is { } result)
 {
+    <PageTitle>@result.ExperimentRunDescription experiment result</PageTitle>
     <div class="container">
         <h2>Experiment Result Details</h2>
         <div class="card mb-3">
             <div class="card-body">
-                <h5 class="card-title">Experiment: @result.Experiment.Name</h5>
+                <h5 class="card-title">Experiment: @result.Experiment.Name (<code>@result.Experiment.Id</code>)</h5>
                 <p class="card-text"><strong>Description:</strong> @result.ExperimentRunDescription</p>
                 <p class="card-text"><strong>Data Set:</strong> @result.Experiment.DataSetName</p>
                 <p class="card-text"><strong>Experiment time:</strong> @result.UTCStartTime -> @result.UTCEndTime</p>
                 <p class="card-text"><strong>Experiment duration:</strong> @(result.UTCEndTime - result.UTCStartTime)</p>
                 <p class="card-text"><strong>Success:</strong> @(result.ExperimentSuccess ? "Yes" : "No")</p>
+                <p class="card-text"><strong>Recalculation Simulated:</strong> @result.Experiment.DoRecalculationBounce</p>
                 @if (!string.IsNullOrEmpty(result.ExperimentError))
                 {
                     <p class="card-text text-danger"><strong>Error:</strong> @result.ExperimentError</p>
@@ -38,9 +40,9 @@
             <div class="list-group">
                 @foreach (var clientResult in result.ClientResults)
                 {
-                    <div class="list-group-item">
+                    <div class="list-group-item mb-4">
                         <h5 class="mb-1">Client ID: @clientResult.ClientId</h5>
-                        <p class="mb-1"><strong>Data Store Type:</strong> @clientResult.DataStoreType</p>
+                        <p class="mb-1"><strong>Data Store Type:</strong> <code>@clientResult.DataStoreType</code></p>
                         <p class="mb-1"><strong>Max Flight Consumer Lag:</strong> @clientResult.MaxFlightConsumerLag</p>
                         <p class="mb-1"><strong>Max Weather Consumer Lag:</strong> @clientResult.MaxWeatherConsumerLag</p>
                         @if(RecalculationCount.TryGetValue(clientResult.ClientId, out var count))
@@ -53,13 +55,13 @@
                         }
                         @if (clientResult.LatencyTest != null)
                         {
-                            <h5>Latency Test Result</h5>
+                            <h5 class="mt-3">Latency Test Result</h5>
                             <p class="mb-1"><strong>Latency Test ID:</strong> @clientResult.LatencyTest.Id</p>
                             <p class="mb-1"><strong>Sample Points:</strong> @clientResult.LatencyTest.SamplePoints</p>
                             <p class="mb-1"><strong>Sample Delay:</strong> @clientResult.LatencyTest.SampleDelayMs.ToString(".00") ms.</p>
                             <p class="mb-1"><strong>Average Latency:</strong> @clientResult.LatencyTest.AverageLatencyMs.ToString(".00") ms.</p>
                             <p class="mb-1"><strong>Median Latency:</strong> @clientResult.LatencyTest.MedianLatencyMs.ToString(".00") ms.</p>
-                            <p class="mb-1"><strong>Standard Deviation Latency:</strong> @clientResult.LatencyTest.StdDeviationLatency</p>
+                            <p class="mb-1"><strong>Standard Deviation Latency:</strong> @clientResult.LatencyTest.StdDeviationLatency.ToString(".00")</p>
                         }
                         @if(WeatherData.TryGetValue(clientResult.ClientId, out var weatherData))
                         {
@@ -98,6 +100,7 @@
 }
 else
 {
+    <PageTitle>Experiment result not found</PageTitle>
     <p>No experiment-result with id: @Id</p>
 }
 

@@ -421,7 +421,8 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
         private async Task RecalculationMessageRecieved(string flightId, string experimentId)
         {
-            if (string.IsNullOrWhiteSpace(flightId)
+            if (CurrentExperiment?.DoRecalculationBounce != true
+                || string.IsNullOrWhiteSpace(flightId)
                 || string.IsNullOrWhiteSpace(experimentId)
                 || ExperimentCancellationToken.IsCancellationRequested)
             {
