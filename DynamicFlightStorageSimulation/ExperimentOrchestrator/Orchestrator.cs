@@ -14,6 +14,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
         public const int LatencyTestSamples = 20;
         public const int LatencyTestFrequencyMs = 100;
         public const int ExperimentLoopIntervalMs = 900;
+        public const int TimeToRecalculateMs = 5000;
 
         private SimulationEventBus _eventBus;
         private LatencyTester _latencyTester;
@@ -34,18 +35,13 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             _consumingMonitor = consumingMonitor ?? throw new ArgumentNullException(nameof(consumingMonitor));
             _dataSetManager = dataSetManager ?? throw new ArgumentNullException(nameof(dataSetManager));
             _experimentDataCollector = experimentDataCollector ?? throw new ArgumentNullException(nameof(experimentDataCollector));
-            _experimentDataCollector.OnRecalculation += RecalculationMessageRecieved;
+            _experimentDataCollector.OnRecalculationAsync += RecalculationMessageRecieved;
             _logger = new EventLogger<Orchestrator>(logger);
             _experimentChecker = new System.Timers.Timer(1000);
             _experimentChecker.Elapsed += (s, e) => CheckExperimentRunning();
             _experimentChecker.AutoReset = true;
 
             _logger.OnLog += OnLog;
-        }
-
-        private void RecalculationMessageRecieved(string obj)
-        {
-            throw new NotImplementedException();
         }
 
         private const int LogsToKeep = 30;
@@ -423,6 +419,34 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             }
         }
 
+        private async Task RecalculationMessageRecieved(string flightId, string experimentId)
+        {
+            if (string.IsNullOrWhiteSpace(flightId)
+                || string.IsNullOrWhiteSpace(experimentId)
+                || ExperimentCancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            if (_flightInjector is null)
+            {
+                _logger.LogWarning("Recalculation recieved while flight injector is null.");
+                return;
+            }
+
+            var flight = _flightInjector.GetFlightById(flightId);
+            if (flight is null)
+            {
+                _logger.LogWarning("Recalculation Flight with id '{FlightId}' was not found in the flight data.", flightId);
+                return;
+            }
+
+            await Task.Delay(TimeToRecalculateMs, ExperimentCancellationToken.Token).ConfigureAwait(false);
+
+            _logger.LogDebug("Sending flight {FlightId} back after recalculation", flight.FlightIdentification);
+            await _eventBus.PublishFlightAsync(flight, experimentId).ConfigureAwait(false);
+        }
+
         private async Task ExperimentLoop()
         {
             if (CurrentExperiment is null
@@ -468,7 +492,6 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 OnExperimentStateChanged?.Invoke();
 
                 // Inject weather and flights up to CurrentSimulationTime
-
                 var weatherTask = _weatherInjector.PublishWeatherUntil(CurrentSimulationTime.Value, CurrentExperiment.Id, _logger, ExperimentCancellationToken.Token);
 
                 if (!CurrentExperiment.PreloadAllFlights)
@@ -559,6 +582,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             ExperimentCancellationToken.Dispose();
             _experimentChecker.Stop();
             _experimentChecker.Dispose();
+            _experimentDataCollector.OnRecalculationAsync -= RecalculationMessageRecieved;
             _logger.OnLog -= OnLog;
         }
     }

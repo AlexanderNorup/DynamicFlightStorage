@@ -68,7 +68,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
             await SaveChangesAsyncSafely().ConfigureAwait(false);
         }
 
-        public event Action<string> OnRecalculation;
+        public event Func<string, string, Task> OnRecalculationAsync;
 
         private Task OnRecalculationRecieved(FlightRecalculation flight)
         {
@@ -80,8 +80,8 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
                 FlightId = flight.FlightIdentification
             });
 
-            OnRecalculation?.Invoke(flight.FlightIdentification);
-
+            // Fire and forget from this side. We don't want to halt data-collection
+            _ = OnRecalculationAsync?.Invoke(flight.FlightIdentification, flight.ExperimentId);
             return Task.CompletedTask;
         }
 
