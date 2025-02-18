@@ -16,9 +16,12 @@ namespace DynamicFlightStorageDTOs
         [Key(2)]
         public required string ExperimentId { get; set; }
 
+        [Key(3)]
+        public required string ClientId { get; set; }
+
         public override string ToString()
         {
-            return $"Recaculation for {{{FlightIdentification}}}: @ {RecalculatedTime} (Experiment: {ExperimentId})";
+            return $"Recaculation for {{{FlightIdentification}}}: @ {RecalculatedTime} (Experiment: {ExperimentId}, from: {ClientId})";
         }
 
         private string GetDebuggerDisplay()

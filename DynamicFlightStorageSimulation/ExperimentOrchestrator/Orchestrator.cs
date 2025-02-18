@@ -34,12 +34,18 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             _consumingMonitor = consumingMonitor ?? throw new ArgumentNullException(nameof(consumingMonitor));
             _dataSetManager = dataSetManager ?? throw new ArgumentNullException(nameof(dataSetManager));
             _experimentDataCollector = experimentDataCollector ?? throw new ArgumentNullException(nameof(experimentDataCollector));
+            _experimentDataCollector.OnRecalculation += RecalculationMessageRecieved;
             _logger = new EventLogger<Orchestrator>(logger);
             _experimentChecker = new System.Timers.Timer(1000);
             _experimentChecker.Elapsed += (s, e) => CheckExperimentRunning();
             _experimentChecker.AutoReset = true;
 
             _logger.OnLog += OnLog;
+        }
+
+        private void RecalculationMessageRecieved(string obj)
+        {
+            throw new NotImplementedException();
         }
 
         private const int LogsToKeep = 30;

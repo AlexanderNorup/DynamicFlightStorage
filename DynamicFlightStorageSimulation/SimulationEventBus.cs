@@ -176,6 +176,7 @@ namespace DynamicFlightStorageSimulation
             {
                 FlightIdentification = flightIdentification,
                 ExperimentId = CurrentExperimentId,
+                ClientId = ClientId,
                 RecalculatedTime = DateTime.UtcNow
             };
             return PublishMessageInternalAsync(_eventBusConfig.RecalculationTopic, MessagePackSerializer.Serialize(recalculation, _messagePackOptions));
