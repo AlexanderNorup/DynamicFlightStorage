@@ -116,8 +116,8 @@ namespace OptimizedPostgreSQLDataStore
                 WHERE a.icao = @icao
                     AND a.lastSeenWeather < @newWeather
                     AND f.isRecalculating = false
-                    AND (f.arrivalTime < @validFrom
-                        OR @validTo < f.departureTime)
+                    AND f.departureTime <= @validTo
+                    AND @validFrom <= f.arrivalTime
                 """;
 
             const string UpdateRecalculatingSql =

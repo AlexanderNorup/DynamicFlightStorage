@@ -94,8 +94,8 @@ namespace SimplePostgreSQLDataStore
             var affectedFlights = await _dbContext.Airports
                 .Where(x => x.ICAO == weather.Airport  // Get all airports matching the weather
                         && !x.FlightEntity.IsRecalculating // Whose flights are not already being recalculated
-                        && (x.FlightEntity.ScheduledTimeOfArrival < weather.ValidFrom // And whose flights overlap with the weather
-                            || weather.ValidTo < x.FlightEntity.ScheduledTimeOfDeparture)
+                        && (x.FlightEntity.ScheduledTimeOfDeparture <= weather.ValidTo// And whose flights overlap with the weather
+                            && weather.ValidFrom <= x.FlightEntity.ScheduledTimeOfArrival)
                           && x.LastSeenWeatherCategory < weather.WeatherLevel) // And those where the current wetter is now worse
                 .ToListAsync();
 

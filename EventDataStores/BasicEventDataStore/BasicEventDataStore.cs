@@ -66,12 +66,9 @@ namespace BasicEventDataStore
         {
             // Check if the first range ends before the second range starts or
             // if the second range ends before the first range starts
-            if (flight.ScheduledTimeOfArrival < weather.ValidFrom
-                || weather.ValidTo < flight.ScheduledTimeOfDeparture)
-            {
-                return false;
-            }
-            return true;
+
+            return flight.ScheduledTimeOfDeparture <= weather.ValidTo
+                && weather.ValidFrom <= flight.ScheduledTimeOfArrival;
         }
 
         private static bool IsAirportInFlight(Flight flight, string airport)
