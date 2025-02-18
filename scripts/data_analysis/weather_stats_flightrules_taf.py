@@ -74,6 +74,27 @@ taf_flight_rules_stats = taf_flight_rules_percentages.agg(['mean', 'median', 'mi
 # Print the statistics for the percentage of each flight rule per hour
 print(taf_flight_rules_stats)
 
+# Filter the data to include only the hours 00, 06, 12, and 18
+filtered_hours = ['00', '06', '12', '18']
+taf_flight_rules_percentages_filtered = taf_flight_rules_percentages[taf_flight_rules_percentages.index.str[-2:].isin(filtered_hours)]
+
+# Calculate mean, median, min, max, std for the percentage of each rule per hour for the filtered hours
+taf_flight_rules_stats_filtered = taf_flight_rules_percentages_filtered.agg(['mean', 'median', 'min', 'max', 'std']).transpose()
+
+# Print the statistics for the percentage of each flight rule per hour for the filtered hours
+print(taf_flight_rules_stats_filtered)
+
+
+# Filter the data to exclude the hours 00, 06, 12, and 18
+filtered_hours = ['00', '06', '12', '18']
+taf_flight_rules_percentages_filtered = taf_flight_rules_percentages[~taf_flight_rules_percentages.index.str[-2:].isin(filtered_hours)]
+
+# Calculate mean, median, min, max, std for the percentage of each rule per hour for the filtered hours
+taf_flight_rules_stats_filtered = taf_flight_rules_percentages_filtered.agg(['mean', 'median', 'min', 'max', 'std']).transpose()
+
+# Print the statistics for the percentage of each flight rule per hour for the filtered hours
+print(taf_flight_rules_stats_filtered)
+
 # Plot the flight rules count per hour
 plt.figure(figsize=(12, 6))
 taf_flight_rules_counts.plot(kind='bar', stacked=True)
