@@ -11,7 +11,7 @@ public class FlightInjectionTest
     [SetUp]
     public void Setup()
     {
-        _flightInjector = new FlightInjector(null, _directoryPath);
+        _flightInjector = new FlightInjector(null!, _directoryPath);
     }
 
     [Test]

@@ -1,14 +1,14 @@
-namespace DynamicFlightStorageSimulation;
 
 using DynamicFlightStorageDTOs;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
-using System.Threading;
 
+namespace DynamicFlightStorageSimulation;
 public class FlightInjector
 {
     private readonly SimulationEventBus _eventBus;
     private Queue<Flight>? _flights;
+    private Dictionary<string, Flight>? _flightsById;
     private string _directoryPath;
     public FlightInjector(SimulationEventBus eventBus, string directoryPath)
     {
@@ -19,34 +19,10 @@ public class FlightInjector
     public void ResetReader()
     {
         _flights = null;
+        _flightsById = null;
     }
 
-    private List<Flight> DeserializeFlights(string directoryPath)
-    {
-        if (!Directory.Exists(directoryPath))
-        {
-            Console.WriteLine($"The path {directoryPath} is not a directory!");
-        }
-        string[] files = Directory.GetFiles(directoryPath, "*.json");
-        Console.WriteLine($"Found {files.Length} files in {directoryPath}");
-
-        var flightList = new List<Flight>();
-
-        foreach (string file in files)
-        {
-            try
-            {
-                flightList.Add(JsonSerializer.Deserialize<Flight>(File.ReadAllText(file))
-                    ?? throw new InvalidOperationException($"Deserializing {file} returned null?"));
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Could not serialize flight from file {file}");
-            }
-        }
-
-        return flightList.OrderBy(x => x.DatePlanned).ToList();
-    }
+    public Flight? GetFlightById(string flightId) => _flightsById?.GetValueOrDefault(flightId);
 
     public void SkipFlightsUntil(DateTime date, CancellationToken cancellationToken = default)
     {
@@ -89,6 +65,7 @@ public class FlightInjector
         if (_flights is null)
         {
             _flights = new Queue<Flight>(DeserializeFlights(_directoryPath));
+            _flightsById = _flights.ToDictionary(x => x.FlightIdentification);
         }
 
         if (_flights.Count < 1)
@@ -97,7 +74,6 @@ public class FlightInjector
         }
 
         var currentDate = _flights.Peek().DatePlanned;
-        int i = 0;
         while (currentDate < date && !cancellationToken.IsCancellationRequested)
         {
             yield return _flights.Dequeue();
@@ -108,5 +84,33 @@ public class FlightInjector
             }
             currentDate = _flights.Peek().DatePlanned;
         }
+    }
+
+
+    private List<Flight> DeserializeFlights(string directoryPath)
+    {
+        if (!Directory.Exists(directoryPath))
+        {
+            Console.WriteLine($"The path {directoryPath} is not a directory!");
+        }
+        string[] files = Directory.GetFiles(directoryPath, "*.json");
+        Console.WriteLine($"Found {files.Length} files in {directoryPath}");
+
+        var flightList = new List<Flight>();
+
+        foreach (string file in files)
+        {
+            try
+            {
+                flightList.Add(JsonSerializer.Deserialize<Flight>(File.ReadAllText(file))
+                    ?? throw new InvalidOperationException($"Deserializing {file} returned null?"));
+            }
+            catch (Exception)
+            {
+                Console.WriteLine($"Could not serialize flight from file {file}");
+            }
+        }
+
+        return flightList.OrderBy(x => x.DatePlanned).ToList();
     }
 }

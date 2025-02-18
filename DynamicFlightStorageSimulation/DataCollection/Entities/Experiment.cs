@@ -28,6 +28,11 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.E
         /// </summary>
         public bool LoggingEnabled { get; init; } = false;
 
+        /// <summary>
+        /// If enabled, the recalculation-events will get back to the Consumer after they've been "processed".
+        /// </summary>
+        public bool DoRecalculationBounce { get; init; } = false;
+
         public ICollection<ExperimentResult> ExperimentResults { get; init; } = new List<ExperimentResult>();
     }
 }

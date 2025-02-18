@@ -4,6 +4,7 @@
 @page "/experiments"
 @inject DataCollectionContext dbContext
 <h3>Experiments</h3>
+<PageTitle>Experiment Overview</PageTitle>
 
 @if (AllExperiments.Count > 0)
 {
@@ -36,11 +37,13 @@
                 <details>
                     <summary>Experiment details</summary>
                     <ul>
+                        <li><b>Id</b>: @experiment.Id</li>
                         <li><b>Simulated Time</b>: @experiment.SimulatedStartTime -> @experiment.SimulatedEndTime (Duration: @(experiment.SimulatedEndTime - experiment.SimulatedStartTime))</li>
                         <li><b>Preload Time</b>: @experiment.SimulatedPreloadStartTime -> @experiment.SimulatedPreloadEndTime (Duration: @(experiment.SimulatedPreloadEndTime - experiment.SimulatedPreloadStartTime))</li>
                         <li><b>Data-set</b>: @experiment.DataSetName</li>
                         <li><b>Preload all flights</b>: @experiment.PreloadAllFlights</li>
                         <li><b>Logging enabled</b>: @experiment.LoggingEnabled</li>
+                        <li><b>Recalculation simuated (bounce back)</b>: @experiment.DoRecalculationBounce</li>
                         <li><b>Time-Scale</b>: @(experiment.TimeScale <= 0 ? "Max Speed" : experiment.TimeScale)</li>
                     </ul>
                 </details>

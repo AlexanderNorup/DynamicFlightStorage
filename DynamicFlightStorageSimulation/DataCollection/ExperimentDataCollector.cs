@@ -68,16 +68,20 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
             await SaveChangesAsyncSafely().ConfigureAwait(false);
         }
 
+        public event Func<string, string, Task>? OnRecalculationAsync;
+
         private Task OnRecalculationRecieved(FlightRecalculation flight)
         {
             _recalculationLogs.Add(new RecalculationEventLog()
             {
-                ExperimentId = _eventBus.CurrentExperimentId,
-                ClientId = _eventBus.ClientId,
+                ExperimentId = flight.ExperimentId,
+                ClientId = flight.ClientId,
                 UtcTimeStamp = flight.RecalculatedTime,
                 FlightId = flight.FlightIdentification
             });
 
+            // Fire and forget from this side. We don't want to halt data-collection
+            _ = OnRecalculationAsync?.Invoke(flight.FlightIdentification, flight.ExperimentId);
             return Task.CompletedTask;
         }
 
