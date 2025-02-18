@@ -17,6 +17,6 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.RabbitMQRestEnti
         public int MessagesUnacknowledged { get; set; }
 
         [JsonPropertyName("name")]
-        public string Name { get; set; }
+        public string? Name { get; set; }
     }
 }

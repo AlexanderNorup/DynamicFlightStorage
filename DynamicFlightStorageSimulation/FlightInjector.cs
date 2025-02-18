@@ -74,7 +74,6 @@ public class FlightInjector
         }
 
         var currentDate = _flights.Peek().DatePlanned;
-        int i = 0;
         while (currentDate < date && !cancellationToken.IsCancellationRequested)
         {
             yield return _flights.Dequeue();
@@ -106,7 +105,7 @@ public class FlightInjector
                 flightList.Add(JsonSerializer.Deserialize<Flight>(File.ReadAllText(file))
                     ?? throw new InvalidOperationException($"Deserializing {file} returned null?"));
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 Console.WriteLine($"Could not serialize flight from file {file}");
             }

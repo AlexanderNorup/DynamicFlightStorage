@@ -10,7 +10,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.E
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
         [ForeignKey("ExperimentResultId")]
-        public ExperimentResult ExperimentResult { get; set; }
+        public ExperimentResult? ExperimentResult { get; set; }
         public required string ClientId { get; set; }
         public required string DataStoreType { get; set; }
         [ForeignKey("LatencyTestId")]

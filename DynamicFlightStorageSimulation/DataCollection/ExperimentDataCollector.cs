@@ -68,7 +68,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
             await SaveChangesAsyncSafely().ConfigureAwait(false);
         }
 
-        public event Func<string, string, Task> OnRecalculationAsync;
+        public event Func<string, string, Task>? OnRecalculationAsync;
 
         private Task OnRecalculationRecieved(FlightRecalculation flight)
         {
