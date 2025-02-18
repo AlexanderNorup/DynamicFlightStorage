@@ -194,7 +194,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
                 await minimumWaitPreloadWaitTime; // Wait for the minium time of 10 seconds before checking if everything is consumed
                 await _consumingMonitor.WaitForExchangesToBeConsumedAsync(ExperimentRunnerClientIds.ToArray(), ExperimentCancellationToken.Token);
-
+                minimumWaitPreloadWaitTime = Task.Delay(TimeSpan.FromSeconds(10));
                 ExperimentCancellationToken.Token.ThrowIfCancellationRequested();
 
                 st.Restart();
