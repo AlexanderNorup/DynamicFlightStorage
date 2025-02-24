@@ -112,6 +112,24 @@ namespace DynamicFlightStorageSimulation
             await _rabbitChannel.ExchangeDeclareAsync(GetWeatherExperimentExchange(experimentId), ExchangeType.Fanout, autoDelete: true);
         }
 
+        public async Task DeleteExperimentExchanges(string experimentId)
+        {
+            if (_rabbitChannel is null)
+            {
+                throw new InvalidOperationException("Not connected to the event bus");
+            }
+
+            try
+            {
+                await _rabbitChannel.ExchangeDeleteAsync(GetFlightExperimentExchange(experimentId));
+                await _rabbitChannel.ExchangeDeleteAsync(GetWeatherExperimentExchange(experimentId));
+            }
+            catch
+            {
+                 // We don't actually care, exhcanged are auto-delete anyway, so they'll die eventually
+            }
+        }
+
         public string GetFlightExperimentExchange(string experimentId) => $"{_eventBusConfig.FlightTopic}.{experimentId}";
         public string GetWeatherExperimentExchange(string experimentId) => $"{_eventBusConfig.WeatherTopic}.{experimentId}";
 
