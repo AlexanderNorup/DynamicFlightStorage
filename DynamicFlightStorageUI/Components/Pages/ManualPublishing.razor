@@ -8,20 +8,29 @@
     <div class="row">
         <div class="mb-3">
             <label for="experimentIdInput" class="form-label">Current Experiment Id:</label>
-            <input type="text" class="form-control" id="experimentIdInput" @bind="CurrentExperimentId">
-            <button class="btn btn-success" @onclick=StartExperiment>Start Experiment</button>
+            <input type="text" class="form-control" disabled="@ExperimentCreated" id="experimentIdInput" @bind="CurrentExperimentId">
+            <button class="btn btn-success" disabled="@ExperimentCreated" @onclick=StartExperiment>Start Experiment</button>
         </div>
     </div>
-    <div class="row g-2 mb-2">
-        <div class="col-6 border rounded p-2">
-            <h3>Publish Weather:</h3>
-            <WeatherBuilder OnWeatherCreated="PublishWeather" />
+
+    @if (!ExperimentCreated)
+    {
+        <p>Create a temporary experiment to publish data.</p>
+    }
+    else
+    {
+        <div class="row g-2 mb-2">
+            <div class="col-6 border rounded p-2">
+                <h3>Publish Weather:</h3>
+                <WeatherBuilder OnWeatherCreated="PublishWeather" />
+            </div>
+            <div class="col-6 border rounded p-2">
+                <h3>Publish Flight:</h3>
+                <FlightBuilder OnFlightCreated="PublishFlight" />
+            </div>
         </div>
-        <div class="col-6 border rounded p-2">
-            <h3>Publish Flight:</h3>
-            <FlightBuilder OnFlightCreated="PublishFlight" />
-        </div>
-    </div>
+
+    }
     <div class="row">
         <div class="col">
             <h3>Logs:</h3>
@@ -31,6 +40,7 @@
 </div>
 
 @code {
+    private bool ExperimentCreated { get; set; } = false;
     private string CurrentExperimentId { get; set; } = Guid.NewGuid().ToString();
 
     protected override void OnAfterRender(bool firstRender)
@@ -51,6 +61,7 @@
                 Source = "ManualPublishing",
                 TimeStamp = DateTime.UtcNow
             });
+        ExperimentCreated = true;
     }
 
     private async Task PublishWeather(Weather weather)
@@ -77,5 +88,9 @@
     public void Dispose()
     {
         eventbus.UnSubscribeToSystemEvent(OnSystemMessage);
+        if (ExperimentCreated)
+        {
+            eventbus.DeleteExperimentExchanges(CurrentExperimentId).GetAwaiter().GetResult();
+        }
     }
 }
