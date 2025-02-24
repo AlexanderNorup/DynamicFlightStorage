@@ -4,8 +4,6 @@ using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
-using Microsoft.Extensions.Options;
 using System.ComponentModel.DataAnnotations;
 
 namespace ExperimentRunner
