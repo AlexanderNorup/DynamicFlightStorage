@@ -75,79 +75,41 @@ namespace Neo4jDataStore
             // Executes it as a single transaction
             await session.ExecuteWriteAsync(async tx =>
             {
-                await CreateOrUpdateFlight(tx, flight.FlightIdentification);
+                await CommonGraphDatabaseCommands.CreateOrUpdateFlight(tx, flight.FlightIdentification);
 
                 var weather = _weatherService.GetWeatherCategoriesForFlight(flight);
 
                 foreach (var airport in flight.GetAllAirports().Distinct())
                 {
                     // Insert the airport
-                    await CreateOrUpdateAirport(tx, airport);
+                    //await CommonGraphDatabaseCommands.CreateOrUpdateAirport(tx, airport);
                     await CreateOrUpdateRelation(tx, flight.FlightIdentification, airport, weather.GetValueOrDefault(airport, WeatherCategory.Undefined),
                         flight.ScheduledTimeOfDeparture, flight.ScheduledTimeOfArrival);
                 }
             });
         }
 
-        private async Task<IResultSummary> CreateOrUpdateFlight(IAsyncQueryRunner tx, string flightId)
-        {
-            const string Query =
-                """
-                MERGE (f:Flight {id:$flightId})
-                SET f.recalculating = false;
-                """;
-            return await (await tx.RunAsync(Query, new { flightId }).ConfigureAwait(false))
-                .ConsumeAsync().ConfigureAwait(false);
-        }
-
-        private async Task<IResultSummary> SetRecalculation(IAsyncQueryRunner tx, string[] flightIds)
-        {
-            //const string Query =
-            //    """
-            //    MATCH (f:Flight {id:$flightId});
-            //    SET f.recalculating = true 
-            //    """;
-            const string Query =
-                """
-                MATCH (f:Flight)
-                WHERE f.id IN $flightIds
-                SET f.recalculating = true
-                """;
-            return await (await tx.RunAsync(Query, new { flightIds }).ConfigureAwait(false))
-                .ConsumeAsync().ConfigureAwait(false);
-        }
-
-        private async Task<IResultSummary> CreateOrUpdateAirport(IAsyncQueryRunner tx, string icao)
-        {
-            const string Query =
-                """
-                MERGE (a:Airport {icao: $icao});
-                """;
-            return await (await tx.RunAsync(Query, new { icao }).ConfigureAwait(false))
-                .ConsumeAsync().ConfigureAwait(false);
-        }
-
-        private async Task<IResultSummary> CreateOrUpdateRelation(IAsyncQueryRunner tx,
+        private async Task CreateOrUpdateRelation(IAsyncQueryRunner tx,
             string flightId, string icao, WeatherCategory weatherCategory, DateTimeOffset departure, DateTimeOffset arrival)
         {
             const string Query =
                 """
+                MERGE (a:Airport {icao: $icao})
+                    WITH a
                 MATCH (f:Flight {id: $flightId})
-                MATCH (a:Airport {icao: $icao})
                 MERGE (a) -[e:USES]-> (f)
                 SET e.weather = $weatherLevel, e.dep = $departure, e.arr = $arrival;
                 """;
-            return await (await tx.RunAsync(Query, new
+
+            await tx.RunAsync(Query, new
             {
                 flightId,
                 icao,
                 weatherLevel = (int)weatherCategory,
                 departure = departure.ToUnixTimeSeconds(),
                 arrival = arrival.ToUnixTimeSeconds()
-            }).ConfigureAwait(false))
-                .ConsumeAsync().ConfigureAwait(false);
+            }).ConfigureAwait(false);
         }
-
 
         public async Task AddWeatherAsync(Weather weather)
         {
@@ -206,7 +168,7 @@ namespace Neo4jDataStore
 
                     if (records.Count > 0)
                     {
-                        await SetRecalculation(tx, recalculatedFlights.ToArray());
+                        await CommonGraphDatabaseCommands.SetRecalculation(tx, recalculatedFlights.ToArray());
                     }
                 });
             }

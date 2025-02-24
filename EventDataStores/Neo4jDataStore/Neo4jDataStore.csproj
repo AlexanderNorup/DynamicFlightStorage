@@ -17,11 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="DatabaseInit\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="DatabaseInit\relationalInit.cypher">
+    <None Update="DatabaseInit\*.cypher">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
