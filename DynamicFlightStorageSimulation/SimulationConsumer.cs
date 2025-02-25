@@ -65,7 +65,7 @@ namespace DynamicFlightStorageSimulation
         private async Task ResetStateAsync(SystemMessage message)
         {
             var experimentId = message.Message;
-            _weatherService.Clear();
+            _weatherService.ResetWeatherService();
             _consumerLogger.ResetLogger();
             if (!cleanState)
             {

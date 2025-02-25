@@ -1,7 +1,9 @@
 ﻿@page "/manual"
+@using DynamicFlightStorageSimulation.ExperimentOrchestrator
 @using DynamicFlightStorageSimulation.Utilities
 @inject SimulationEventBus eventbus
 @inject IJSRuntime jsRuntime
+@inject Orchestrator orchestrator
 @implements IDisposable
 <h1>Prototyping Dashboard!</h1>
 <div class="container mb-2">
@@ -15,7 +17,7 @@
 
     @if (!ExperimentCreated)
     {
-        <p>Create a temporary experiment to publish data.</p>
+        <p>Create a temporary experiment to publish data OR start a real experiment before visiting this page.</p>
     }
     else
     {
@@ -31,7 +33,7 @@
         </div>
 
     }
-    <div class="row">
+    <div class="row mt-4">
         <div class="col">
             <h3>Logs:</h3>
             <ul id="logList" class="logContainer list-unstyled"></ul>
@@ -43,11 +45,19 @@
     private bool ExperimentCreated { get; set; } = false;
     private string CurrentExperimentId { get; set; } = Guid.NewGuid().ToString();
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if(firstRender)
         {
             eventbus.SubscribeToSystemEvent(OnSystemMessage);
+            await eventbus.SubscribeToRecalculationEventAsync(OnRecalculation);
+
+            if (orchestrator.CurrentExperimentResult is { } result)
+            {
+                CurrentExperimentId = result.ExperimentId;
+                ExperimentCreated = true;
+                StateHasChanged();
+            }
         }
     }
 
@@ -66,6 +76,7 @@
 
     private async Task PublishWeather(Weather weather)
     {
+        weather.DateIssued = DateTime.UtcNow;
         await eventbus.PublishWeatherAsync(weather, CurrentExperimentId).ConfigureAwait(false);
     }
 
@@ -80,6 +91,12 @@
         return Task.CompletedTask;
     }
 
+    private Task OnRecalculation(FlightRecalculation message)
+    {
+        Log(new LogEntry(LogLevel.Information, $"[{message.ClientId}::Recalculation] {message.FlightIdentification} (Experiment: {message.ExperimentId})", null));
+        return Task.CompletedTask;
+    }
+
     private void Log(LogEntry log)
     {
         _ = jsRuntime.InvokeVoidAsync("logMessage", log);
@@ -87,6 +104,7 @@
 
     public void Dispose()
     {
+        eventbus.UnSubscribeToRecalculationEvent(OnRecalculation);
         eventbus.UnSubscribeToSystemEvent(OnSystemMessage);
         if (ExperimentCreated)
         {

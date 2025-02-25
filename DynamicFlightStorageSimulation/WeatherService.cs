@@ -19,11 +19,12 @@ namespace DynamicFlightStorageSimulation
 
             if (_weather.TryGetValue(airport, out var weatherInstances))
             {
-                var weather = weatherInstances.Find(weather => weather.ValidFrom <= dateTime && weather.ValidTo >= dateTime);
+                var weather = weatherInstances
+                    .Where(weather => weather.ValidFrom <= dateTime && weather.ValidTo >= dateTime);
 
-                if (weather is not null)
+                if (weather.Any())
                 {
-                    return weather;
+                    return weather.MaxBy(x => x.DateIssued)!;
                 }
 
                 var smallestDiff = TimeSpan.MaxValue;
@@ -66,7 +67,7 @@ namespace DynamicFlightStorageSimulation
             });
         }
 
-        public void Clear()
+        public void ResetWeatherService()
         {
             _weather.Clear();
         }
