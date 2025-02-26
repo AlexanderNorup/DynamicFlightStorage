@@ -74,7 +74,7 @@ public static class WeatherCreator
             {
                 Id = identifier,
                 ValidFrom = dateIssued,
-                ValidTo = dateIssued,
+                ValidTo = dateIssued.AddHours(1),
                 Airport = airportId,
                 WeatherLevel = category,
                 DateIssued = dateIssued
