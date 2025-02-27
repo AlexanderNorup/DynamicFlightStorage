@@ -41,6 +41,14 @@ metar_df['DateHour'] = metar_df['DateIssued'].dt.strftime('%Y-%m-%d %H')
 # Count the number of occurrences of each FlightRules per hour
 metar_flight_rules_counts = metar_df.groupby(['DateHour', 'FlightRules']).size().unstack(fill_value=0)
 
+# Define custom colors for each FlightRules category
+flight_rules_colors = {
+    'VFR': '#2ca02c',  # green
+    'MVFR': '#1f77b4',  # blue
+    'IFR': '#ff7f0e',  # orange
+    'LIFR': '#d62728'  # red
+}
+
 # Calculate the percentage of each FlightRules per hour
 metar_flight_rules_percentages = metar_flight_rules_counts.div(metar_flight_rules_counts.sum(axis=1), axis=0) * 100
 
@@ -55,12 +63,13 @@ print(metar_flight_rules_stats)
 
 
 # Plot the flight rules count per hour
-plt.figure(figsize=(12, 6))
-metar_flight_rules_counts.plot(kind='bar', stacked=True)
+metar_flight_rules_counts.plot(kind='bar', stacked=True, color=[flight_rules_colors.get(x, '#333333') for x in metar_flight_rules_counts.columns], figsize=(12,6))
 plt.title('Flight Rules Count per Hour on 2024-10-11')
 plt.xlabel('Hour')
 plt.ylabel('Count')
 plt.xticks(rotation=45)
 plt.legend(title='Flight Rules')
 plt.tight_layout()
+plt.savefig('/home/sebastian/Desktop/thesis/DynamicFlightStorage/scripts/data_analysis/000000_metar.pdf')
+
 plt.show()

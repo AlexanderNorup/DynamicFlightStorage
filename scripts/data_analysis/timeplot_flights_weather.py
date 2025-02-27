@@ -8,11 +8,9 @@ import pytz
 # Adjust as needed
 #metar_dir = '/home/sebastian/Desktop/thesis/DynamicFlightStorage/scripts/fake_data_generation/metar'
 #taf_dir = '/home/sebastian/Desktop/thesis/DynamicFlightStorage/scripts/fake_data_generation/taf'
-#flight_dir = '/home/sebastian/Desktop/thesis/DynamicFlightStorage/scripts/fake_data_generation/flights'
 
 metar_dir = '/home/sebastian/Desktop/thesis/weather_clean_2024_10_11/metar/'
 taf_dir = '/home/sebastian/Desktop/thesis/weather_clean_2024_10_11/taf/'
-flight_dir = '/home/sebastian/Desktop/thesis/2024_10_10_flights/'
 
 
 weather_dates = []
@@ -53,81 +51,98 @@ for file_name in taf_files:
                 taf_errors += 1
                 continue
 
-
-# Get date departure for each flight
-flight_files = [filename for filename in os.listdir(flight_dir)]
-
-for file_name in flight_files:
-    file_path = os.path.join(flight_dir, file_name)
-    with open(file_path) as json_file:
-        data = json.load(json_file)
-        try:
-            flight_dates.append(
-                datetime.fromisoformat(data['ScheduledTimeOfDeparture'])
-                .astimezone(pytz.utc)
-            )
-        except KeyError:
-            flight_errors += 1
-            continue
-
-print(f'taf errors: {taf_errors}, metar errors: {metar_errors}, flight errors: {flight_errors}')
-
-
 # Create hour buckets and combine into one dataframe
 weather_df = pd.DataFrame(weather_dates, columns=['Dates'])
 weather_df['DateHour'] = weather_df['Dates'].dt.strftime('%Y-%m-%d %H')
-w_counts = weather_df['DateHour'].value_counts().sort_index()
+weather_df['Day'] = weather_df['Dates'].dt.strftime('%Y-%m-%d')
+weather_df['Month'] = weather_df['Dates'].dt.strftime('%Y-%m')
+
+flight_df = pd.DataFrame()
+
+def load_flights_json():
+    global flight_df
+    #flight_dir = '/home/sebastian/Desktop/thesis/DynamicFlightStorage/scripts/fake_data_generation/flights'
+    flight_dir = '/home/sebastian/Desktop/thesis/2024_10_10_flights/'
+    # Get date departure for each flight
+    flight_files = [filename for filename in os.listdir(flight_dir)]
+
+    for file_name in flight_files:
+        file_path = os.path.join(flight_dir, file_name)
+        with open(file_path) as json_file:
+            data = json.load(json_file)
+            try:
+                flight_dates.append(
+                    datetime.fromisoformat(data['ScheduledTimeOfDeparture'])
+                    .astimezone(pytz.utc)
+                )
+            except KeyError:
+                flight_errors += 1
+                continue
+    flight_df = pd.DataFrame(flight_dates, columns=['Dates'])
+    flight_df['DateHour'] = flight_df['Dates'].dt.strftime('%Y-%m-%d %H')
 
 
-flight_df = pd.DataFrame(flight_dates, columns=['Dates'])
-flight_df['DateHour'] = flight_df['Dates'].dt.strftime('%Y-%m-%d %H')
-f_count = flight_df['DateHour'].value_counts().sort_index()
+def load_flights_csv():
+    global flight_df
+    flight_dir = '/home/sebastian/Desktop/thesis/Real_flights.csv'
 
-print(f"Flight data ranges from {flight_df['DateHour'].min()} to {flight_df['DateHour'].max()}")
-print(f"Weather data ranges from {weather_df['DateHour'].min()} to {weather_df['DateHour'].max()}")
+    # Read from the CSV file
+    flight_df = pd.read_csv(flight_dir, parse_dates=['Takeoff_Time'])
+    flight_df['DateHour'] = flight_df['Takeoff_Time'].dt.strftime('%Y-%m-%d %H')
+    flight_df['Day'] = flight_df['Takeoff_Time'].dt.strftime('%Y-%m-%d')
+    flight_df['Month'] = flight_df['Takeoff_Time'].dt.strftime('%Y-%m')
+    print(flight_df.head())
+    print(f"Flight data departure ranges from {flight_df['DateHour'].min()} to {flight_df['DateHour'].max()}")
 
+load_flights_csv()
 
-weather_counts = weather_df.groupby('DateHour').size().reset_index(name='weather_count')
-flight_counts = flight_df.groupby('DateHour').size().reset_index(name='flight_count')
+bucket_size = 'Day' # 'DateHour' 'Month'
 
-combined_counts = pd.merge(weather_counts, flight_counts, on='DateHour', how='outer')
-combined_counts['DateHour'] = pd.to_datetime(combined_counts['DateHour'])
+print(f"Flight data ranges from {flight_df[bucket_size].min()} to {flight_df[bucket_size].max()}")
+print(f"Weather data ranges from {weather_df[bucket_size].min()} to {weather_df[bucket_size].max()}")
+
+flight_counts = flight_df.groupby(bucket_size).size().reset_index(name='flight_count')
+weather_counts = weather_df.groupby(bucket_size).size().reset_index(name='weather_count')
+
+combined_counts = pd.merge(weather_counts, flight_counts, on=bucket_size, how='outer')
+combined_counts[bucket_size] = pd.to_datetime(combined_counts[bucket_size])
 
 
 # full datetime index that covers both datasets and fills in any gaps
-start_time = combined_counts['DateHour'].min()
-end_time = combined_counts['DateHour'].max()
-full_time_index = pd.date_range(start=start_time, end=end_time, freq='h')
+start_time = combined_counts[bucket_size].min()
+end_time = combined_counts[bucket_size].max()
+full_time_index = pd.date_range(start=start_time, end=end_time, freq='D')
 
 # reindex to full time index
-combined_counts_resampled = combined_counts.set_index('DateHour').reindex(full_time_index)
+combined_counts_resampled = combined_counts.set_index(bucket_size).reindex(full_time_index)
 
 
 fig, ax1 = plt.subplots(figsize=(12, 6))
 
-# weather data (skyblue)
-ax1.bar(combined_counts_resampled.index, combined_counts_resampled['weather_count'], 
-        color='skyblue', alpha=0.8, label='Weather', width=timedelta(hours=1))
+ax1.bar(combined_counts_resampled.index, combined_counts_resampled['flight_count'], 
+        color='green', alpha=0.8, label='Flight', width=timedelta(days=1))
 #ax1.set_xlabel('Date and Hour')
-ax1.set_xlabel('Month-Day')
-ax1.set_ylabel('Weather Count', color='skyblue')
-ax1.tick_params(axis='y', labelcolor='skyblue')
-
+ax1.set_xlabel('Year-Month')
+ax1.set_ylabel('Flight Count', color='green')
+ax1.tick_params(axis='y', labelcolor='green')
 
 ax2 = ax1.twinx()
-ax2.bar(combined_counts_resampled.index, combined_counts_resampled['flight_count'], 
-        color='orange', alpha=0.8, label='Flights', width=timedelta(hours=1))
-ax2.set_ylabel('Flight Count', color='orange')
-ax2.tick_params(axis='y', labelcolor='orange')
+ax2.bar(combined_counts_resampled.index, combined_counts_resampled['weather_count'], 
+        color='blue', alpha=0.8, label='Weather', width=timedelta(days=1))
+ax2.set_ylabel('Weather Count', color='blue')
+ax2.tick_params(axis='y', labelcolor='blue')
 
 # readability
-ax1.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
-ax1.xaxis.set_major_locator(mdates.DayLocator(interval=1))
+ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+ax1.xaxis.set_major_locator(mdates.DayLocator(interval=30))
 
-ax1.set_xlim([datetime(2024, 9, 23), datetime(2024, 10, 18)])
+# ax1.set_xlim([datetime(2024, 9, 23), datetime(2024, 10, 18)])
 # ax1.set_xlim([start_time - timedelta(days=2), end_time + timedelta(days=2)])
-ax1.set_ylim([0, combined_counts_resampled['weather_count'].max()])
-ax2.set_ylim([0, combined_counts_resampled['flight_count'].max()])
+ax1.set_ylim([0, combined_counts_resampled['flight_count'].max()])
+ax2.set_ylim([0, combined_counts_resampled['weather_count'].max()])
 plt.setp(ax1.xaxis.get_majorticklabels(), rotation=70)
 
+
+plt.tight_layout()
+plt.savefig('/home/sebastian/Desktop/thesis/DynamicFlightStorage/scripts/data_analysis/flight_weather_timeplot.pdf')
 plt.show()

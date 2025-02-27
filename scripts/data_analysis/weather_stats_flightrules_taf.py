@@ -95,13 +95,22 @@ taf_flight_rules_stats_filtered = taf_flight_rules_percentages_filtered.agg(['me
 # Print the statistics for the percentage of each flight rule per hour for the filtered hours
 print(taf_flight_rules_stats_filtered)
 
+# Define custom colors for each FlightRules category
+flight_rules_colors = {
+    'VFR': '#2ca02c',  # green
+    'MVFR': '#1f77b4',  # blue
+    'IFR': '#ff7f0e',  # orange
+    'LIFR': '#d62728'  # red
+}
+
 # Plot the flight rules count per hour
-plt.figure(figsize=(12, 6))
-taf_flight_rules_counts.plot(kind='bar', stacked=True)
+#plt.figure(figsize=(12, 6))
+taf_flight_rules_counts.plot(kind='bar', color=[flight_rules_colors.get(x, '#333333') for x in taf_flight_rules_counts.columns], stacked=True, figsize=(12, 6))
 plt.title('Flight Rules Count per Hour on 2024-10-11')
 plt.xlabel('Hour')
 plt.ylabel('Count')
 plt.xticks(rotation=45)
 plt.legend(title='Flight Rules')
 plt.tight_layout()
+plt.savefig('/home/sebastian/Desktop/thesis/DynamicFlightStorage/scripts/data_analysis/000000_taf.pdf')
 plt.show()

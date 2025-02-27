@@ -4,11 +4,11 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 # Adjust as needed
-metar_dir = '/home/sebastian/Desktop/thesis/DynamicFlightStorage/scripts/fake_data_generation/metar'
-taf_dir = '/home/sebastian/Desktop/thesis/DynamicFlightStorage/scripts/fake_data_generation/taf'
+#metar_dir = '/home/sebastian/Desktop/thesis/DynamicFlightStorage/scripts/fake_data_generation/metar'
+#taf_dir = '/home/sebastian/Desktop/thesis/DynamicFlightStorage/scripts/fake_data_generation/taf'
 
-# metar_dir = '/home/sebastian/Desktop/thesis/weather_clean_2024_10_11/metar/'
-# taf_dir = '/home/sebastian/Desktop/thesis/weather_clean_2024_10_11/taf/'
+metar_dir = '/home/sebastian/Desktop/thesis/weather_clean_2024_10_11/metar/'
+taf_dir = '/home/sebastian/Desktop/thesis/weather_clean_2024_10_11/taf/'
 
 ################### METAR DEFINITIONS
 metar_dates = []
@@ -35,17 +35,17 @@ metar_df = pd.DataFrame(metar_dates, columns=['DateIssued'])
 # Filter out entries before 2024-10-11 00:00:00 and after 2024-10-11 22:59:59
 metar_start_date = datetime(2024, 10, 11, 0, 0, 0)
 metar_end_date = datetime(2024, 10, 11, 21, 59, 59)
-#metar_df = metar_df[(metar_df['DateIssued'] >= metar_start_date) & (metar_df['DateIssued'] <= metar_end_date)]
+metar_df = metar_df[(metar_df['DateIssued'] >= metar_start_date) & (metar_df['DateIssued'] <= metar_end_date)]
 
 # Create hour buckets and count the number of METAR reports per hour
 metar_df['DateHour'] = metar_df['DateIssued'].dt.strftime('%Y-%m-%d %H')
 metar_hourly_counts = metar_df['DateHour'].value_counts().sort_index()
 
 # Create a full timeline from min DateIssued to max DateIssued
-#metar_full_timeline = pd.date_range(start=metar_start_date, end=metar_end_date, freq='h').strftime('%Y-%m-%d %H')
+metar_full_timeline = pd.date_range(start=metar_start_date, end=metar_end_date, freq='h').strftime('%Y-%m-%d %H')
 
 # Reindex the hourly counts to include all hours in the timeline
-#metar_hourly_counts = metar_hourly_counts.reindex(metar_full_timeline, fill_value=0)
+metar_hourly_counts = metar_hourly_counts.reindex(metar_full_timeline, fill_value=0)
 
 
 
@@ -80,10 +80,10 @@ taf_df['DateHourStart'] = taf_df['DateStart'].dt.strftime('%Y-%m-%d %H')
 taf_df['DateHourIssued'] = taf_df['DateIssued'].dt.strftime('%Y-%m-%d %H')
 
 # Filter out entries before 2024-10-10 20:00:00 and after 2024-10-11 20:59:59, both for issue date and start date
-# taf_start_date = datetime(2024, 10, 10, 20, 0, 0)
-# taf_end_date = datetime(2024, 10, 11, 20, 59, 59)
-# taf_temp = taf_df[(taf_df['DateIssued'] >= taf_start_date) & (taf_df['DateIssued'] <= taf_end_date)]
-# taf_df_filtered = taf_temp[(taf_df['DateStart'] >= taf_start_date) & (taf_df['DateStart'] <= taf_end_date)]
+taf_start_date = datetime(2024, 10, 10, 20, 0, 0)
+taf_end_date = datetime(2024, 10, 11, 20, 59, 59)
+taf_temp = taf_df[(taf_df['DateIssued'] >= taf_start_date) & (taf_df['DateIssued'] <= taf_end_date)]
+taf_df_filtered = taf_temp[(taf_df['DateStart'] >= taf_start_date) & (taf_df['DateStart'] <= taf_end_date)]
 taf_df_filtered = taf_df
 
 
@@ -275,6 +275,7 @@ def taf_stats_forecast_diff():
     plt.boxplot(taf_df['Difference'].dt.total_seconds() / 60, vert=False, meanline=True, showmeans=True)
     plt.xlabel('Difference (minutes)')
     plt.title('Boxplot of TAF DateIssued to DateStart Differences')
+    plt.xlim(0, 400)
 
     # Calculate quartiles, median, and mean
     q1 = taf_df['Difference'].quantile(0.25)
@@ -297,6 +298,7 @@ def taf_stats_forecast_diff():
 
     plt.legend()
     plt.tight_layout()
+    plt.savefig('/home/sebastian/Desktop/thesis/DynamicFlightStorage/scripts/data_analysis/taf_forecast_diff_plot.pdf')
     plt.show()
 
 
@@ -390,12 +392,12 @@ def taf_stats_overall():
 
 
 def main():
-    taf_stats_overall()
+    # taf_stats_overall()
     # taf_stats_above_24h()
     # taf_stats_below_24h()
     # taf_stats_6h()
     # taf_stats_6h_inverse()
-    # taf_stats_forecast_diff()
+    taf_stats_forecast_diff()
     # metar_stats()
     # print("The end")
 
