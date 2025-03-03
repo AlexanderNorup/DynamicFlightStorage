@@ -7,7 +7,7 @@ namespace Neo4jDataStore
 {
     public class TimeBucketedNeo4jDataStore : IEventDataStore, IDisposable
     {
-        public static readonly TimeSpan TimeBucketSize = TimeSpan.FromHours(1);
+        public static readonly TimeSpan TimeBucketSize = TimeSpan.FromDays(1);
 
         private Neo4jContainer? _container;
         private IDriver? _database;
