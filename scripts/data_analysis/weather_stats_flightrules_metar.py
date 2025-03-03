@@ -5,7 +5,6 @@ import pandas as pd
 
 # Adjust as needed
 metar_dir = '/home/sebastian/Desktop/thesis/DynamicFlightStorage/scripts/fake_data_generation/metar'
-
 #metar_dir = '/home/sebastian/Desktop/thesis/weather_clean_2024_10_11/metar/'
 
 ################### METAR DEFINITIONS
@@ -40,8 +39,12 @@ metar_df['DateHour'] = metar_df['DateIssued'].dt.strftime('%Y-%m-%d %H')
 
 # Count the number of occurrences of each FlightRules per hour
 metar_flight_rules_counts = metar_df.groupby(['DateHour', 'FlightRules']).size().unstack(fill_value=0)
+metar_flight_rules_percentages = metar_flight_rules_counts.div(metar_flight_rules_counts.sum(axis=1), axis=0) * 100
+print(metar_flight_rules_percentages)
 
-# Define custom colors for each FlightRules category
+metar_flight_rules_stats = metar_flight_rules_percentages.agg(['mean', 'median', 'min', 'max', 'std']).transpose()
+print(metar_flight_rules_stats)
+
 flight_rules_colors = {
     'VFR': '#2ca02c',  # green
     'MVFR': '#1f77b4',  # blue
@@ -49,22 +52,7 @@ flight_rules_colors = {
     'LIFR': '#d62728'  # red
 }
 
-# Calculate the percentage of each FlightRules per hour
-metar_flight_rules_percentages = metar_flight_rules_counts.div(metar_flight_rules_counts.sum(axis=1), axis=0) * 100
-
-# Print the percentages of each flight rule per hour
-print(metar_flight_rules_percentages)
-
-# Calculate mean, median, min, max, std for the percentage of each rule per hour
-metar_flight_rules_stats = metar_flight_rules_percentages.agg(['mean', 'median', 'min', 'max', 'std']).transpose()
-
-# Print the statistics for the percentage of each flight rule per hour
-print(metar_flight_rules_stats)
-
-
-# Plot the flight rules count per hour
 metar_flight_rules_counts.plot(kind='bar', stacked=True, color=[flight_rules_colors.get(x, '#333333') for x in metar_flight_rules_counts.columns], figsize=(12,6))
-plt.title('Flight Rules Count per Hour on 2024-10-11')
 plt.xlabel('Hour')
 plt.ylabel('Count')
 plt.xticks(rotation=45)
