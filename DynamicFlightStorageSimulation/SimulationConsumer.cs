@@ -130,6 +130,20 @@ namespace DynamicFlightStorageSimulation
                     await _consumerLogger.PersistDataAsync(_simulationEventBus.CurrentExperimentId, ClientId).ConfigureAwait(false);
                     _consumerLogger.ResetLogger();
                     break;
+                case SystemMessage.SystemMessageType.AbortExperiment:
+                    _logger?.LogWarning("Consumer aborting experiment");
+                    await _simulationEventBus.ClearExchanges().ConfigureAwait(false); // Problem: queues are cleared but messages are still attempted to be read
+                    await _consumerLogger.PersistDataAsync(_simulationEventBus.CurrentExperimentId, ClientId).ConfigureAwait(false);
+                    _consumerLogger.ResetLogger();
+                    var response = new SystemMessage()
+                    {
+                        MessageType = SystemMessage.SystemMessageType.AbortSuccess,
+                        Message = message.Message, // The current experiment id. Uses the same function as pinging
+                        Source = _simulationEventBus.ClientId,
+                    };
+                    await _simulationEventBus.PublishSystemMessage(response);
+                    _logger?.LogDebug($"Consumer aborted experiment and responded with {response}");
+                    break;
                 default:
                     break;
             }

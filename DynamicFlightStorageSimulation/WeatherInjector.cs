@@ -62,6 +62,7 @@ public class WeatherInjector
         int weatherCount = 0;
         foreach (var weatherBatch in weatherBatches)
         {
+            if (cancellationToken.IsCancellationRequested) break;
             await _eventBus.PublishWeatherAsync(weatherBatch, experimentId).ConfigureAwait(false);
             if (++weatherCount % 10_000 == 0)
             {
