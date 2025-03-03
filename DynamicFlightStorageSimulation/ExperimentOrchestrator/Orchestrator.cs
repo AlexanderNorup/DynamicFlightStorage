@@ -167,8 +167,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 await _experimentDataCollector.AddOrUpdateExperimentAsync(CurrentExperiment);
 
                 ExperimentCancellationToken = new CancellationTokenSource();
-                var minimumWaitPreloadWaitTime = Task.Delay(TimeSpan.FromMilliseconds(MinimumWaitTimeForConsumptionMs));
-
+                
                 var result = await SendSystemMessageAndWaitForResponseAsync(new SystemMessage()
                 {
                     Message = CurrentExperiment.Id,
@@ -191,10 +190,10 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
                 // Do preload here.
                 var st = Stopwatch.StartNew();
+                var minimumWaitPreloadWaitTime = Task.Delay(TimeSpan.FromMilliseconds(MinimumWaitTimeForConsumptionMs));
                 _weatherInjector.SkipWeatherUntil(CurrentExperiment.SimulatedPreloadStartTime, ExperimentCancellationToken.Token);
                 await _weatherInjector.PublishWeatherUntil(CurrentExperiment.SimulatedPreloadEndTime, CurrentExperiment.Id, _logger, ExperimentCancellationToken.Token).ConfigureAwait(false);
                 _logger.LogInformation("Finished preloading weather. Took {Time}. Waiting to be consumed...", st.Elapsed);
-
                 await minimumWaitPreloadWaitTime; // Wait for the minium time of 10 seconds before checking if everything is consumed
                 await _consumingMonitor.WaitForExchangesToBeConsumedAsync(ExperimentRunnerClientIds.ToArray(), ExperimentCancellationToken.Token);
                 minimumWaitPreloadWaitTime = Task.Delay(TimeSpan.FromMilliseconds(MinimumWaitTimeForConsumptionMs));
@@ -202,14 +201,13 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
                 st.Restart();
 
-                _flightInjector.SkipFlightsUntil(CurrentExperiment.SimulatedPreloadStartTime, ExperimentCancellationToken.Token);
-
                 if (CurrentExperiment.PreloadAllFlights)
                 {
                     await _flightInjector.PublishFlightsUntil(DateTime.MaxValue, CurrentExperiment.Id, _logger, ExperimentCancellationToken.Token).ConfigureAwait(false);
                 }
                 else
                 {
+                    _flightInjector.SkipFlightsUntil(CurrentExperiment.SimulatedPreloadStartTime, ExperimentCancellationToken.Token);
                     await _flightInjector.PublishFlightsUntil(CurrentExperiment.SimulatedPreloadEndTime, CurrentExperiment.Id, _logger, ExperimentCancellationToken.Token).ConfigureAwait(false);
                 }
                 _logger.LogInformation("Finished preloading flights. Took {Time}", st.Elapsed);

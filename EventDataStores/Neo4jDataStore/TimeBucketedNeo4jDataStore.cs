@@ -1,5 +1,6 @@
 ﻿using DynamicFlightStorageDTOs;
 using Neo4j.Driver;
+using System.Text;
 using Testcontainers.Neo4j;
 
 namespace Neo4jDataStore
@@ -92,26 +93,64 @@ namespace Neo4jDataStore
         private async Task CreateOrUpdateTimeBucketRelation(IAsyncQueryRunner tx,
             string flightId, string icao, WeatherCategory weatherCategory, DateTime departure, DateTime arrival)
         {
-            const string TimeBucketCreationQuery =
+            // We should make a time-bucket instance for every time-slot the flight occupies.
+            const string TimeBucketCreationQuery1 =
                 """
                 MERGE (a:Airport {icao: $icao})
                     WITH a
-                MERGE (a) -[h:HasFlightIn]-> (t:TimeBucket {icao: $icao, timeSliceStart: $timeSliceStart})
+                MERGE (a) -[h:HasFlightIn]-> (t:TimeBucket {
+                    icao: $icao, 
+                    timeSliceStart: 
+                """;
+
+            const string TimeBucketCreationQuery2 =
+                    """
+                })
                     WITH t
                 MATCH (f:Flight {id: $flightId})
                 MERGE (t) -[e:USES]-> (f)
-                SET e.weather = $weatherLevel, e.dep = $departure, e.arr = $arrival;
+                SET e.weather = $weatherLevel, e.dep = $departure, e.arr = $arrival
                 """;
 
-            await tx.RunAsync(TimeBucketCreationQuery, new
+            var parameters = new Dictionary<string, object>
             {
-                icao,
-                timeSliceStart = ((DateTimeOffset)GetTimeSlot(departure)).ToUnixTimeSeconds(),
-                flightId,
-                weatherLevel = (int)weatherCategory,
-                departure = ((DateTimeOffset)departure).ToUnixTimeSeconds(),
-                arrival = ((DateTimeOffset)arrival).ToUnixTimeSeconds()
-            }).ConfigureAwait(false);
+                { "icao", icao},
+                { "flightId", flightId},
+                { "weatherLevel", (int)weatherCategory},
+                { "departure", ((DateTimeOffset)departure).ToUnixTimeSeconds()},
+                { "arrival", ((DateTimeOffset)arrival).ToUnixTimeSeconds()}
+            };
+
+            var timeBucketsToCreate = new List<long>();
+            var current = GetTimeSlot(departure);
+            var arrivalTimeSlot = GetTimeSlot(arrival);
+            while (current <= arrivalTimeSlot)
+            {
+                timeBucketsToCreate.Add(((DateTimeOffset)current).ToUnixTimeSeconds());
+                current = current.Add(TimeBucketSize);
+            }
+
+            var query = new StringBuilder();
+            int i = 0;
+            foreach (var timeSlice in timeBucketsToCreate)
+            {
+                var key = $"timeSliceStart{i++}";
+                parameters.Add(key, timeSlice);
+                query.Append(TimeBucketCreationQuery1);
+                query.Append("$");
+                query.Append(key);
+                query.Append(TimeBucketCreationQuery2);
+
+#if DEBUG
+                query.Append(", ");
+                query.Append("e.humanDep = \"").Append(departure.ToString()).Append("\", ");
+                query.Append("e.humanArr = \"").Append(arrival.ToString()).Append("\", ");
+                query.Append("t.humanTimeSlice = \"").Append(DateTimeOffset.FromUnixTimeSeconds(timeSlice).UtcDateTime.ToString()).AppendLine("\" ");
+#endif 
+                query.AppendLine(); // Add an empty line between queries
+            }
+
+            await tx.RunAsync(query.ToString(), parameters).ConfigureAwait(false);
         }
 
         private static DateTime GetTimeSlot(DateTime dateTime)
@@ -140,7 +179,7 @@ namespace Neo4jDataStore
                             and $validFrom <= u.arr 
                         ]-> 
                         (f:Flight {recalculating: false}) 
-                    return f.id
+                    RETURN DISTINCT f.id
                     """;
 
             var result = await session.RunAsync(SearchQuery, new
