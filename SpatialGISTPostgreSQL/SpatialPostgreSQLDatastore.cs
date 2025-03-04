@@ -70,12 +70,12 @@ public class SpatialPostgreSQLDatastore : IEventDataStore, IDisposable
     {
         await using (var batch = new NpgsqlBatch(_insertConnection))
         {
-            var departureEpoch = new DateTimeOffset(flight.ScheduledTimeOfDeparture).ToUnixTimeSeconds();
-            var arrivalEpoch = new DateTimeOffset(flight.ScheduledTimeOfArrival).ToUnixTimeSeconds();
+            var departureEpoch = ((DateTimeOffset)flight.ScheduledTimeOfDeparture).ToUnixTimeSeconds();
+            var arrivalEpoch = ((DateTimeOffset)flight.ScheduledTimeOfArrival).ToUnixTimeSeconds();
             var weather = _weatherService.GetWeatherCategoriesForFlight(flight);
             foreach (var airport in flight.GetAllAirports().Distinct())
             {
-                int icaoNum = ConvertIcaoToInt(airport);
+                int icaoNum = ConvertIcaoToInt2(airport);
                 const string insertFlightEventSql =
                     """
                     INSERT INTO flight_events (flightIdentification, lastWeather, departure, arrival, icao, line3d)
@@ -91,6 +91,7 @@ public class SpatialPostgreSQLDatastore : IEventDataStore, IDisposable
                     ON CONFLICT (icao, flightIdentification)  
                     DO UPDATE SET 
                         lastWeather = EXCLUDED.lastWeather,
+                        isRecalculating = FALSE,
                         line3d = cube(ARRAY[EXCLUDED.lastWeather, @departureEpoch, @icaoNum],
                                       ARRAY[EXCLUDED.lastWeather, @arrivalEpoch, @icaoNum]);
                         
@@ -125,9 +126,9 @@ public class SpatialPostgreSQLDatastore : IEventDataStore, IDisposable
 
     public async Task AddWeatherAsync(Weather weather)
     {
-        int icaoNum = ConvertIcaoToInt(weather.Airport);
-        var departureEpoch = new DateTimeOffset(weather.ValidFrom).ToUnixTimeSeconds();
-        var arrivalEpoch = new DateTimeOffset(weather.ValidTo).ToUnixTimeSeconds();
+        int icaoNum = ConvertIcaoToInt2(weather.Airport);
+        var departureEpoch = ((DateTimeOffset)weather.ValidFrom).ToUnixTimeSeconds();
+        var arrivalEpoch = ((DateTimeOffset)weather.ValidTo).ToUnixTimeSeconds();
         int weatherMin = (int)WeatherCategory.Undefined;
         int weatherMax = (int)weather.WeatherLevel - 1;
         const string searchSql =
@@ -135,12 +136,13 @@ public class SpatialPostgreSQLDatastore : IEventDataStore, IDisposable
             SELECT DISTINCT ON (flightIdentification) * 
             FROM flight_events
             WHERE line3d && cube(ARRAY[@weatherMin, @departureEpoch, @icaoNum],
-                                 ARRAY[@weatherMax, @arrivalEpoch, @icaoNum]);
+                                 ARRAY[@weatherMax, @arrivalEpoch, @icaoNum])
+            AND isRecalculating = FALSE;
             """;
         const string updateRecalculatingSql = 
             """
             UPDATE flight_events SET isRecalculating = TRUE
-            WHERE flightIdentification = @id;
+            WHERE flightIdentification = @id AND isRecalculating = FALSE;
             """;
         await using (var updateBatch = new NpgsqlBatch(_updateConnection))
         {
@@ -191,6 +193,21 @@ public class SpatialPostgreSQLDatastore : IEventDataStore, IDisposable
 
         return icaoNum;
     }
+    
+    private int ConvertIcaoToInt2(string icao)
+    {
+        // Ensure ICAO is at most 4 characters
+        if (icao.Length > 4)
+            throw new ArgumentException($"ICAO code must be at most 4 characters long. Given: {icao}", nameof(icao));
+
+        // Pad ICAO with spaces (' ') if it's shorter than 4 characters
+        icao = icao.PadRight(4, ' '); // Ensures all ICAOs are exactly 4 characters
+
+        // Encode ICAO into an integer
+        return (icao[0] << 24) | (icao[1] << 16) | (icao[2] << 8) | icao[3];
+    }
+
+
 
     public void Dispose()
     {
