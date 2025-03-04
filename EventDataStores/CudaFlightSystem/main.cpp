@@ -8,8 +8,12 @@
 #include "flight.h"
 #include "flight_system.h"
 
+#define COLOR_RED "\033[31m"
+#define COLOR_GREEN "\033[32m"
+#define COLOR_RESET "\033[0m"
+
 // Utility function to generate random point flights
-void generateRandomParticles(std::vector<Flight>& flights, int count, float range) {
+void generateRandomFlights(std::vector<Flight>& flights, int count, float range) {
 	std::random_device rd;
 	std::mt19937 gen(rd());
 	std::uniform_real_distribution<float> posDist(-range, range);
@@ -47,13 +51,26 @@ int main(int argc, char* argv[]) {
 	// Generate random flights
 	std::vector<Flight> flights;
 	std::cout << "Generating " << numFlights << " random point flights..." << std::endl;
-	generateRandomParticles(flights, numFlights, 20.0f);
+	generateRandomFlights(flights, numFlights, 20.0f);
 
-	// Create and initialize particle system
+	// Create and initialize flight system
 	FlightSystem flightSystem;
-	std::cout << "Initializing particle system in GPU memory..." << std::endl;
+	std::cout << "Initializing flight system in GPU memory..." << std::endl;
 	if (!flightSystem.initialize(flights.data(), numFlights)) {
-		std::cerr << "Failed to initialize particle system" << std::endl;
+		std::cerr << COLOR_RED << "Failed to initialize flight system" << COLOR_RESET << std::endl;
+		return 1;
+	}
+
+	if (flightSystem.getFlightCount() <= 0) {
+		std::cerr << COLOR_RED << "Flight system initialized with 0 flights" << COLOR_RESET << std::endl;
+		return 1;
+	}
+	else {
+		std::cout << COLOR_GREEN << "Flight system initialized with " << flightSystem.getFlightCount() << " flights." << COLOR_RESET << std::endl;
+	}
+
+	if (flightSystem.getFlightCount() != numFlights) {
+		std::cerr << COLOR_RED << "Flight count mismatch after initialization" << COLOR_RESET << std::endl;
 		return 1;
 	}
 
@@ -66,7 +83,7 @@ int main(int argc, char* argv[]) {
 
 	bool success = flightSystem.detectCollisions(box, gpuResults.data());
 	if (!success) {
-		std::cerr << "Collision detection failed" << std::endl;
+		std::cerr << COLOR_RED << "Collision detection failed" << COLOR_RESET << std::endl;
 		return 1;
 	}
 
@@ -82,8 +99,12 @@ int main(int argc, char* argv[]) {
 	std::cout << "GPU execution time: " << std::fixed << std::setprecision(2)
 		<< gpuTime.count() << " ms" << std::endl;
 
+	if (collisionCount <= 0) {
+		std::cerr << COLOR_RED << "No collisions detected in the initial run." << COLOR_RESET << std::endl;
+	}
+
 	// Wait for user input before closing the console window
-	std::cout << "\nPress Enter to continue..." << std::endl;
+	std::cout << "\nPausing so you can examine GPU memory\nPress Enter to continue..." << std::endl;
 	std::cin.get();
 
 	// Demonstrate updating specific flights
@@ -112,7 +133,7 @@ int main(int argc, char* argv[]) {
 	auto endUpdate = std::chrono::high_resolution_clock::now();
 
 	if (!success) {
-		std::cerr << "Failed to update flights" << std::endl;
+		std::cerr << COLOR_RED << "Failed to update flights" << COLOR_RESET << std::endl;
 		return 1;
 	}
 
@@ -130,7 +151,7 @@ int main(int argc, char* argv[]) {
 	std::chrono::duration<double, std::milli> redetectTime = endRedetect - startRedetect;
 
 	if (!success) {
-		std::cerr << "Collision re-detection failed" << std::endl;
+		std::cerr << COLOR_RED << "Collision re-detection failed" << COLOR_RESET << std::endl;
 		return 1;
 	}
 
@@ -141,6 +162,14 @@ int main(int argc, char* argv[]) {
 	std::cout << "After update: Detected " << newCollisionCount << " points inside the bounding box." << std::endl;
 	std::cout << "Collision re-detection time: " << std::fixed << std::setprecision(2)
 		<< redetectTime.count() << " ms" << std::endl;
+
+	if (newCollisionCount != collisionCount) {
+		std::cout << COLOR_GREEN << "Updating flight positions changed the collision count as expected." << COLOR_RESET << std::endl;
+	}
+	else
+	{
+		std::cerr << COLOR_RED << "Updating flight positions did not change collision count." << COLOR_RESET << std::endl;
+	}
 
 	// Test adding a single flight
 	std::cout << "\nAdding just a single flight" << std::endl;
@@ -156,7 +185,7 @@ int main(int argc, char* argv[]) {
 	std::chrono::duration<double, std::milli> addFlightTime = endAddFlight - startAddFlight;
 
 	if (!success) {
-		std::cerr << "Adding flight failed" << std::endl;
+		std::cerr << COLOR_RED << "Adding flight failed" << COLOR_RESET << std::endl;
 		return 1;
 	}
 
@@ -167,7 +196,7 @@ int main(int argc, char* argv[]) {
 	success = flightSystem.detectCollisions(box, gpuResults.data());
 
 	if (!success) {
-		std::cerr << "Collision re-detection (after add) failed" << std::endl;
+		std::cerr << COLOR_RED << "Collision re-detection (after add) failed" << COLOR_RESET << std::endl;
 		return 1;
 	}
 
@@ -175,11 +204,11 @@ int main(int argc, char* argv[]) {
 
 	std::cout << "After adding one flight: Detected " << newCollisionCountAfterAdd << " points inside the bounding box." << std::endl;
 	if (newCollisionCountAfterAdd == newCollisionCount + 1) {
-		std::cout << "Adding a single flight worked as expected." << std::endl;
+		std::cout << COLOR_GREEN << "Adding a single flight worked as expected." << COLOR_RESET << std::endl;
 	}
 	else
 	{
-		std::cerr << "Adding a single flight did not work as expected." << std::endl;
+		std::cerr << COLOR_RED << "Adding a single flight did not work as expected." << COLOR_RESET << std::endl;
 	}
 	std::cout << "Adding a flight took: " << std::fixed << std::setprecision(2)
 		<< addFlightTime.count() << " ms" << std::endl;
@@ -204,7 +233,7 @@ int main(int argc, char* argv[]) {
 	std::chrono::duration<double, std::milli> removeTime = endRemove - startRemove;
 
 	if (!success) {
-		std::cerr << "Removing flights failed" << std::endl;
+		std::cerr << COLOR_RED << "Removing flights failed" << COLOR_RESET << std::endl;
 		return 1;
 	}
 
@@ -215,7 +244,7 @@ int main(int argc, char* argv[]) {
 	success = flightSystem.detectCollisions(box, gpuResults.data());
 
 	if (!success) {
-		std::cerr << "Collision re-detection (after remvoe) failed" << std::endl;
+		std::cerr << COLOR_RED << "Collision re-detection (after remvoe) failed" << COLOR_RESET << std::endl;
 		return 1;
 	}
 
@@ -224,17 +253,63 @@ int main(int argc, char* argv[]) {
 	std::cout << "Stored Flights before removal: " << numFlights << " and after removal: " << countAfterRemoval << std::endl;
 	std::cout << "After removing " << numFlightsToRemove << " flights: Detected " << newCollisionCountAfterRemove << " points inside the bounding box." << std::endl;
 	if (newCollisionCountAfterRemove < newCollisionCountAfterAdd) {
-		std::cout << "Removing flights also removed some collisions as expected." << std::endl;
+		std::cout << COLOR_GREEN << "Removing flights also removed some collisions as expected." << COLOR_RESET << std::endl;
 	}
 	else
 	{
-		std::cerr << "Removing flights did not change the collision count." << std::endl;
+		std::cerr << COLOR_RED << "Removing flights did not change the collision count." << COLOR_RESET << std::endl;
 	}
 	std::cout << "Removing flights took: " << std::fixed << std::setprecision(2)
 		<< removeTime.count() << " ms" << std::endl;
 
 	// Clean up GPU resources
 	flightSystem.cleanup();
+
+	// Test creating an empty flightsystem
+	std::cout << "\nCreating an empty flight system..." << std::endl;
+	FlightSystem emptyFlightSystem;
+	emptyFlightSystem.initialize(nullptr, 0);
+
+	if (emptyFlightSystem.getFlightCount() != 0) {
+		std::cerr << COLOR_RED << "Empty system is not empty" << COLOR_RESET << std::endl;
+	}
+	else {
+		std::cout << COLOR_GREEN << "Empty system is initialized and contains " << emptyFlightSystem.getFlightCount() << " flights." << COLOR_RESET << std::endl;
+	}
+
+	// Test adding flights to an empty flight system
+	int flightsToAdd = 1000;
+	std::vector<Flight> newFlights;
+	std::cout << "Generating " << flightsToAdd << " random point flights..." << std::endl;
+	generateRandomFlights(newFlights, flightsToAdd, 20.0f);
+	success = emptyFlightSystem.addFlights(newFlights.data(), flightsToAdd);
+	if (!success) {
+		std::cerr << COLOR_RED << "Adding flights to empty system failed" << COLOR_RESET << std::endl;
+		return 1;
+	}
+
+	std::vector<int> collisionResults(flightsToAdd, 0);
+	success = emptyFlightSystem.detectCollisions(box, collisionResults.data());
+	if (!success) {
+		std::cerr << COLOR_RED << "Collision detection in (no longer) empty system failed" << COLOR_RESET << std::endl;
+		return 1;
+	}
+
+	int emptyCollisionCount = std::count(collisionResults.begin(), collisionResults.end(), 1);
+
+	std::cout << "Empty system now has " << emptyFlightSystem.getFlightCount() << " flights." << std::endl;
+	std::cout << "Detected " << emptyCollisionCount << " points inside the bounding box out of "
+		<< flightsToAdd << " flights in the (no longer) empty system." << std::endl;
+
+	if (emptyFlightSystem.getFlightCount() <= 0 || emptyCollisionCount <= 0) {
+		std::cout << COLOR_RED << "Adding flights to empty system did not work as expected." << COLOR_RESET << std::endl;
+	}
+	else
+	{
+		std::cout << COLOR_GREEN << "Adding flights to empty system worked as expected." << COLOR_RESET << std::endl;
+	}
+
+	emptyFlightSystem.cleanup();
 
 	// Wait for user input before closing the console window
 	std::cout << "\nPress Enter to exit..." << std::endl;
