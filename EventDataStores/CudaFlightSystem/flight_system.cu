@@ -126,8 +126,8 @@ bool FlightSystem::initialize(Flight* hostFlights, int count) {
 	// Clean up previous allocation if any
 	cleanup();
 
-	if (count <= 0 || hostFlights == nullptr) {
-		std::cerr << "Invalid flight data provided for initialization" << std::endl;
+	if (count < 0) {
+		std::cerr << "Invalid flight count provided for initialization" << std::endl;
 		return false;
 	}
 
@@ -138,17 +138,19 @@ bool FlightSystem::initialize(Flight* hostFlights, int count) {
 		return false;
 	}
 
-	// Copy flights to device
-	cudaError_t error = cudaMemcpy(d_flights, hostFlights, numFlights * sizeof(Flight), cudaMemcpyHostToDevice);
-	if (error != cudaSuccess) {
-		std::cerr << "Failed to copy flights to device: "
-			<< cudaGetErrorString(error) << std::endl;
-		cleanup();
-		return false;
-	}
+	if (hostFlights != nullptr) {
+		// Copy flights to device
+		cudaError_t error = cudaMemcpy(d_flights, hostFlights, numFlights * sizeof(Flight), cudaMemcpyHostToDevice);
+		if (error != cudaSuccess) {
+			std::cerr << "Failed to copy flights to device: "
+				<< cudaGetErrorString(error) << std::endl;
+			cleanup();
+			return false;
+		}
 
-	// Initialize indices and sort flights
-	sortFlightsByX();
+		// Initialize indices and sort flights
+		sortFlightsByX();
+	}
 
 	initialized = true;
 	return true;
@@ -161,7 +163,7 @@ bool FlightSystem::addFlights(Flight* newFlights, int count) {
 		return false;
 	}
 
-	if (count <= 0 || newFlights == nullptr) {
+	if (count < 0 || newFlights == nullptr) {
 		std::cerr << "Invalid flight data provided for addition" << std::endl;
 		return false;
 	}
