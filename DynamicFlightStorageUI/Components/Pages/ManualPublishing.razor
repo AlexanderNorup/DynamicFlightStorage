@@ -1,34 +1,114 @@
 ﻿@page "/manual"
+@using DynamicFlightStorageSimulation.ExperimentOrchestrator
+@using DynamicFlightStorageSimulation.Utilities
 @inject SimulationEventBus eventbus
+@inject IJSRuntime jsRuntime
+@inject Orchestrator orchestrator
+@implements IDisposable
 <h1>Prototyping Dashboard!</h1>
 <div class="container mb-2">
     <div class="row">
         <div class="mb-3">
             <label for="experimentIdInput" class="form-label">Current Experiment Id:</label>
-            <input type="text" class="form-control" id="experimentIdInput" @bind="CurrentExperimentId">
+            <input type="text" class="form-control" disabled="@ExperimentCreated" id="experimentIdInput" @bind="CurrentExperimentId">
+            <button class="btn btn-success" disabled="@ExperimentCreated" @onclick=StartExperiment>Start Experiment</button>
         </div>
     </div>
-    <div class="row g-2 mb-2">
-        <div class="col-6 border rounded p-2">
-            <h3>Publish Weather:</h3>
-            <WeatherBuilder OnWeatherCreated="PublishWeather" />
+
+    @if (!ExperimentCreated)
+    {
+        <p>Create a temporary experiment to publish data OR start a real experiment before visiting this page.</p>
+    }
+    else
+    {
+        <div class="row g-2 mb-2">
+            <div class="col-6 border rounded p-2">
+                <h3>Publish Weather:</h3>
+                <WeatherBuilder OnWeatherCreated="PublishWeather" />
+            </div>
+            <div class="col-6 border rounded p-2">
+                <h3>Publish Flight:</h3>
+                <FlightBuilder OnFlightCreated="PublishFlight" />
+            </div>
         </div>
-        <div class="col-6 border rounded p-2">
-            <h3>Publish Flight:</h3>
-            <FlightBuilder OnFlightCreated="PublishFlight" />
+
+    }
+    <div class="row mt-4">
+        <div class="col">
+            <h3>Logs:</h3>
+            <ul id="logList" class="logContainer list-unstyled"></ul>
         </div>
     </div>
 </div>
 
 @code {
+    private bool ExperimentCreated { get; set; } = false;
     private string CurrentExperimentId { get; set; } = Guid.NewGuid().ToString();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if(firstRender)
+        {
+            eventbus.SubscribeToSystemEvent(OnSystemMessage);
+            await eventbus.SubscribeToRecalculationEventAsync(OnRecalculation);
+
+            if (orchestrator.CurrentExperimentResult is { } result)
+            {
+                CurrentExperimentId = result.ExperimentId;
+                ExperimentCreated = true;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task StartExperiment()
+    {
+        await eventbus.CreateNewExperiment(CurrentExperimentId);
+        await eventbus.PublishSystemMessage(new SystemMessage()
+            {
+                MessageType = SystemMessage.SystemMessageType.NewExperiment,
+                Message = CurrentExperimentId,
+                Source = "ManualPublishing",
+                TimeStamp = DateTime.UtcNow
+            });
+        ExperimentCreated = true;
+    }
+
     private async Task PublishWeather(Weather weather)
     {
+        weather.DateIssued = DateTime.UtcNow;
         await eventbus.PublishWeatherAsync(weather, CurrentExperimentId).ConfigureAwait(false);
     }
 
     private async Task PublishFlight(Flight flight)
     {
         await eventbus.PublishFlightAsync(flight, CurrentExperimentId).ConfigureAwait(false);
+    }
+
+    private Task OnSystemMessage(SystemMessage message)
+    {
+        Log(new LogEntry(LogLevel.Information, $"[{message.Source}::{message.MessageType}] {message.Message}", null));
+        return Task.CompletedTask;
+    }
+
+    private Task OnRecalculation(FlightRecalculation message)
+    {
+        Log(new LogEntry(LogLevel.Information, $"[{message.ClientId}::Recalculation] {message.FlightIdentification} (Experiment: {message.ExperimentId})", null));
+        return Task.CompletedTask;
+    }
+
+    private void Log(LogEntry log)
+    {
+        _ = jsRuntime.InvokeVoidAsync("logMessage", log);
+    }
+
+    public void Dispose()
+    {
+        eventbus.UnSubscribeToRecalculationEvent(OnRecalculation);
+        eventbus.UnSubscribeToSystemEvent(OnSystemMessage);
+        if (ExperimentCreated)
+        {
+            eventbus.DeleteExperimentExchanges(CurrentExperimentId).GetAwaiter().GetResult();
+        }
     }
 }

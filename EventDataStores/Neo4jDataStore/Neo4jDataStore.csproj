@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Neo4j.Driver" Version="5.27.0" />
+    <PackageReference Include="Testcontainers.Neo4j" Version="4.1.0" />
+    <PackageReference Include="Testcontainers" Version="4.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\DynamicFlightStorageDTOs\DynamicFlightStorageDTOs.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="DatabaseInit\*.cypher">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

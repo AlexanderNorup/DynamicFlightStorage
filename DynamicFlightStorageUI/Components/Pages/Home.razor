@@ -28,8 +28,8 @@
             <h3>Run an experiment: <button class="btn btn-sm" @onclick="StateHasChanged">Refresh state</button></h3>
             <p>An experiment is running: @(orchestrator.CheckExperimentRunning())</p>
             @if(orchestrator.CurrentSimulationTime is { } simTime
-             && orchestrator.CurrentExperiment is { } currEx
-             && orchestrator.CurrentExperimentResult is { } result)
+            && orchestrator.CurrentExperiment is { } currEx
+            && orchestrator.CurrentExperimentResult is { } result)
             {
                 bool experimentDone = result.UTCEndTime is not null;
                 string barColor = "";
@@ -305,6 +305,8 @@
         { "Simple PostgreSQL (EF-Core backed)", (w, e) => new SimplePostgreSQLDataStore.SimplePostgreSQLDataStore(w, e) },
         { "Optimized PostgreSQL (BTree indexes)", (w, e) => new OptimizedPostgreSQLDataStore.BTreePostgreSQLDataStore(w, e) },
         { "Spatial PostreSQL (GIST index)", (w, e) => new SpatialGISTPostgreSQL.SpatialPostgreSQLDatastore(w, e)},
+        { "Neo4J Relational", (w, e) => new Neo4jDataStore.RelationalNeo4jDataStore(w, e) },
+        { "Neo4J Time-Buckets", (w, e) => new Neo4jDataStore.TimeBucketedNeo4jDataStore(w, e) },
     };
 
     private async Task CreateConsumer()
@@ -321,10 +323,10 @@
                 OnOrchestratorLog(new LogEntry(LogLevel.Error, $"Failed to find data store {SelectedDataStore}", null));
                 return;
             }
-            
+
             var weatherService = new WeatherService();
             OnOrchestratorLog(new LogEntry(LogLevel.Information, $"Creating internal consumer of type {SelectedDataStore}", null));
-            
+
             IEventDataStore dataStore = dataStoreFactory(weatherService, eventbus);
 
             var newConsumer = new SimulationConsumer(eventbus,
@@ -338,6 +340,10 @@
 
             consumer = newConsumer;
             KnownClientIds.Add(consumer.ClientId);
+        }
+        catch(Exception e)
+        {
+            OnOrchestratorLog(new LogEntry(LogLevel.Error, $"Failed to start consumer of type {SelectedDataStore}", e));
         }
         finally
         {

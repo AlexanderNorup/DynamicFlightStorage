@@ -108,7 +108,10 @@ namespace SimplePostgreSQLDataStore
 
                 await _flightRecalculation.PublishRecalculationAsync(flight.FlightIdentification).ConfigureAwait(false);
             }
-            await _dbContext.SaveChangesAsync();
+            if (affectedFlights.Count > 0)
+            {
+                await _dbContext.SaveChangesAsync();
+            }
         }
 
         public async Task DeleteFlightAsync(string id)
