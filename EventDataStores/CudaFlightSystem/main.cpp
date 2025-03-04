@@ -34,10 +34,6 @@ int main(int argc, char* argv[]) {
 	std::cout << "CUDA Sort and Sweep Box Collision Detection" << std::endl;
 	std::cout << "==============================================" << std::endl;
 
-	// TODO: Move to bottom of file
-	testCollisionSystem();
-	std::cin.get();
-
 	// Parse command line arguments or use default values
 	int numFlights = 10000000;
 	if (argc > 1) {
@@ -326,6 +322,9 @@ int main(int argc, char* argv[]) {
 	}
 
 	emptyFlightSystem.cleanup();
+
+	// Do collision tests
+	testCollisionSystem();
 
 	// Wait for user input before closing the console window
 	std::cout << "\nPress Enter to exit..." << std::endl;

@@ -4,7 +4,7 @@
 #include "collisionSystemTest.h"
 
 void testCase(char* desc, Flight* flight, bool shouldCollide, FlightSystem* flightSystem) {
-	std::cout << "\n== Test case: " << desc << " ==" << std::endl;
+	std::cout << "\n== Collision Test case: " << desc << " ==" << std::endl;
 
 	std::vector<int> indicies(1, 0);
 	flightSystem->updateFlights(indicies.data(), &flight->position, &flight->flightDuration, 1);
@@ -49,10 +49,54 @@ void testCollisionSystem() {
 	}
 
 	// Run tests
+	flight.position = { 0, 0, 0 };
 	testCase("Basic collision", &flight, true, &flightsystem);
 
 	flight.position = { 20, 20, 20 };
-	testCase("Basic non-collision", &flight, true, &flightsystem);
+	testCase("Basic non-collision", &flight, false, &flightsystem);
+
+	flight.flightDuration = 0;
+	flight.position = { 11, 0, 0 };
+	testCase("Outside x-coord (pos)", &flight, false, &flightsystem);
+
+	flight.position = { -11, 0, 0 };
+	testCase("Outside x-coord (neg)", &flight, false, &flightsystem);
+
+	flight.position = { 0, 11, 0 };
+	testCase("Outside y-coord (pos)", &flight, false, &flightsystem);
+
+	flight.position = { 0, -11, 0 };
+	testCase("Outside y-coord (neg)", &flight, false, &flightsystem);
+
+	flight.position = { 0, 0, 11 };
+	testCase("Outside z-coord (pos)", &flight, false, &flightsystem);
+
+	flight.position = { 0, 0, -11 };
+	testCase("Outside z-coord (neg)", &flight, false, &flightsystem);
+
+	flight.position = { 0, 11, 11 };
+	testCase("Outside y-z-coord (pos)", &flight, false, &flightsystem);
+
+	flight.position = { 0, -11, -11 };
+	testCase("Outside y-z-coord (neg)", &flight, false, &flightsystem);
+
+	// Now we test with duration
+	flight.flightDuration = 100;
+	flight.position = { 0, 0, 0 };
+	testCase("Inside long duration", &flight, true, &flightsystem);
+
+	flight.position = { -11, 0, 0 };
+	testCase("Outside overlapping duration", &flight, true, &flightsystem);
+
+	flight.position = { -11, 11, 0 };
+	testCase("Outside overlapping duration, but wrong y", &flight, false, &flightsystem);
+
+	flight.flightDuration = 5;
+	flight.position = { -1, 0, 0 };
+	testCase("Purely inside", &flight, true, &flightsystem);
+
+	flight.position = { -11, 0, 0 };
+	testCase("From outside, stops inside", &flight, true, &flightsystem);
 
 	std::cout << "\nCollision system test complete." << std::endl;
 }
