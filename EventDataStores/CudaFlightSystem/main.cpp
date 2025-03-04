@@ -5,18 +5,18 @@
 #include <algorithm>
 #include <iomanip>
 #include <string>
+#include "console_colors.h"
 #include "flight.h"
 #include "flight_system.h"
-
-#define COLOR_RED "\033[31m"
-#define COLOR_GREEN "\033[32m"
-#define COLOR_RESET "\033[0m"
+#include "collisionSystemTest.h"
 
 // Utility function to generate random point flights
-void generateRandomFlights(std::vector<Flight>& flights, int count, float range) {
+void generateRandomFlights(std::vector<Flight>& flights, int count, int positionRange, int durationRange) {
 	std::random_device rd;
 	std::mt19937 gen(rd());
-	std::uniform_real_distribution<float> posDist(-range, range);
+	std::uniform_int_distribution<int> posDist(-positionRange, positionRange);
+	durationRange = std::max(50, durationRange);
+	std::uniform_int_distribution<int> durDist(durationRange - 50, durationRange);
 
 	flights.resize(count);
 
@@ -24,6 +24,7 @@ void generateRandomFlights(std::vector<Flight>& flights, int count, float range)
 		flights[i].position.x = posDist(gen);
 		flights[i].position.y = posDist(gen);
 		flights[i].position.z = posDist(gen);
+		flights[i].flightDuration = durDist(gen);
 		flights[i].id = i;
 	}
 }
@@ -33,6 +34,10 @@ int main(int argc, char* argv[]) {
 	std::cout << "CUDA Sort and Sweep Box Collision Detection" << std::endl;
 	std::cout << "==============================================" << std::endl;
 
+	// TODO: Move to bottom of file
+	testCollisionSystem();
+	std::cin.get();
+
 	// Parse command line arguments or use default values
 	int numFlights = 10000000;
 	if (argc > 1) {
@@ -41,8 +46,8 @@ int main(int argc, char* argv[]) {
 
 	// Create a bounding box
 	BoundingBox box;
-	box.min = { -10.0f, -10.0f, -10.0f };
-	box.max = { 10.0f, 10.0f, 10.0f };
+	box.min = { -10, -10, -10 };
+	box.max = { 10, 10, 10 };
 
 	std::cout << "Bounding Box: ["
 		<< box.min.x << ", " << box.min.y << ", " << box.min.z << "] to ["
@@ -51,7 +56,7 @@ int main(int argc, char* argv[]) {
 	// Generate random flights
 	std::vector<Flight> flights;
 	std::cout << "Generating " << numFlights << " random point flights..." << std::endl;
-	generateRandomFlights(flights, numFlights, 20.0f);
+	generateRandomFlights(flights, numFlights, 20.0f, 100);
 
 	// Create and initialize flight system
 	FlightSystem flightSystem;
@@ -111,12 +116,14 @@ int main(int argc, char* argv[]) {
 	int numFlightsToUpdate = std::min(1000, numFlights);
 	std::vector<int> updateIndices(numFlightsToUpdate);
 	std::vector<Vec3> newPositions(numFlightsToUpdate);
+	std::vector<int> newDurations(numFlightsToUpdate);
 
 	// Select random flights to update
 	std::random_device rd;
 	std::mt19937 gen(rd());
 	std::uniform_int_distribution<> idxDist(0, numFlights - 1);
-	std::uniform_real_distribution<float> posDist(-15.0f, 15.0f);
+	std::uniform_int_distribution<> posDist(-15, 15);
+	std::uniform_int_distribution<> posDuration(60, 100);
 
 	std::cout << "Updating positions of " << numFlightsToUpdate << " random flights..." << std::endl;
 
@@ -125,11 +132,12 @@ int main(int argc, char* argv[]) {
 		newPositions[i].x = posDist(gen);
 		newPositions[i].y = posDist(gen);
 		newPositions[i].z = posDist(gen);
+		newDurations[i] = posDuration(gen);
 	}
 
 	// Update flights in GPU memory
 	auto startUpdate = std::chrono::high_resolution_clock::now();
-	success = flightSystem.updateFlights(updateIndices.data(), newPositions.data(), numFlightsToUpdate);
+	success = flightSystem.updateFlights(updateIndices.data(), newPositions.data(), newDurations.data(), numFlightsToUpdate);
 	auto endUpdate = std::chrono::high_resolution_clock::now();
 
 	if (!success) {
@@ -177,7 +185,8 @@ int main(int argc, char* argv[]) {
 
 	Flight newFlight;
 	newFlight.id = 1337;
-	newFlight.position = { 0.0f, 0.0f, 0.0f };
+	newFlight.flightDuration = 420;
+	newFlight.position = { 0, 0, 0 };
 
 	success = flightSystem.addFlights(&newFlight, 1);
 
@@ -251,6 +260,13 @@ int main(int argc, char* argv[]) {
 	int newCollisionCountAfterRemove = std::count(gpuResults.begin(), gpuResults.end(), 1);
 
 	std::cout << "Stored Flights before removal: " << numFlights << " and after removal: " << countAfterRemoval << std::endl;
+	if (numFlights - numFlightsToRemove != countAfterRemoval) {
+		std::cerr << COLOR_RED << "Flight count mismatch after removal (diff=" << (numFlights - countAfterRemoval) << ")" << COLOR_RESET << std::endl;
+	}
+	else {
+		std::cout << COLOR_GREEN << "Flight count matches expected value after removal" << COLOR_RESET << std::endl;
+	}
+
 	std::cout << "After removing " << numFlightsToRemove << " flights: Detected " << newCollisionCountAfterRemove << " points inside the bounding box." << std::endl;
 	if (newCollisionCountAfterRemove < newCollisionCountAfterAdd) {
 		std::cout << COLOR_GREEN << "Removing flights also removed some collisions as expected." << COLOR_RESET << std::endl;
@@ -281,7 +297,7 @@ int main(int argc, char* argv[]) {
 	int flightsToAdd = 1000;
 	std::vector<Flight> newFlights;
 	std::cout << "Generating " << flightsToAdd << " random point flights..." << std::endl;
-	generateRandomFlights(newFlights, flightsToAdd, 20.0f);
+	generateRandomFlights(newFlights, flightsToAdd, 20.0f, 100);
 	success = emptyFlightSystem.addFlights(newFlights.data(), flightsToAdd);
 	if (!success) {
 		std::cerr << COLOR_RED << "Adding flights to empty system failed" << COLOR_RESET << std::endl;
@@ -317,3 +333,4 @@ int main(int argc, char* argv[]) {
 
 	return 0;
 }
+
