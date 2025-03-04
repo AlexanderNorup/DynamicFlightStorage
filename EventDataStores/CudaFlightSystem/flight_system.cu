@@ -10,11 +10,12 @@
 #include <iostream>
 
 // CUDA kernel to update specific flights
-__global__ void updateFlightsKernel(Flight* flights, int* indices, Vec3* newPositions, int updateCount) {
+__global__ void updateFlightsKernel(Flight* flights, int* indices, Vec3* newPositions, int* newDurations, int updateCount) {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (idx < updateCount) {
 		int flightIdx = indices[idx];
 		flights[flightIdx].position = newPositions[idx];
+		flights[flightIdx].flightDuration = newDurations[idx];
 	}
 }
 
@@ -24,13 +25,25 @@ __global__ void checkCollisionsKernel(Flight* flights, int numFlights,
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (idx < numFlights) {
 		int flightIdx = indices[idx];
-		Vec3 pos = flights[flightIdx].position;
+		Vec3 dep = flights[flightIdx].position;
+		int duration = flights[flightIdx].flightDuration;
 
-		// Check if point is inside the bounding box
+		// We must check if the box intersects with the flight.
+		// The flight is a LINE in 3D space made up of points (dep, dest) where dest.x = dep.x + duration
+		// Y and Z coordinates are the same. So if they're not in the box, the flight doesn't intersect the box.
+
+		bool yzCollision = (dep.y >= box.min.y) && (dep.y <= box.max.y) &&
+			(dep.z >= box.min.z) && (dep.z <= box.max.z);
+
+		if (!yzCollision) {
+			collisionResults[flightIdx] = 0;
+			return;
+		}
+
+		float xDest = dep.x + duration;
 		bool collision =
-			(pos.x >= box.min.x) && (pos.x <= box.max.x) &&
-			(pos.y >= box.min.y) && (pos.y <= box.max.y) &&
-			(pos.z >= box.min.z) && (pos.z <= box.max.z);
+			((dep.x >= box.min.x) && (dep.x <= box.max.x)) // Checks if flight starts inside the box
+			|| (dep.x < box.min.x && xDest > box.min.x); // Checks if flight intersects the box
 
 		collisionResults[flightIdx] = collision ? 1 : 0;
 	}
@@ -255,20 +268,21 @@ bool FlightSystem::removeFlights(int* indices, int count) {
 }
 
 // Update specific flights with new positions
-bool FlightSystem::updateFlights(int* indices, Vec3* newPositions, int updateCount) {
+bool FlightSystem::updateFlights(int* indices, Vec3* newPositions, int* newDurations, int updateCount) {
 	if (!initialized) {
 		std::cerr << "Flight system not initialized" << std::endl;
 		return false;
 	}
 
-	if (updateCount <= 0 || indices == nullptr || newPositions == nullptr) {
+	if (updateCount <= 0 || indices == nullptr || newPositions == nullptr || newDurations == nullptr) {
 		std::cerr << "Invalid data provided for flight update" << std::endl;
 		return false;
 	}
 
-	// Allocate device memory for indices and new positions
+	// Allocate device memory for indices, new positions and durations
 	int* d_updateIndices;
 	Vec3* d_newPositions;
+	int* d_newDurations;
 
 	cudaError_t error = cudaMalloc(&d_updateIndices, updateCount * sizeof(int));
 	if (error != cudaSuccess) {
@@ -285,16 +299,26 @@ bool FlightSystem::updateFlights(int* indices, Vec3* newPositions, int updateCou
 		return false;
 	}
 
+	error = cudaMalloc(&d_newDurations, updateCount * sizeof(int));
+	if (error != cudaSuccess) {
+		std::cerr << "Failed to allocate device memory for new durations: "
+			<< cudaGetErrorString(error) << std::endl;
+		cudaFree(d_updateIndices);
+		cudaFree(d_newPositions);
+		return false;
+	}
+
 	// Copy indices and new positions to device
 	cudaMemcpy(d_updateIndices, indices, updateCount * sizeof(int), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_newPositions, newPositions, updateCount * sizeof(Vec3), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_newDurations, newDurations, updateCount * sizeof(int), cudaMemcpyHostToDevice);
 
 	// Launch kernel to update flights
 	int blockSize = 256;
 	int numBlocks = (updateCount + blockSize - 1) / blockSize;
 
 	updateFlightsKernel << <numBlocks, blockSize >> > (
-		d_flights, d_updateIndices, d_newPositions, updateCount);
+		d_flights, d_updateIndices, d_newPositions, d_newDurations, updateCount);
 
 	// Wait for kernel to finish
 	cudaDeviceSynchronize();
@@ -305,12 +329,14 @@ bool FlightSystem::updateFlights(int* indices, Vec3* newPositions, int updateCou
 		std::cerr << "Error updating flights: " << cudaGetErrorString(error) << std::endl;
 		cudaFree(d_updateIndices);
 		cudaFree(d_newPositions);
+		cudaFree(d_newDurations);
 		return false;
 	}
 
 	// Free temporary device memory
 	cudaFree(d_updateIndices);
 	cudaFree(d_newPositions);
+	cudaFree(d_newDurations);
 
 	// Re-sort flights by X coordinate after update
 	sortFlightsByX();

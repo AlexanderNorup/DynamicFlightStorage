@@ -3,13 +3,16 @@
 
 // Vector structure for 3D coordinates
 struct Vec3 {
-	float x, y, z;
+	int x, // Time coordinate (unix time seconds)
+		y,   // Weather coordinate
+		z;   // Airport coordinate
 };
 
 // Flight structure (point in space)
 struct Flight {
 	Vec3 position;
 	int id;
+	int flightDuration; // In seconds
 };
 
 struct BoundingBox {

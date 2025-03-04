@@ -85,10 +85,13 @@
     <CudaCompile Include="flight_system.cu" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="collisionSystemTest.h" />
+    <ClInclude Include="console_colors.h" />
     <ClInclude Include="flight.h" />
     <ClInclude Include="flight_system.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="collisionSystemTest.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
