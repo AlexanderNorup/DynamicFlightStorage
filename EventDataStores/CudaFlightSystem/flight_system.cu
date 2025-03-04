@@ -356,6 +356,34 @@ void FlightSystem::sortFlightsByX() {
 		CompareByX(d_flights));
 }
 
+// Custom compare function for lower/upper bound search to compare x-coordinate
+struct CompareToLowerX {
+	Flight* flights;
+
+	CompareToLowerX(Flight* _flights) : flights(_flights) {}
+
+	__host__ __device__ bool operator()(int idx, int val) const {
+		return flights[idx].position.x < val;
+	}
+};
+
+int* FlightSystem::getMinMaxIndex(int min, int max) {
+
+	// Sort flights by their x-coordinate
+	int* lower = thrust::lower_bound(thrust::device, d_indices, d_indices + numFlights, min,
+		CompareToLowerX(d_flights));
+	int* higher = thrust::upper_bound(thrust::device, d_indices, d_indices + numFlights, max,
+		CompareToLowerX(d_flights));
+
+	std::vector<int> minMaxIdx(2, 0);
+	cudaMemcpy(minMaxIdx.data(), lower, sizeof(int), cudaMemcpyDeviceToHost);
+	cudaMemcpy(minMaxIdx.data() + 1, higher, sizeof(int), cudaMemcpyDeviceToHost);
+
+	// TODO: Check if this is right. It might be. I don't know.
+
+	return minMaxIdx.data();
+}
+
 __global__ void getMinMaxKernel(int* indicies, Flight* flights, int numFlights, int min, int max, int* minMaxIdx) {
 	if (blockIdx.x == 0) {
 		minMaxIdx[0] = 1;
@@ -374,11 +402,13 @@ bool FlightSystem::detectCollisions(const BoundingBox& box, int* collisionResult
 
 	// Binary search to find the first flight that might intersect the box
 
+	int* minTest = getMinMaxIndex(box.min.x, box.max.x);
+
 	int* d_minMaxIdx;
 	cudaMalloc(&d_minMaxIdx, 2 * sizeof(int));
 
 	// TODO: Make Github Copilot write this instead. I am tired.
-	getMinMaxKernel << <2, 1 >> > (d_indices, d_flights, numFlights, box.min.x, box.max.x, d_minMaxIdx);
+	//getMinMaxKernel << <2, 1 >> > (d_indices, d_flights, numFlights, box.min.x, box.max.x, d_minMaxIdx);
 
 	// Wait for kernel to finish
 	cudaDeviceSynchronize();

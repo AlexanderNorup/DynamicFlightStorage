@@ -43,6 +43,8 @@ private:
 	// Private method to sort flights by X coordinate
 	void sortFlightsByX();
 
+	int* getMinMaxIndex(int min, int max);
+
 	// Allocate or reallocate device memory
 	bool allocateDeviceMemory(int requiredSize);
 };
