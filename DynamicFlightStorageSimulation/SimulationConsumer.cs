@@ -43,7 +43,10 @@ namespace DynamicFlightStorageSimulation
         private async Task OnWeatherRecieved(WeatherEvent weatherEvent)
         {
             _consumerLogger.LogWeatherData(weatherEvent);
-            cleanState = false;
+            if (cleanState)
+            {
+                cleanState = false;
+            }
             var weather = weatherEvent.Weather;
             _weatherService.AddWeather(weather);
             await _eventDataStore.AddWeatherAsync(weather).ConfigureAwait(false);
@@ -52,14 +55,17 @@ namespace DynamicFlightStorageSimulation
         private async Task OnFlightRecieved(FlightEvent flight)
         {
             _consumerLogger.LogFlightData(flight);
-            cleanState = false;
+            if (cleanState)
+            {
+                cleanState = false;
+            }
             await _eventDataStore.AddOrUpdateFlightAsync(flight.Flight).ConfigureAwait(false);
         }
 
         private async Task ResetStateAsync(SystemMessage message)
         {
             var experimentId = message.Message;
-            _weatherService.Clear();
+            _weatherService.ResetWeatherService();
             _consumerLogger.ResetLogger();
             if (!cleanState)
             {

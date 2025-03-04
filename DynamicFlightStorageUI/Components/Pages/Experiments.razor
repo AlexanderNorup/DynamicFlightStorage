@@ -18,7 +18,7 @@
                 
                 <h5>Results</h5>
                 <ul>
-                    @foreach(var result in experiment.ExperimentResults.OrderBy(x=>x.UTCEndTime))
+                    @foreach(var result in experiment.ExperimentResults.OrderBy(x=>x.UTCStartTime))
                     {
                         <li>
                             @if (result.ExperimentSuccess)
