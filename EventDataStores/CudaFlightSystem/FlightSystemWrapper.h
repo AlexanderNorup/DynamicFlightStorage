@@ -15,8 +15,7 @@ extern "C" {
 	FLIGHT_API void DestroyFlightSystem(void* flightSystem);
 
 	// Initialize flights
-	FLIGHT_API bool InitializeFlights(void* flightSystem,
-		float* positions, int count);
+	FLIGHT_API bool InitializeFlights(void* flightSystem);
 
 	// Add new flights to the system
 	FLIGHT_API bool AddFlights(void* flightSystem,

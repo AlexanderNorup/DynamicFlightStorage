@@ -22,24 +22,15 @@ void DestroyFlightSystem(void* flightSystem) {
 }
 
 // Initialize flights in the system
-bool InitializeFlights(void* flightSystem, float* positions, int count) {
-	if (!flightSystem || !positions || count <= 0) {
+bool InitializeFlights(void* flightSystem) {
+	if (!flightSystem) {
 		return false;
 	}
 
 	try {
 		FlightSystem* system = static_cast<FlightSystem*>(flightSystem);
-		std::vector<Flight> flights(count);
 
-		// Convert flat float array into flights
-		for (int i = 0; i < count; i++) {
-			flights[i].position.x = positions[i * 3];
-			flights[i].position.y = positions[i * 3 + 1];
-			flights[i].position.z = positions[i * 3 + 2];
-			flights[i].id = i;
-		}
-
-		return system->initialize(flights.data(), count);
+		return system->initialize(nullptr, 0);
 	}
 	catch (...) {
 		return false;
@@ -47,8 +38,8 @@ bool InitializeFlights(void* flightSystem, float* positions, int count) {
 }
 
 // Add new flights to the system
-bool AddFlights(void* flightSystem, float* positions, int count) {
-	if (!flightSystem || !positions || count <= 0) {
+bool AddFlights(void* flightSystem, int* ids, int* positions, int* durations, int count) {
+	if (!flightSystem || !ids || !positions || !durations || count <= 0) {
 		return false;
 	}
 
@@ -56,15 +47,13 @@ bool AddFlights(void* flightSystem, float* positions, int count) {
 		FlightSystem* system = static_cast<FlightSystem*>(flightSystem);
 		std::vector<Flight> flights(count);
 
-		// Get the current flight count for ID assignment
-		int startId = system->getFlightCount();
-
 		// Convert flat float array into flights
 		for (int i = 0; i < count; i++) {
 			flights[i].position.x = positions[i * 3];
 			flights[i].position.y = positions[i * 3 + 1];
 			flights[i].position.z = positions[i * 3 + 2];
-			flights[i].id = startId + i;
+			flights[i].flightDuration = durations[i];
+			flights[i].id = ids[i];
 		}
 
 		return system->addFlights(flights.data(), count);
