@@ -13,6 +13,7 @@
     <ProjectReference Include="..\EventDataStores\BasicEventDataStore\BasicEventDataStore.csproj" />
     <ProjectReference Include="..\EventDataStores\OptimizedPostgreSQLDataStore\OptimizedPostgreSQLDataStore.csproj" />
     <ProjectReference Include="..\EventDataStores\SimplePostgreSQLDataStore\SimplePostgreSQLDataStore.csproj" />
+    <ProjectReference Include="..\SpatialGISTPostgreSQL\SpatialGISTPostgreSQL.csproj" />
   </ItemGroup>
 
 </Project>

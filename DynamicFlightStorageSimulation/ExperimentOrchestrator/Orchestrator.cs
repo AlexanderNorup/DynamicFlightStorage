@@ -479,6 +479,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 if (CurrentSimulationTime >= CurrentExperiment.SimulatedEndTime)
                 {
                     _logger.LogInformation("Simulation Time done. Waiting for consumers to consume the rest of the data.");
+                    await Task.Delay(TimeSpan.FromSeconds(30));
                     await _consumingMonitor.WaitForExchangesToBeConsumedAsync(ExperimentRunnerClientIds.ToArray(), ExperimentCancellationToken.Token);
                     CurrentExperimentResult.UTCEndTime = DateTime.UtcNow;
                     CurrentExperimentResult.ExperimentSuccess = true;
