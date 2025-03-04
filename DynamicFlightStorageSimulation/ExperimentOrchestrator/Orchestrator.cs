@@ -15,6 +15,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
         public const int LatencyTestFrequencyMs = 100;
         public const int ExperimentLoopIntervalMs = 900;
         public const int TimeToRecalculateMs = 5000;
+        public const int MinimumWaitTimeForConsumptionMs = 15_000;
 
         private SimulationEventBus _eventBus;
         private LatencyTester _latencyTester;
@@ -167,7 +168,6 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
                 ExperimentCancellationToken = new CancellationTokenSource();
                 var ccToken = ExperimentCancellationToken;
-                var minimumWaitPreloadWaitTime = Task.Delay(TimeSpan.FromSeconds(10));
 
                 var result = await SendSystemMessageAndWaitForResponseAsync(new SystemMessage()
                 {
@@ -191,18 +191,18 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
                 // Do preload here.
                 var st = Stopwatch.StartNew();
+                var minimumWaitPreloadWaitTime = Task.Delay(TimeSpan.FromMilliseconds(MinimumWaitTimeForConsumptionMs));
+                
                 _weatherInjector.SkipWeatherUntil(CurrentExperiment.SimulatedPreloadStartTime, ccToken.Token);
                 await _weatherInjector.PublishWeatherUntil(CurrentExperiment.SimulatedPreloadEndTime, CurrentExperiment.Id, _logger, ccToken.Token).ConfigureAwait(false);
+                
                 _logger.LogInformation("Finished preloading weather. Took {Time}. Waiting to be consumed...", st.Elapsed);
-
                 await minimumWaitPreloadWaitTime; // Wait for the minium time of 10 seconds before checking if everything is consumed
                 await _consumingMonitor.WaitForExchangesToBeConsumedAsync(ExperimentRunnerClientIds.ToArray(), ccToken.Token);
-                minimumWaitPreloadWaitTime = Task.Delay(TimeSpan.FromSeconds(10));
+                minimumWaitPreloadWaitTime = Task.Delay(TimeSpan.FromMilliseconds(MinimumWaitTimeForConsumptionMs));
                 ccToken.Token.ThrowIfCancellationRequested();
 
                 st.Restart();
-
-                _flightInjector.SkipFlightsUntil(CurrentExperiment.SimulatedPreloadStartTime, ccToken.Token);
 
                 if (CurrentExperiment.PreloadAllFlights)
                 {
@@ -210,6 +210,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 }
                 else
                 {
+                    _flightInjector.SkipFlightsUntil(CurrentExperiment.SimulatedPreloadStartTime, ccToken.Token);
                     await _flightInjector.PublishFlightsUntil(CurrentExperiment.SimulatedPreloadEndTime, CurrentExperiment.Id, _logger, ccToken.Token).ConfigureAwait(false);
                 }
                 _logger.LogInformation("Finished preloading flights. Took {Time}", st.Elapsed);
@@ -490,11 +491,12 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 if (CurrentSimulationTime >= CurrentExperiment.SimulatedEndTime)
                 {
                     _logger.LogInformation("Simulation Time done. Waiting for consumers to consume the rest of the data.");
+                    await Task.Delay(TimeSpan.FromMilliseconds(MinimumWaitTimeForConsumptionMs)).ConfigureAwait(false);
                     await _consumingMonitor.WaitForExchangesToBeConsumedAsync(ExperimentRunnerClientIds.ToArray(), ExperimentCancellationToken.Token);
                     CurrentExperimentResult.UTCEndTime = DateTime.UtcNow;
                     CurrentExperimentResult.ExperimentSuccess = true;
                     await _experimentDataCollector.AddOrUpdateExperimentResultAsync(CurrentExperimentResult);
-                    await Task.Delay(TimeSpan.FromSeconds(15)); // Simply to ensure we get the rest of the recalculaitons if some of them were to be in the last dataset
+                    await Task.Delay(TimeSpan.FromSeconds(15)).ConfigureAwait(false); // Simply to ensure we get the rest of the recalculaitons if some of them were to be in the last dataset
                     await _experimentDataCollector.FinishDataCollectionAsync(ExperimentRunnerClientIds);
                     _logger.LogInformation("Experiment {Id} ended successfully.", CurrentExperiment.Id);
                     ResetExperimentState();

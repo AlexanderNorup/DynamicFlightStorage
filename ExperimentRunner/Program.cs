@@ -4,8 +4,6 @@ using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
-using Microsoft.Extensions.Options;
 using System.ComponentModel.DataAnnotations;
 
 namespace ExperimentRunner
@@ -44,7 +42,7 @@ namespace ExperimentRunner
             var weatherService = new WeatherService();
 
             // The event store to experiment with. Change me!
-            var eventDataStore = new BasicEventDataStore.BasicEventDataStore(weatherService, simulationEventBus);
+            var eventDataStore = new Neo4jDataStore.TimeBucketedNeo4jDataStore(weatherService, simulationEventBus);
 
             logger.LogInformation("Event data store of type {Type} ready", eventDataStore.GetType().FullName);
             using var consumer = new SimulationConsumer(simulationEventBus, weatherService, consumerDataLogger, eventDataStore, factory.CreateLogger<SimulationConsumer>());

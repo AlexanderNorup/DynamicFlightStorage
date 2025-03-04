@@ -228,7 +228,6 @@ public static class WeatherCreator
         {
             throw new ArgumentException($"Invalid date for {identifier}");
         }
-
-        return DateTime.Parse(dateString);
+        return DateTime.Parse(dateString).ToUniversalTime();
     }
 }
