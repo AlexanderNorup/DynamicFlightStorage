@@ -7,6 +7,8 @@
 #include <thrust/sequence.h>
 #include <thrust/copy.h>
 #include <thrust/remove.h>
+#include <thrust/device_vector.h>
+#include <thrust/binary_search.h>
 #include <iostream>
 
 // CUDA kernel to update specific flights
@@ -354,10 +356,46 @@ void FlightSystem::sortFlightsByX() {
 		CompareByX(d_flights));
 }
 
+__global__ void getMinMaxKernel(int* indicies, Flight* flights, int numFlights, int min, int max, int* minMaxIdx) {
+	if (blockIdx.x == 0) {
+		minMaxIdx[0] = 1;
+	}
+	else if (blockIdx.x == 1) {
+		minMaxIdx[1] = 2;
+	}
+}
+
 // Detect collisions with a bounding box
 bool FlightSystem::detectCollisions(const BoundingBox& box, int* collisionResults) {
 	if (!initialized) {
 		std::cerr << "Flight system not initialized" << std::endl;
+		return false;
+	}
+
+	// Binary search to find the first flight that might intersect the box
+
+	int* d_minMaxIdx;
+	cudaMalloc(&d_minMaxIdx, 2 * sizeof(int));
+
+	// TODO: Make Github Copilot write this instead. I am tired.
+	getMinMaxKernel << <2, 1 >> > (d_indices, d_flights, numFlights, box.min.x, box.max.x, d_minMaxIdx);
+
+	// Wait for kernel to finish
+	cudaDeviceSynchronize();
+
+	// Check for errors
+	cudaError_t error = cudaGetLastError();
+	if (error != cudaSuccess) {
+		std::cerr << "Error binary searching for idx lookup: " << cudaGetErrorString(error) << std::endl;
+		cudaFree(d_minMaxIdx);
+		return false;
+	}
+
+	std::vector<int> minMaxIdx(2, 0);
+	error = cudaMemcpy(minMaxIdx.data(), d_minMaxIdx, 2 * sizeof(int), cudaMemcpyDeviceToHost);
+	if (error != cudaSuccess) {
+		std::cerr << "Failed to copy collision results to host: "
+			<< cudaGetErrorString(error) << std::endl;
 		return false;
 	}
 
@@ -372,7 +410,7 @@ bool FlightSystem::detectCollisions(const BoundingBox& box, int* collisionResult
 	cudaDeviceSynchronize();
 
 	// Check for errors
-	cudaError_t error = cudaGetLastError();
+	error = cudaGetLastError();
 	if (error != cudaSuccess) {
 		std::cerr << "Error detecting collisions: " << cudaGetErrorString(error) << std::endl;
 		return false;
