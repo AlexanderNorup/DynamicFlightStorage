@@ -16,16 +16,23 @@ void generateRandomFlights(std::vector<Flight>& flights, int count, int position
 	std::mt19937 gen(rd());
 	std::uniform_int_distribution<int> posDist(-positionRange, positionRange);
 	durationRange = std::max(50, durationRange);
-	std::uniform_int_distribution<int> durDist(durationRange - durationRange/2, durationRange);
+	std::uniform_int_distribution<int> durDist(durationRange - durationRange / 2, durationRange);
 
 	flights.resize(count);
 
 	for (int i = 0; i < count; i++) {
 		flights[i].position.x = posDist(gen);
 		flights[i].position.y = posDist(gen);
-		flights[i].position.z = posDist(gen);
+		flights[i].position.z = new int[2] { posDist(gen), posDist(gen) };
+		flights[i].position.zLength = 2;
 		flights[i].flightDuration = durDist(gen);
 		flights[i].id = i;
+	}
+}
+
+void freeFlights(std::vector<Flight>& flights) {
+	for (int i = 0; i < flights.size(); i++) {
+		delete[] flights[i].position.z;
 	}
 }
 
@@ -35,7 +42,7 @@ int main(int argc, char* argv[]) {
 	std::cout << "==============================================" << std::endl;
 
 	// Parse command line arguments or use default values
-	int numFlights = 10000000;
+	int numFlights = 10000;
 	if (argc > 1) {
 		numFlights = std::atoi(argv[1]);
 	}
@@ -61,6 +68,7 @@ int main(int argc, char* argv[]) {
 		std::cerr << COLOR_RED << "Failed to initialize flight system" << COLOR_RESET << std::endl;
 		return 1;
 	}
+	freeFlights(flights);
 
 	if (flightSystem.getFlightCount() <= 0) {
 		std::cerr << COLOR_RED << "Flight system initialized with 0 flights" << COLOR_RESET << std::endl;
@@ -111,7 +119,7 @@ int main(int argc, char* argv[]) {
 	// Demonstrate updating specific flights
 	int numFlightsToUpdate = std::min(1000, numFlights);
 	std::vector<int> updateIndices(numFlightsToUpdate);
-	std::vector<Vec3> newPositions(numFlightsToUpdate);
+	std::vector<FlightPosition> newPositions(numFlightsToUpdate);
 	std::vector<int> newDurations(numFlightsToUpdate);
 
 	// Select random flights to update
@@ -127,7 +135,8 @@ int main(int argc, char* argv[]) {
 		updateIndices[i] = idxDist(gen);
 		newPositions[i].x = posDist(gen);
 		newPositions[i].y = posDist(gen);
-		newPositions[i].z = posDist(gen);
+		newPositions[i].z = new int[2] { posDist(gen), posDist(gen) };
+		newPositions[i].zLength = 2;
 		newDurations[i] = posDuration(gen);
 	}
 
@@ -139,6 +148,10 @@ int main(int argc, char* argv[]) {
 	if (!success) {
 		std::cerr << COLOR_RED << "Failed to update flights" << COLOR_RESET << std::endl;
 		return 1;
+	}
+
+	for (int i = 0; i < numFlightsToUpdate; i++) {
+		delete[] newPositions[i].z; // Clear memory
 	}
 
 	std::chrono::duration<double, std::milli> updateTime = endUpdate - startUpdate;
@@ -177,21 +190,31 @@ int main(int argc, char* argv[]) {
 
 	// Test adding a single flight
 	std::cout << "\nAdding just a single flight" << std::endl;
-	auto startAddFlight = std::chrono::high_resolution_clock::now();
 
 	Flight newFlight;
 	newFlight.id = 1337;
 	newFlight.flightDuration = 420;
-	newFlight.position = { 0, 0, 0 };
+	newFlight.position = { 0, 0, new int[1] {1}, 1 };
+
+	auto startAddFlight = std::chrono::high_resolution_clock::now();
 
 	success = flightSystem.addFlights(&newFlight, 1);
 
 	auto endAddFlight = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double, std::milli> addFlightTime = endAddFlight - startAddFlight;
 
+	delete[] newFlight.position.z;
+
 	if (!success) {
 		std::cerr << COLOR_RED << "Adding flight failed" << COLOR_RESET << std::endl;
 		return 1;
+	}
+
+	if (flightSystem.getFlightCount() == numFlights + 1) {
+		std::cout << COLOR_GREEN << "Adding a flight increased flight-count by 1 as expected. Count before: " << numFlights << " count now: " << flightSystem.getFlightCount() << COLOR_RESET << std::endl;
+	}
+	else {
+		std::cerr << COLOR_RED << "Adding a flight did not increase flight-count by 1. Count before: " << numFlights << " count now: " << flightSystem.getFlightCount() << COLOR_RESET << std::endl;
 	}
 
 	// Resize to fit the new flight
@@ -209,11 +232,11 @@ int main(int argc, char* argv[]) {
 
 	std::cout << "After adding one flight: Detected " << newCollisionCountAfterAdd << " points inside the bounding box." << std::endl;
 	if (newCollisionCountAfterAdd == newCollisionCount + 1) {
-		std::cout << COLOR_GREEN << "Adding a single flight worked as expected." << COLOR_RESET << std::endl;
+		std::cout << COLOR_GREEN << "Adding a single flight in the center added a new collision as expected." << COLOR_RESET << std::endl;
 	}
 	else
 	{
-		std::cerr << COLOR_RED << "Adding a single flight did not work as expected." << COLOR_RESET << std::endl;
+		std::cerr << COLOR_RED << "Adding a single flight did not add a new collision." << COLOR_RESET << std::endl;
 	}
 	std::cout << "Adding a flight took: " << std::fixed << std::setprecision(2)
 		<< addFlightTime.count() << " ms" << std::endl;
@@ -299,6 +322,7 @@ int main(int argc, char* argv[]) {
 		std::cerr << COLOR_RED << "Adding flights to empty system failed" << COLOR_RESET << std::endl;
 		return 1;
 	}
+	freeFlights(newFlights);
 
 	std::vector<int> collisionResults(flightsToAdd, 0);
 	success = emptyFlightSystem.detectCollisions(box, collisionResults.data());

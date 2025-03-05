@@ -20,7 +20,7 @@ public:
 	bool removeFlights(int* indices, int count);
 
 	// Update specific flights
-	bool updateFlights(int* indices, Vec3* newPositions, int* newDurations, int updateCount);
+	bool updateFlights(int* indices, FlightPosition* newPositions, int* newDurations, int updateCount);
 
 	// Detect collisions with a bounding box
 	bool detectCollisions(const BoundingBox& box, int* collisionResults);
@@ -49,6 +49,10 @@ private:
 
 	// Allocate or reallocate device memory
 	bool allocateDeviceMemory(int requiredSize);
+	int* copyToDeviceManaged(int* hostData, int count);
+	void copyZDataToDeviceManaged(Flight* hostFlights, int count);
+
+	std::vector<int*> managedMallocs;
 };
 
 #endif // FLIGHT_SYSTEM_H
