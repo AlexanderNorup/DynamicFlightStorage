@@ -16,9 +16,7 @@ void testCase(char* desc, Flight* flight, Vec3* position, bool shouldCollide, Fl
 	std::vector<int> indicies(1, 0);
 	flightSystem->updateFlights(indicies.data(), &flight->position, &flight->flightDuration, 1);
 
-	if (position != nullptr) {
-		delete[] flight->position.z;
-	}
+	delete[] flight->position.z;
 
 	BoundingBox box;
 	box.min = { -10, -10, -10 };
@@ -111,6 +109,22 @@ void testCollisionSystem() {
 
 	position = { -11, 0, 0 };
 	testCase("From outside, stops inside", &flight, &position, true, &flightsystem);
+
+	// Test cases with multiple z-values
+	flight.position.x = 0;
+	flight.position.y = 0;
+
+	flight.position.z = new int[3] { 1, 2, 3};
+	flight.position.zLength = 3;
+	testCase("Multiple z-values, all inside", &flight, nullptr, true, &flightsystem);
+
+	flight.position.z = new int[3] { -11, -12, 0 };
+	flight.position.zLength = 3;
+	testCase("Multiple z-values, 1 inside", &flight, nullptr, true, &flightsystem);
+
+	flight.position.z = new int[3] { -11, -12, -13 };
+	flight.position.zLength = 3;
+	testCase("Multiple z-values, all outside", &flight, nullptr, false, &flightsystem);
 
 	std::cout << "\nCollision system test complete." << std::endl;
 }
