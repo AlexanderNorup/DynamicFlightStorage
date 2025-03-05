@@ -9,7 +9,7 @@
 #include <iostream>
 
 // CUDA kernel to update specific flights
-__global__ void updateFlightsKernel(Flight* flights, int* indices, Vec3* newPositions, int* newDurations, int updateCount) {
+__global__ void updateFlightsKernel(Flight* flights, int* indices, FlightPosition* newPositions, int* newDurations, int updateCount) {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (idx < updateCount) {
 		int flightIdx = indices[idx];
@@ -24,18 +24,30 @@ __global__ void checkCollisionsKernel(Flight* flights, int numFlights,
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (idx < numFlights) {
 		int flightIdx = indices[idx + offset];
-		Vec3 dep = flights[flightIdx].position;
+		FlightPosition dep = flights[flightIdx].position;
 		int duration = flights[flightIdx].flightDuration;
+
+		collisionResults[flightIdx] = 0; // Default to no collision
 
 		// We must check if the box intersects with the flight.
 		// The flight is a LINE in 3D space made up of points (dep, dest) where dest.x = dep.x + duration
 		// Y and Z coordinates are the same. So if they're not in the box, the flight doesn't intersect the box.
 
-		bool yzCollision = (dep.y >= box.min.y) && (dep.y <= box.max.y) &&
-			(dep.z >= box.min.z) && (dep.z <= box.max.z);
+		bool yCollision = (dep.y >= box.min.y) && (dep.y <= box.max.y);
 
-		if (!yzCollision) {
-			collisionResults[flightIdx] = 0;
+		if (!yCollision) {
+			return;
+		}
+
+		bool zCollision = false;
+		for (int i = 0; i < dep.zLength; i++) {
+			if (dep.z[i] >= box.min.z && dep.z[i] <= box.max.z) {
+				zCollision = true;
+				break;
+			}
+		}
+
+		if (!zCollision) {
 			return;
 		}
 
@@ -152,6 +164,41 @@ bool FlightSystem::allocateDeviceMemory(int requiredSize) {
 	return true;
 }
 
+int* FlightSystem::copyToDeviceManaged(int* hostData, int count) {
+	int* d_managed;
+	cudaMalloc(&d_managed, count * sizeof(int));
+	managedMallocs.push_back(d_managed);
+	auto error = cudaMemcpy(d_managed, hostData, count * sizeof(int), cudaMemcpyHostToDevice);
+	if (error != cudaSuccess) {
+		std::cerr << "Failed to managed data to device: "
+			<< cudaGetErrorString(error) << std::endl;
+		return nullptr;
+	}
+	return d_managed;
+}
+
+// Makes a Flight* ready to be copied into device memory. 
+void FlightSystem::copyZDataToDeviceManaged(Flight* flights, int count) {
+	// Copy all the airports to device
+	std::vector<int> airports(count * 3);
+	for (int i = 0; i < count; i++) {
+		for (int j = 0; j < flights[i].position.zLength; j++) {
+			airports.push_back(flights[i].position.z[j]);
+		}
+	}
+	int* d_airports = copyToDeviceManaged(airports.data(), airports.size());
+	airports.clear();
+	int counter = 0;
+	for (int i = 0; i < count; i++) {
+		if (flights[i].position.zLength <= 0) {
+			flights[i].position.z = nullptr;
+			continue;
+		}
+		flights[i].position.z = d_airports + counter;
+		counter += flights[i].position.zLength;
+	}
+}
+
 // Initialize with flights from host
 bool FlightSystem::initialize(Flight* hostFlights, int count) {
 	// Clean up previous allocation if any
@@ -170,8 +217,16 @@ bool FlightSystem::initialize(Flight* hostFlights, int count) {
 	}
 
 	if (hostFlights != nullptr) {
+
+		// This is a bit flawed because we are making a copy of all incomming flights.
+		// I don't nessecarily have to do that, as I could either do it one at the time (saving memory-footprint)
+		// or somehow agree with the caller that I will take ownership of the data so I can free any allocated memory that I'm overriding
+		std::vector<Flight> flights(hostFlights, hostFlights + count);
+		copyZDataToDeviceManaged(flights.data(), count);
+
 		// Copy flights to device
-		cudaError_t error = cudaMemcpy(d_flights, hostFlights, numFlights * sizeof(Flight), cudaMemcpyHostToDevice);
+		cudaError_t error = cudaMemcpy(d_flights, flights.data(), numFlights * sizeof(Flight), cudaMemcpyHostToDevice);
+		flights.clear();
 		if (error != cudaSuccess) {
 			std::cerr << "Failed to copy flights to device: "
 				<< cudaGetErrorString(error) << std::endl;
@@ -207,8 +262,13 @@ bool FlightSystem::addFlights(Flight* newFlights, int count) {
 		}
 	}
 
+	// Copy all the airports to device
+	std::vector<Flight> flights(newFlights, newFlights + count);
+	copyZDataToDeviceManaged(flights.data(), count);
+
 	// Copy new flights to the end of existing flights
-	cudaError_t error = cudaMemcpy(d_flights + numFlights, newFlights, count * sizeof(Flight), cudaMemcpyHostToDevice);
+	cudaError_t error = cudaMemcpy(d_flights + numFlights, flights.data(), count * sizeof(Flight), cudaMemcpyHostToDevice);
+	flights.clear();
 	if (error != cudaSuccess) {
 		std::cerr << "Failed to copy new flights to device: "
 			<< cudaGetErrorString(error) << std::endl;
@@ -269,6 +329,9 @@ bool FlightSystem::removeFlights(int* indices, int count) {
 	for (int i = 0; i < numFlights; i++) {
 		if (!toRemove[i]) {
 			newFlights[newCount++] = hostFlights[i];
+			std::vector<int> airports(newFlights[newCount - 1].position.zLength);
+			cudaMemcpy(airports.data(), newFlights[newCount - 1].position.z, newFlights[newCount - 1].position.zLength * sizeof(int), cudaMemcpyDeviceToHost);
+			newFlights[newCount - 1].position.z = airports.data();
 		}
 	}
 
@@ -286,7 +349,7 @@ bool FlightSystem::removeFlights(int* indices, int count) {
 }
 
 // Update specific flights with new positions
-bool FlightSystem::updateFlights(int* indices, Vec3* newPositions, int* newDurations, int updateCount) {
+bool FlightSystem::updateFlights(int* indices, FlightPosition* newPositions, int* newDurations, int updateCount) {
 	if (!initialized) {
 		std::cerr << "Flight system not initialized" << std::endl;
 		return false;
@@ -299,7 +362,7 @@ bool FlightSystem::updateFlights(int* indices, Vec3* newPositions, int* newDurat
 
 	// Allocate device memory for indices, new positions and durations
 	int* d_updateIndices;
-	Vec3* d_newPositions;
+	FlightPosition* d_newPositions;
 	int* d_newDurations;
 
 	cudaError_t error = cudaMalloc(&d_updateIndices, updateCount * sizeof(int));
@@ -309,7 +372,7 @@ bool FlightSystem::updateFlights(int* indices, Vec3* newPositions, int* newDurat
 		return false;
 	}
 
-	error = cudaMalloc(&d_newPositions, updateCount * sizeof(Vec3));
+	error = cudaMalloc(&d_newPositions, updateCount * sizeof(FlightPosition));
 	if (error != cudaSuccess) {
 		std::cerr << "Failed to allocate device memory for new positions: "
 			<< cudaGetErrorString(error) << std::endl;
@@ -326,10 +389,33 @@ bool FlightSystem::updateFlights(int* indices, Vec3* newPositions, int* newDurat
 		return false;
 	}
 
+	// Copy the airport data over
+
+	std::vector<FlightPosition> positions(newPositions, newPositions + updateCount);
+	std::vector<int> airports;
+	for (int i = 0; i < updateCount; i++) {
+		for (int j = 0; j < positions[i].zLength; j++) {
+			airports.push_back(positions[i].z[j]);
+		}
+	}
+	int* d_airports = copyToDeviceManaged(airports.data(), airports.size());
+	airports.clear();
+	int counter = 0;
+	for (int i = 0; i < updateCount; i++) {
+		if (positions[i].zLength <= 0) {
+			positions[i].z = nullptr;
+			continue;
+		}
+		positions[i].z = d_airports + counter;
+		counter += positions[i].zLength;
+	}
+
 	// Copy indices and new positions to device
 	cudaMemcpy(d_updateIndices, indices, updateCount * sizeof(int), cudaMemcpyHostToDevice);
-	cudaMemcpy(d_newPositions, newPositions, updateCount * sizeof(Vec3), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_newPositions, positions.data(), updateCount * sizeof(FlightPosition), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_newDurations, newDurations, updateCount * sizeof(int), cudaMemcpyHostToDevice);
+
+	positions.clear();
 
 	// Launch kernel to update flights
 	int blockSize = 256;
@@ -476,6 +562,15 @@ void FlightSystem::cleanup() {
 	if (d_collisionResults) {
 		cudaFree(d_collisionResults);
 		d_collisionResults = nullptr;
+	}
+
+	if (managedMallocs.size() > 0) {
+		for (int i = 0; i < managedMallocs.size(); i++) {
+			if (managedMallocs[i] != nullptr) {
+				cudaFree(managedMallocs[i]);
+			}
+		}
+		managedMallocs.clear();
 	}
 
 	initialized = false;

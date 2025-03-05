@@ -19,7 +19,7 @@ extern "C" {
 
 	// Add new flights to the system
 	FLIGHT_API bool AddFlights(void* flightSystem,
-		float* positions, int count);
+		int* ids, int* positions, int* durations, int flightCount, int positionCount);
 
 	// Remove flights by indices
 	FLIGHT_API bool RemoveFlights(void* flightSystem,
@@ -28,7 +28,7 @@ extern "C" {
 	// Update flight positions
 	FLIGHT_API bool UpdateFlights(void* flightSystem,
 		int* indices, int* newPositions, int* newDurations,
-		int updateCount);
+		int updateCount, int positionCount);
 
 	// Detect collisions with a bounding box
 	FLIGHT_API bool DetectCollisions(void* flightSystem,
