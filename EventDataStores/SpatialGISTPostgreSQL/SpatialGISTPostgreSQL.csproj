@@ -12,7 +12,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\DynamicFlightStorageDTOs\DynamicFlightStorageDTOs.csproj" />
+      <ProjectReference Include="..\..\DynamicFlightStorageDTOs\DynamicFlightStorageDTOs.csproj" />
     </ItemGroup>
 
     <ItemGroup>

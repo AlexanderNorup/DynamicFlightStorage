@@ -75,7 +75,7 @@ public class SpatialPostgreSQLDatastore : IEventDataStore, IDisposable
             var weather = _weatherService.GetWeatherCategoriesForFlight(flight);
             foreach (var airport in flight.GetAllAirports().Distinct())
             {
-                int icaoNum = ConvertIcaoToInt2(airport);
+                int icaoNum = IcaoConversionHelper.ConvertIcaoToInt(airport);
                 const string insertFlightEventSql =
                     """
                     INSERT INTO flight_events (flightIdentification, lastWeather, departure, arrival, icao, line3d)
@@ -126,14 +126,14 @@ public class SpatialPostgreSQLDatastore : IEventDataStore, IDisposable
 
     public async Task AddWeatherAsync(Weather weather)
     {
-        int icaoNum = ConvertIcaoToInt2(weather.Airport);
+        int icaoNum = IcaoConversionHelper.ConvertIcaoToInt(weather.Airport);
         var departureEpoch = ((DateTimeOffset)weather.ValidFrom).ToUnixTimeSeconds();
         var arrivalEpoch = ((DateTimeOffset)weather.ValidTo).ToUnixTimeSeconds();
         int weatherMin = (int)WeatherCategory.Undefined;
         int weatherMax = (int)weather.WeatherLevel - 1;
         const string searchSql =
             """
-            SELECT DISTINCT ON (flightIdentification) * 
+            SELECT DISTINCT ON (flightIdentification) flightIdentification
             FROM flight_events
             WHERE line3d && cube(ARRAY[@weatherMin, @departureEpoch, @icaoNum],
                                  ARRAY[@weatherMax, @arrivalEpoch, @icaoNum])
@@ -175,39 +175,6 @@ public class SpatialPostgreSQLDatastore : IEventDataStore, IDisposable
             }
         }
     }
-    
-    private int ConvertIcaoToInt(string icao)
-    {
-        int icaoNum = 0;
-        for (int i = 0; i < 4; i++)
-        {
-            try
-            {
-                icaoNum += icao[i] * (int)Math.Pow(10, i);
-            }
-            catch (IndexOutOfRangeException e)
-            {
-                continue;
-            }
-        }
-
-        return icaoNum;
-    }
-    
-    private int ConvertIcaoToInt2(string icao)
-    {
-        // Ensure ICAO is at most 4 characters
-        if (icao.Length > 4)
-            throw new ArgumentException($"ICAO code must be at most 4 characters long. Given: {icao}", nameof(icao));
-
-        // Pad ICAO with spaces (' ') if it's shorter than 4 characters
-        icao = icao.PadRight(4, ' '); // Ensures all ICAOs are exactly 4 characters
-
-        // Encode ICAO into an integer
-        return (icao[0] << 24) | (icao[1] << 16) | (icao[2] << 8) | icao[3];
-    }
-
-
 
     public void Dispose()
     {

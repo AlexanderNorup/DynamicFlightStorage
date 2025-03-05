@@ -27,7 +27,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimplePostgreSQLDataStore",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OptimizedPostgreSQLDataStore", "EventDataStores\OptimizedPostgreSQLDataStore\OptimizedPostgreSQLDataStore.csproj", "{511915AD-0643-41F9-8E17-F66EF1AD3F23}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpatialGISTPostgreSQL", "SpatialGISTPostgreSQL\SpatialGISTPostgreSQL.csproj", "{A354DC2C-0874-483C-B822-7E7AE148024C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpatialGISTPostgreSQL", "EventDataStores\SpatialGISTPostgreSQL\SpatialGISTPostgreSQL.csproj", "{A354DC2C-0874-483C-B822-7E7AE148024C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Neo4jDataStore", "EventDataStores\Neo4jDataStore\Neo4jDataStore.csproj", "{E7B64365-3D92-4962-A1C3-1BC57D3430C9}"
 EndProject
