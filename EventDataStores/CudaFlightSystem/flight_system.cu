@@ -2,13 +2,10 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <thrust/sort.h>
-#include <thrust/device_ptr.h>
 #include <thrust/execution_policy.h>
 #include <thrust/sequence.h>
-#include <thrust/copy.h>
-#include <thrust/remove.h>
-#include <thrust/device_vector.h>
 #include <thrust/binary_search.h>
+#include <thrust/extrema.h>
 #include <iostream>
 
 // CUDA kernel to update specific flights
@@ -72,6 +69,14 @@ struct CompareToLowerX {
 		return flights[idx].position.x < val;
 	}
 };
+
+struct CompareByDuration {
+	__host__ __device__ bool operator()(Flight a, Flight b)
+	{
+		return a.flightDuration < b.flightDuration;
+	}
+};
+
 
 // Constructor - initialize member variables
 FlightSystem::FlightSystem()
@@ -365,13 +370,25 @@ void FlightSystem::sortFlightsByX() {
 	// Sort flights by their x-coordinate
 	thrust::sort(thrust::device, d_indices, d_indices + numFlights,
 		CompareByX(d_flights));
+
+	findLongestFlightDuration();
+}
+
+void FlightSystem::findLongestFlightDuration() {
+	std::vector<Flight> flight(1);
+	Flight* d_maxFlight = thrust::max_element(thrust::device, d_flights, d_flights + numFlights, CompareByDuration());
+	cudaMemcpy(flight.data(), d_maxFlight, sizeof(Flight), cudaMemcpyDeviceToHost);
+
+	longestFlightDuration = flight[0].flightDuration;
 }
 
 int* FlightSystem::getMinMaxIndex(int min, int max) {
+	// When we sort by time (X) we also need to consider the flight duration.
+	// The nicest way to do that is simply to add the longest flight duration to the min value.
+	int adjustedMin = min - longestFlightDuration;
 
 	// This requires d_indicies to be sorted by x-coordinate.
-
-	int* lower = thrust::lower_bound(thrust::device, d_indices, d_indices + numFlights, min,
+	int* lower = thrust::lower_bound(thrust::device, d_indices, d_indices + numFlights, adjustedMin,
 		CompareToLowerX(d_flights));
 	// Using Lower_bouund with max + 1 here, because upper_bound would not work. Probably a skill issue, but this works. 
 	int* higher = thrust::lower_bound(thrust::device, d_indices, d_indices + numFlights, max + 1,
@@ -406,6 +423,10 @@ bool FlightSystem::detectCollisions(const BoundingBox& box, int* collisionResult
 	// Uncomment this to scan all flights
 	//offset = 0;
 	//numFlightsInsideBox = numFlights;
+
+#if DEBUG
+	std::cout << "[DEBUG] Saving: " << numFlights - numFlightsInsideBox << " flight lookups through Sort and Sweep" << std::endl;
+#endif 
 
 	if (numFlightsInsideBox <= 0) {
 		return true; // No flights to check, we know they're all outside.

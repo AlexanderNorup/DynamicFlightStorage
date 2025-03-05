@@ -16,7 +16,7 @@ void generateRandomFlights(std::vector<Flight>& flights, int count, int position
 	std::mt19937 gen(rd());
 	std::uniform_int_distribution<int> posDist(-positionRange, positionRange);
 	durationRange = std::max(50, durationRange);
-	std::uniform_int_distribution<int> durDist(durationRange - 50, durationRange);
+	std::uniform_int_distribution<int> durDist(durationRange - durationRange/2, durationRange);
 
 	flights.resize(count);
 
@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
 	// Generate random flights
 	std::vector<Flight> flights;
 	std::cout << "Generating " << numFlights << " random point flights..." << std::endl;
-	generateRandomFlights(flights, numFlights, 20.0f, 100);
+	generateRandomFlights(flights, numFlights, 100.0f, 50);
 
 	// Create and initialize flight system
 	FlightSystem flightSystem;
