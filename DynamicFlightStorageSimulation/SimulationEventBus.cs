@@ -310,6 +310,19 @@ namespace DynamicFlightStorageSimulation
             await _rabbitChannel.BasicConsumeAsync(queue: queueName, autoAck: false, consumer: consumer);
         }
 
+        public async Task ClearExchanges()
+        {
+            if (_rabbitChannel is null)
+            {
+                return;
+            }
+
+            _logger.LogDebug("Bus is purging flight and weather queues");
+            await _rabbitChannel.QueuePurgeAsync(FlightQueueName);
+            await _rabbitChannel.QueuePurgeAsync(WeatherQueueName);
+            _logger.LogDebug("Bus has purged queues");
+        }
+
         public async Task DisconnectAsync()
         {
             if (_rabbitConnection is null)

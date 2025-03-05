@@ -167,7 +167,8 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 await _experimentDataCollector.AddOrUpdateExperimentAsync(CurrentExperiment);
 
                 ExperimentCancellationToken = new CancellationTokenSource();
-                
+                var ccToken = ExperimentCancellationToken;
+
                 var result = await SendSystemMessageAndWaitForResponseAsync(new SystemMessage()
                 {
                     Message = CurrentExperiment.Id,
@@ -191,33 +192,35 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 // Do preload here.
                 var st = Stopwatch.StartNew();
                 var minimumWaitPreloadWaitTime = Task.Delay(TimeSpan.FromMilliseconds(MinimumWaitTimeForConsumptionMs));
-                _weatherInjector.SkipWeatherUntil(CurrentExperiment.SimulatedPreloadStartTime, ExperimentCancellationToken.Token);
-                await _weatherInjector.PublishWeatherUntil(CurrentExperiment.SimulatedPreloadEndTime, CurrentExperiment.Id, _logger, ExperimentCancellationToken.Token).ConfigureAwait(false);
+                
+                _weatherInjector.SkipWeatherUntil(CurrentExperiment.SimulatedPreloadStartTime, ccToken.Token);
+                await _weatherInjector.PublishWeatherUntil(CurrentExperiment.SimulatedPreloadEndTime, CurrentExperiment.Id, _logger, ccToken.Token).ConfigureAwait(false);
+                
                 _logger.LogInformation("Finished preloading weather. Took {Time}. Waiting to be consumed...", st.Elapsed);
                 await minimumWaitPreloadWaitTime; // Wait for the minium time of 10 seconds before checking if everything is consumed
-                await _consumingMonitor.WaitForExchangesToBeConsumedAsync(ExperimentRunnerClientIds.ToArray(), ExperimentCancellationToken.Token);
+                await _consumingMonitor.WaitForExchangesToBeConsumedAsync(ExperimentRunnerClientIds.ToArray(), ccToken.Token);
                 minimumWaitPreloadWaitTime = Task.Delay(TimeSpan.FromMilliseconds(MinimumWaitTimeForConsumptionMs));
-                ExperimentCancellationToken.Token.ThrowIfCancellationRequested();
+                ccToken.Token.ThrowIfCancellationRequested();
 
                 st.Restart();
 
                 if (CurrentExperiment.PreloadAllFlights)
                 {
-                    await _flightInjector.PublishFlightsUntil(DateTime.MaxValue, CurrentExperiment.Id, _logger, ExperimentCancellationToken.Token).ConfigureAwait(false);
+                    await _flightInjector.PublishFlightsUntil(DateTime.MaxValue, CurrentExperiment.Id, _logger, ccToken.Token).ConfigureAwait(false);
                 }
                 else
                 {
-                    _flightInjector.SkipFlightsUntil(CurrentExperiment.SimulatedPreloadStartTime, ExperimentCancellationToken.Token);
-                    await _flightInjector.PublishFlightsUntil(CurrentExperiment.SimulatedPreloadEndTime, CurrentExperiment.Id, _logger, ExperimentCancellationToken.Token).ConfigureAwait(false);
+                    _flightInjector.SkipFlightsUntil(CurrentExperiment.SimulatedPreloadStartTime, ccToken.Token);
+                    await _flightInjector.PublishFlightsUntil(CurrentExperiment.SimulatedPreloadEndTime, CurrentExperiment.Id, _logger, ccToken.Token).ConfigureAwait(false);
                 }
                 _logger.LogInformation("Finished preloading flights. Took {Time}", st.Elapsed);
 
-                ExperimentCancellationToken.Token.ThrowIfCancellationRequested();
+                ccToken.Token.ThrowIfCancellationRequested();
 
                 _logger.LogInformation("Published all preload-data. Waiting for consumers to consume it all");
 
                 await minimumWaitPreloadWaitTime; // Wait for the minium time of 10 seconds before checking if everything is consumed
-                await _consumingMonitor.WaitForExchangesToBeConsumedAsync(ExperimentRunnerClientIds.ToArray(), ExperimentCancellationToken.Token);
+                await _consumingMonitor.WaitForExchangesToBeConsumedAsync(ExperimentRunnerClientIds.ToArray(), ccToken.Token);
 
                 _logger.LogInformation("Preload done");
                 OrchestratorState = OrchestratorState.PreloadDone;
@@ -409,6 +412,16 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     }
                     ExperimentTask = null;
                 }
+                // The wait for response function is used because it might be nice to get confirmation. But if the experiment is huge, long and the consumer is overloaded with events
+                // then it might not see the abort request within the 120 second timeout. It will still abort, but this won't be waiting indefinitely
+                var result = await SendSystemMessageAndWaitForResponseAsync(new SystemMessage()
+                {
+                    Message = CurrentExperiment.Id,
+                    MessageType = SystemMessageType.AbortExperiment,
+                    Source = _eventBus.ClientId,
+                    Targets = ExperimentRunnerClientIds,
+                }, SystemMessageType.AbortSuccess, TimeSpan.FromSeconds(120)).ConfigureAwait(false);
+                _logger.LogDebug($"Abort success: {result.success}. Messages: {string.Join(';', result.responses.Select(r => r.ToString()))}");
             }
             finally
             {
