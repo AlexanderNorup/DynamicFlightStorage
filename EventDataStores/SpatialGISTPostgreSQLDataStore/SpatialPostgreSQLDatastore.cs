@@ -88,7 +88,7 @@ public class SpatialPostgreSQLDatastore : IEventDataStore, IDisposable
                         cube(ARRAY[@weather, @departureEpoch, @icaoNum],
                             ARRAY[@weather, @arrivalEpoch, @icaoNum])
                     )
-                    ON CONFLICT (icao, flightIdentification)  
+                    ON CONFLICT (flightIdentification, icao)  
                     DO UPDATE SET 
                         lastWeather = EXCLUDED.lastWeather,
                         isRecalculating = FALSE,
@@ -115,7 +115,7 @@ public class SpatialPostgreSQLDatastore : IEventDataStore, IDisposable
     {
         const string deleteSql =
             """
-            DELETE FROM flight_events WHERE flightIdentificaiton = @id;
+            DELETE FROM flight_events WHERE flightIdentification = @id;
             """;
         await using (var cmd = new NpgsqlCommand(deleteSql, _insertConnection))
         {
