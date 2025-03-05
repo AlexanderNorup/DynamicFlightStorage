@@ -39,9 +39,11 @@ private:
 	int allocatedFlights;      // Number of flights allocated in GPU memory
 	bool initialized;          // Whether system is initialized
 	int deviceId;              // CUDA device ID
+	int longestFlightDuration; // Highest flight duration
 
 	// Private method to sort flights by X coordinate
 	void sortFlightsByX();
+	void findLongestFlightDuration();
 
 	int* getMinMaxIndex(int min, int max);
 
