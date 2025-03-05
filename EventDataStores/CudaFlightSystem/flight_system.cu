@@ -23,10 +23,10 @@ __global__ void updateFlightsKernel(Flight* flights, int* indices, Vec3* newPosi
 
 // CUDA kernel to check collisions between flights and a bounding box
 __global__ void checkCollisionsKernel(Flight* flights, int numFlights,
-	int* indices, BoundingBox box, int* collisionResults) {
+	int* indices, BoundingBox box, int offset, int* collisionResults) {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (idx < numFlights) {
-		int flightIdx = indices[idx];
+		int flightIdx = indices[idx + offset];
 		Vec3 dep = flights[flightIdx].position;
 		int duration = flights[flightIdx].flightDuration;
 
@@ -59,6 +59,17 @@ struct CompareByX {
 
 	__host__ __device__ bool operator()(int a, int b) const {
 		return flights[a].position.x < flights[b].position.x;
+	}
+};
+
+// Custom compare function for lower/upper bound search to compare x-coordinate
+struct CompareToLowerX {
+	Flight* flights;
+
+	CompareToLowerX(Flight* _flights) : flights(_flights) {}
+
+	__host__ __device__ bool operator()(int idx, int val) const {
+		return flights[idx].position.x < val;
 	}
 };
 
@@ -356,41 +367,25 @@ void FlightSystem::sortFlightsByX() {
 		CompareByX(d_flights));
 }
 
-// Custom compare function for lower/upper bound search to compare x-coordinate
-struct CompareToLowerX {
-	Flight* flights;
-
-	CompareToLowerX(Flight* _flights) : flights(_flights) {}
-
-	__host__ __device__ bool operator()(int idx, int val) const {
-		return flights[idx].position.x < val;
-	}
-};
-
 int* FlightSystem::getMinMaxIndex(int min, int max) {
 
-	// Sort flights by their x-coordinate
+	// This requires d_indicies to be sorted by x-coordinate.
+
 	int* lower = thrust::lower_bound(thrust::device, d_indices, d_indices + numFlights, min,
 		CompareToLowerX(d_flights));
-	int* higher = thrust::upper_bound(thrust::device, d_indices, d_indices + numFlights, max,
+	// Using Lower_bouund with max + 1 here, because upper_bound would not work. Probably a skill issue, but this works. 
+	int* higher = thrust::lower_bound(thrust::device, d_indices, d_indices + numFlights, max + 1,
 		CompareToLowerX(d_flights));
 
-	std::vector<int> minMaxIdx(2, 0);
-	cudaMemcpy(minMaxIdx.data(), lower, sizeof(int), cudaMemcpyDeviceToHost);
-	cudaMemcpy(minMaxIdx.data() + 1, higher, sizeof(int), cudaMemcpyDeviceToHost);
+	// Calculate the indices by subtracting the adresses we get back from lower_bound.
+	int lowerIdx = lower - d_indices;
+	int upperIdx = higher - d_indices - 1; // -1 because upper_bound gives position after the last element
 
-	// TODO: Check if this is right. It might be. I don't know.
+	int* result = new int[2];
+	result[0] = lowerIdx;
+	result[1] = upperIdx;
 
-	return minMaxIdx.data();
-}
-
-__global__ void getMinMaxKernel(int* indicies, Flight* flights, int numFlights, int min, int max, int* minMaxIdx) {
-	if (blockIdx.x == 0) {
-		minMaxIdx[0] = 1;
-	}
-	else if (blockIdx.x == 1) {
-		minMaxIdx[1] = 2;
-	}
+	return result;
 }
 
 // Detect collisions with a bounding box
@@ -401,46 +396,34 @@ bool FlightSystem::detectCollisions(const BoundingBox& box, int* collisionResult
 	}
 
 	// Binary search to find the first flight that might intersect the box
+	int* minMaxIndex = getMinMaxIndex(box.min.x, box.max.x);
 
-	int* minTest = getMinMaxIndex(box.min.x, box.max.x);
+	int numFlightsInsideBox = minMaxIndex[1] - minMaxIndex[0] + 1;
+	int offset = minMaxIndex[0];
 
-	int* d_minMaxIdx;
-	cudaMalloc(&d_minMaxIdx, 2 * sizeof(int));
+	delete[] minMaxIndex; // Free the memory
 
-	// TODO: Make Github Copilot write this instead. I am tired.
-	//getMinMaxKernel << <2, 1 >> > (d_indices, d_flights, numFlights, box.min.x, box.max.x, d_minMaxIdx);
+	// Uncomment this to scan all flights
+	//offset = 0;
+	//numFlightsInsideBox = numFlights;
 
-	// Wait for kernel to finish
-	cudaDeviceSynchronize();
-
-	// Check for errors
-	cudaError_t error = cudaGetLastError();
-	if (error != cudaSuccess) {
-		std::cerr << "Error binary searching for idx lookup: " << cudaGetErrorString(error) << std::endl;
-		cudaFree(d_minMaxIdx);
-		return false;
-	}
-
-	std::vector<int> minMaxIdx(2, 0);
-	error = cudaMemcpy(minMaxIdx.data(), d_minMaxIdx, 2 * sizeof(int), cudaMemcpyDeviceToHost);
-	if (error != cudaSuccess) {
-		std::cerr << "Failed to copy collision results to host: "
-			<< cudaGetErrorString(error) << std::endl;
-		return false;
+	if (numFlightsInsideBox <= 0) {
+		return true; // No flights to check, we know they're all outside.
 	}
 
 	// Launch collision detection kernel
 	int blockSize = 256;
-	int numBlocks = (numFlights + blockSize - 1) / blockSize;
+	int numBlocks = (numFlightsInsideBox + blockSize - 1) / blockSize;
 
 	checkCollisionsKernel << <numBlocks, blockSize >> > (
-		d_flights, numFlights, d_indices, box, d_collisionResults);
+		d_flights, numFlights, d_indices, box, offset, d_collisionResults);
 
 	// Wait for kernel to finish
 	cudaDeviceSynchronize();
 
+
 	// Check for errors
-	error = cudaGetLastError();
+	auto error = cudaGetLastError();
 	if (error != cudaSuccess) {
 		std::cerr << "Error detecting collisions: " << cudaGetErrorString(error) << std::endl;
 		return false;
