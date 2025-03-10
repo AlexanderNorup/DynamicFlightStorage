@@ -13,6 +13,7 @@ struct FlightPosition {
 	int y;  // Weather coordinates
 	int* z; // Airport coorindates
 	int zLength;
+	int zOffset; // Only used internally
 };
 
 // Flight structure (point in space)

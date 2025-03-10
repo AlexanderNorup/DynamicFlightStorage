@@ -3,6 +3,7 @@
 
 #include "flight.h"
 #include <vector>
+#include <thrust/device_vector.h>
 
 // Class to manage a persistent flight system in GPU memory
 class FlightSystem {
@@ -49,10 +50,9 @@ private:
 
 	// Allocate or reallocate device memory
 	bool allocateDeviceMemory(int requiredSize);
-	int* copyToDeviceManaged(int* hostData, int count);
-	void copyZDataToDeviceManaged(Flight* hostFlights, int count);
+	thrust::device_vector<int> d_flightZData; // Device flight Z data
 
-	std::vector<int*> managedMallocs;
+	void copyZDataToDeviceManaged(Flight* hostFlights, int count);
 };
 
 #endif // FLIGHT_SYSTEM_H

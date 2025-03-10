@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
 	std::cout << "==============================================" << std::endl;
 
 	// Parse command line arguments or use default values
-	int numFlights = 10000;
+	int numFlights = 10000000;
 	if (argc > 1) {
 		numFlights = std::atoi(argv[1]);
 	}
