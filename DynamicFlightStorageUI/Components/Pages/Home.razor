@@ -7,7 +7,6 @@
 @using DynamicFlightStorageSimulation.Utilities
 @using System.Globalization
 @using System.Text.Json.Serialization
-@using ManyTablesPostgreSQLDataStore
 @inject SimulationEventBus eventbus
 @inject Orchestrator orchestrator
 @inject ConsumerDataLogger consumerDataLogger
@@ -305,7 +304,7 @@
         { "Basic in-memory data-store", (w, e) => new BasicEventDataStore.BasicEventDataStore(w, e) },
         { "Simple PostgreSQL (EF-Core backed)", (w, e) => new SimplePostgreSQLDataStore.SimplePostgreSQLDataStore(w, e) },
         { "Optimized PostgreSQL (BTree indexes)", (w, e) => new OptimizedPostgreSQLDataStore.BTreePostgreSQLDataStore(w, e) },
-        { "Many tables PostgreSQL", (w, e) => new ManyTablesPostgreSQLDatastore(w, e) },
+        { "Many tables PostgreSQL", (w, e) => new ManyTablesPostgreSQLDataStore.ManyTablesPostgreSQLDatastore(w, e) },
         { "Spatial PostreSQL (GIST index)", (w, e) => new SpatialGISTPostgreSQL.SpatialPostgreSQLDatastore(w, e)},
         { "Neo4J Relational", (w, e) => new Neo4jDataStore.RelationalNeo4jDataStore(w, e) },
         { "Neo4J Time-Buckets", (w, e) => new Neo4jDataStore.TimeBucketedNeo4jDataStore(w, e) },
