@@ -9,8 +9,8 @@ void testCase(char* desc, Flight* flight, Vec3* position, bool shouldCollide, Fl
 	if (position != nullptr) {
 		flight->position.x = position->x;
 		flight->position.y = position->y;
-		flight->position.z = new int[1] {position->z};
-		flight->position.zLength = 1;
+		flight->position.z = new int[3] {position->z, 999, 999}; // The two 999's are just placeholders
+		flight->position.zLength = 3;
 	}
 
 	std::vector<int> indicies(1, 0);
@@ -49,8 +49,8 @@ void testCollisionSystem() {
 	Flight flight;
 	flight.id = 1;
 	flight.flightDuration = 100;
-	flight.position.z = new int[2] { 0, 0 };
-	flight.position.zLength = 2;
+	flight.position.z = new int[3] { 0, 0, 0 };
+	flight.position.zLength = 3;
 	Vec3 position;
 	bool success = flightsystem.initialize(&flight, 1);
 
@@ -114,7 +114,7 @@ void testCollisionSystem() {
 	flight.position.x = 0;
 	flight.position.y = 0;
 
-	flight.position.z = new int[3] { 1, 2, 3};
+	flight.position.z = new int[3] { 1, 2, 3 };
 	flight.position.zLength = 3;
 	testCase("Multiple z-values, all inside", &flight, nullptr, true, &flightsystem);
 

@@ -194,7 +194,7 @@ int main(int argc, char* argv[]) {
 	Flight newFlight;
 	newFlight.id = 1337;
 	newFlight.flightDuration = 420;
-	newFlight.position = { 0, 0, new int[1] {1}, 1 };
+	newFlight.position = { 0, 0, new int[1] {0}, 1 };
 
 	auto startAddFlight = std::chrono::high_resolution_clock::now();
 

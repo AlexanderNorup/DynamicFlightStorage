@@ -53,6 +53,8 @@ private:
 	thrust::device_vector<int> d_flightZData; // Device flight Z data
 
 	void copyZDataToDeviceManaged(Flight* hostFlights, int count);
+
+	void debug();
 };
 
 #endif // FLIGHT_SYSTEM_H
