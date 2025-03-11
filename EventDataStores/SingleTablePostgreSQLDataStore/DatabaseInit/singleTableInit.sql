@@ -15,7 +15,3 @@ CREATE INDEX flight_events_idx
 -- Optimizes UPDATE (Partial Index for efficiency)
 CREATE INDEX flight_recalc_idx
     ON flight_events (flightIdentification, isRecalculating) WHERE isRecalculating = FALSE;
-
--- Optional: Optimizes frequent lastWeather updates in INSERT/ON CONFLICT
-CREATE INDEX flight_weather_update_idx
-    ON flight_events (flightIdentification, icao, lastWeather);
