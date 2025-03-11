@@ -15,6 +15,7 @@
     <ProjectReference Include="..\EventDataStores\Neo4jDataStore\Neo4jDataStore.csproj" />
     <ProjectReference Include="..\EventDataStores\OptimizedPostgreSQLDataStore\OptimizedPostgreSQLDataStore.csproj" />
     <ProjectReference Include="..\EventDataStores\SimplePostgreSQLDataStore\SimplePostgreSQLDataStore.csproj" />
+    <ProjectReference Include="..\EventDataStores\SpatialGISTManyTablesPostgreSQLDataStore\SpatialGISTManyTablesPostgreSQLDataStore.csproj" />
     <ProjectReference Include="..\EventDataStores\SpatialGISTPostgreSQLDataStore\SpatialGISTPostgreSQLDataStore.csproj" />
     <ProjectReference Include="..\EventDataStores\SingleTablePostgreSQLDataStore\SingleTablePostgreSQLDataStore.csproj" />
   </ItemGroup>
