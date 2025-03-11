@@ -193,7 +193,7 @@ int main(int argc, char* argv[]) {
 
 	Flight newFlight;
 	newFlight.isRecalculating = false;
-	newFlight.id = 1337;
+	newFlight.id = -1337;
 	newFlight.flightDuration = 420;
 	newFlight.position = { 0, 0, new int[2] {0, 0}, 2 };
 
@@ -241,6 +241,24 @@ int main(int argc, char* argv[]) {
 	}
 	std::cout << "Adding a flight took: " << std::fixed << std::setprecision(2)
 		<< addFlightTime.count() << " ms" << std::endl;
+
+
+	std::cout << "\nTest finding index by id" << std::endl;
+	int idToFind = -1337;
+
+	auto startFindId = std::chrono::high_resolution_clock::now();
+	int foundIndex = flightSystem.getIndexFromId(idToFind);
+	auto endFindId = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double, std::milli> findIdTime = endFindId - startFindId;
+
+	std::cout << "Lookup flight id: " << idToFind << " yielded index: " << foundIndex << ". Time: " << std::fixed << std::setprecision(6)
+		<< findIdTime.count() << " ms" << std::endl;
+	if (foundIndex == numFlights) {
+		std::cout << COLOR_GREEN << "Found the correct index of the newly added flight by ID. Index is " << foundIndex << COLOR_RESET << std::endl;
+	}
+	else {
+		std::cerr << COLOR_RED << "Failed to find the index of the newly added flight by ID. Function returned " << foundIndex << ". It should be: " << numFlights << COLOR_RESET << std::endl;
+	}
 
 	// Test removing flights
 

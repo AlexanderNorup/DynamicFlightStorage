@@ -3,6 +3,7 @@
 
 #include "flight.h"
 #include <vector>
+#include <unordered_map>
 #include <thrust/device_vector.h>
 
 // Class to manage a persistent flight system in GPU memory
@@ -26,6 +27,12 @@ public:
 	// Detect collisions with a bounding box
 	bool detectCollisions(const BoundingBox& box, bool autoSetRecalculating, int* collisionResults);
 
+	// Get index for a flight ID (returns -1 if not found)
+	int getIndexFromId(int flightId) const;
+
+	// Get flight indicies by ID
+	bool getIndicesFromIds(int* ids, int count, int* indices);
+
 	// Free GPU resources
 	void cleanup();
 
@@ -40,11 +47,16 @@ private:
 	int allocatedFlights;      // Number of flights allocated in GPU memory
 	bool initialized;          // Whether system is initialized
 	int deviceId;              // CUDA device ID
-	int longestFlightDuration; // Highest flight duration
+	int longestFlightDuration; // Longest flight duration
+	bool flightIdMapDirty;     // Whether the flight ID map is dirty
+	std::unordered_map<int, int> flightIdToIndex; // Map of flight ID to index
 
 	// Private method to sort flights by X coordinate
 	void sortFlightsByX();
 	void findLongestFlightDuration();
+
+	// Update the ID to index mapping
+	void updateIdToIndexMap();
 
 	int* getMinMaxIndex(int min, int max);
 

@@ -276,6 +276,9 @@ bool FlightSystem::initialize(Flight* hostFlights, int count) {
 
 		// Initialize indices and sort flights
 		sortFlightsByX();
+
+		// Update the ID to index mapping
+		updateIdToIndexMap();
 	}
 
 	initialized = true;
@@ -319,6 +322,11 @@ bool FlightSystem::addFlights(Flight* newFlights, int count) {
 
 	// Re-sort flights by X coordinate
 	sortFlightsByX();
+
+	flightIdToIndex.reserve(numFlights);
+	for (int i = 0; i < count; i++) {
+		flightIdToIndex[newFlights[i].id] = numFlights - count + i;
+	}
 
 	return true;
 }
@@ -379,6 +387,8 @@ bool FlightSystem::removeFlights(int* indices, int count) {
 			}
 		}
 	}
+
+	flightIdMapDirty = true;
 
 	// Clean up temporary arrays
 	delete[] hostFlights;
@@ -661,6 +671,85 @@ bool FlightSystem::detectCollisions(const BoundingBox& box, bool autoSetRecalcul
 	return true;
 }
 
+int FlightSystem::getIndexFromId(int flightId) const {
+	auto it = flightIdToIndex.find(flightId);
+	return (it != flightIdToIndex.end()) ? it->second : -1;
+}
+
+bool FlightSystem::getIndicesFromIds(int* ids, int count, int* indices)
+{
+	if (!initialized) {
+		std::cerr << "Flight system not initialized" << std::endl;
+		return false;
+	}
+
+	for (int i = 0; i < count; i++) {
+		int idx = getIndexFromId(flightIdToIndex[i]);
+		if (idx == -1) {
+			std::cerr << "Requested flight ID " << flightIdToIndex[i] << " not found" << std::endl;
+			return false;
+		}
+		indices[i] = idx;
+	}
+
+	return true;
+}
+
+// CUDA kernel to update flight id map
+__global__ void fetchFlightIdKernel(Flight* flights, int* idsInOrder, int flightCount) {
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	if (idx < flightCount) {
+		idsInOrder[idx] = flights[idx].id;
+	}
+}
+
+// Update the ID to index mapping
+void FlightSystem::updateIdToIndexMap() {
+	if (!initialized || numFlights <= 0) {
+		flightIdToIndex.clear();
+		flightIdMapDirty = false;
+		return;
+	}
+
+	// Fetch flight data from device to update map
+	int* d_idsInOrder;
+	cudaError_t error = cudaMalloc(&d_idsInOrder, numFlights * sizeof(int));
+	if (error != cudaSuccess) {
+		std::cerr << "Failed to allocate device memory for update id to index map: "
+			<< cudaGetErrorString(error) << std::endl;
+		return;
+	}
+
+	// Launch collision detection kernel
+	int blockSize = 256;
+	int numBlocks = (numFlights + blockSize - 1) / blockSize;
+
+	fetchFlightIdKernel << <numBlocks, blockSize >> > (
+		d_flights, d_idsInOrder, numFlights);
+
+	// Wait for kernel to finish
+	cudaDeviceSynchronize();
+
+	// Check for errors
+	error = cudaGetLastError();
+	if (error != cudaSuccess) {
+		std::cerr << "Error rebuilding id to index map: " << cudaGetErrorString(error) << std::endl;
+		return;
+	}
+
+	std::vector<int> hostIds(numFlights);
+	cudaMemcpy(hostIds.data(), d_idsInOrder, numFlights * sizeof(int), cudaMemcpyDeviceToHost);
+	cudaFree(d_idsInOrder);
+
+	// Clear and rebuild the map
+	std::swap(flightIdToIndex, std::unordered_map<int, int>());
+	flightIdToIndex.reserve(numFlights);
+	for (int i = 0; i < numFlights; i++) {
+		flightIdToIndex[hostIds[i]] = i;
+	}
+	flightIdMapDirty = false;
+}
+
 // Free all allocated device memory
 void FlightSystem::cleanup() {
 	if (d_flights) {
@@ -680,7 +769,9 @@ void FlightSystem::cleanup() {
 
 	d_flightZData.clear();
 	d_flightZData.shrink_to_fit();
-	//thrust::device_vector<int>().swap(d_flightZData); // Free the memory
+
+	// Free the map memory
+	std::swap(flightIdToIndex, std::unordered_map<int, int>());
 
 	initialized = false;
 	numFlights = 0;
