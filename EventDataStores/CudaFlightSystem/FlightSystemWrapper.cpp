@@ -144,7 +144,7 @@ bool DetectCollisions(void* flightSystem, float* boxMin, float* boxMax, int* res
 		box.max.y = boxMax[1];
 		box.max.z = boxMax[2];
 
-		return system->detectCollisions(box, results);
+		return system->detectCollisions(box, true, results);
 	}
 	catch (...) {
 		return false;

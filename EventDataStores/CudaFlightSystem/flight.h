@@ -21,6 +21,7 @@ struct Flight {
 	FlightPosition position;
 	int id;
 	int flightDuration; // In seconds
+	bool isRecalculating;
 };
 
 struct BoundingBox {

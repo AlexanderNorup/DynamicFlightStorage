@@ -24,7 +24,7 @@ public:
 	bool updateFlights(int* indices, FlightPosition* newPositions, int* newDurations, int updateCount);
 
 	// Detect collisions with a bounding box
-	bool detectCollisions(const BoundingBox& box, int* collisionResults);
+	bool detectCollisions(const BoundingBox& box, bool autoSetRecalculating, int* collisionResults);
 
 	// Free GPU resources
 	void cleanup();

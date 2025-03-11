@@ -24,7 +24,7 @@ void testCase(char* desc, Flight* flight, Vec3* position, bool shouldCollide, Fl
 
 	std::vector<int> collisionResults(1, 0);
 
-	bool success2 = flightSystem->detectCollisions(box, collisionResults.data());
+	bool success2 = flightSystem->detectCollisions(box, false, collisionResults.data());
 	bool collided = collisionResults[0] > 0;
 	if (!success2) {
 		std::cerr << COLOR_RED << "Collision detection failed" << COLOR_RESET << std::endl;
@@ -127,4 +127,5 @@ void testCollisionSystem() {
 	testCase("Multiple z-values, all outside", &flight, nullptr, false, &flightsystem);
 
 	std::cout << "\nCollision system test complete." << std::endl;
+	flightsystem.cleanup();
 }

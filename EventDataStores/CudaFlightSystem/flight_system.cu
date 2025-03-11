@@ -15,6 +15,7 @@ __global__ void updateFlightsKernel(Flight* flights, int* indices, int* zData,
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (idx < updateCount) {
 		int flightIdx = indices[idx];
+		int oldZOffset = flights[flightIdx].position.zOffset;
 		int oldZLength = flights[flightIdx].position.zLength;
 
 		if (oldZLength != newPositions[idx].zLength && zDifferentFlag[0] == 0) {
@@ -24,20 +25,22 @@ __global__ void updateFlightsKernel(Flight* flights, int* indices, int* zData,
 			zDifferentFlag[0] = 1;
 		}
 
-		int* zAddr = flights[flightIdx].position.zOffset + zData;
+		int* zAddr = oldZOffset + zData;
 		for (int i = 0; i < oldZLength; i++) {
 			zAddr[i] = newZData[newPositions[idx].zOffset + i];
 		}
 
 		flights[flightIdx].position = newPositions[idx];
 		flights[flightIdx].position.zLength = oldZLength;
+		flights[flightIdx].position.zOffset = oldZOffset;
 		flights[flightIdx].flightDuration = newDurations[idx];
+		flights[flightIdx].isRecalculating = false;
 	}
 }
 
 // CUDA kernel to check collisions between flights and a bounding box
 __global__ void checkCollisionsKernel(Flight* flights, int numFlights,
-	int* indices, int* zValues, BoundingBox box, int offset, int* collisionResults) {
+	int* indices, int* zValues, BoundingBox box, int offset, bool setRecalculating, int* collisionResults) {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (idx < numFlights) {
 		int flightIdx = indices[idx + offset];
@@ -45,6 +48,10 @@ __global__ void checkCollisionsKernel(Flight* flights, int numFlights,
 		int duration = flights[flightIdx].flightDuration;
 
 		collisionResults[flightIdx] = 0; // Default to no collision
+
+		if (flights[flightIdx].isRecalculating) {
+			return;
+		}
 
 		// We must check if the box intersects with the flight.
 		// The flight is a LINE in 3D space made up of points (dep, dest) where dest.x = dep.x + duration
@@ -73,6 +80,10 @@ __global__ void checkCollisionsKernel(Flight* flights, int numFlights,
 		bool collision =
 			((dep.x >= box.min.x) && (dep.x <= box.max.x)) // Checks if flight starts inside the box
 			|| (dep.x < box.min.x && xDest > box.min.x); // Checks if flight intersects the box
+
+		if (setRecalculating && collision) {
+			flights[flightIdx].isRecalculating = true;
+		}
 
 		collisionResults[flightIdx] = collision ? 1 : 0;
 	}
@@ -182,12 +193,12 @@ bool FlightSystem::allocateDeviceMemory(int requiredSize) {
 	if (d_flights != nullptr && numFlights > 0) {
 		cudaMemcpy(new_d_flights, d_flights, numFlights * sizeof(Flight), cudaMemcpyDeviceToDevice);
 		cudaMemcpy(new_d_indices, d_indices, numFlights * sizeof(int), cudaMemcpyDeviceToDevice);
-
-		// Free old memory
-		cudaFree(d_flights);
-		cudaFree(d_indices);
-		cudaFree(d_collisionResults);
 	}
+
+	// Free old memory
+	cudaFree(d_flights);
+	cudaFree(d_indices);
+	cudaFree(d_collisionResults);
 
 	// Set the new pointers
 	d_flights = new_d_flights;
@@ -427,12 +438,8 @@ bool FlightSystem::updateFlights(int* indices, FlightPosition* newPositions, int
 	// Copy the airport data over
 
 	std::vector<int> airports;
-	int counter = 0;
 	airports.reserve(updateCount * 2.5);
 	for (int i = 0; i < updateCount; i++) {
-		newPositions[i].zOffset = counter;
-		counter += newPositions[i].zLength;
-
 		for (int j = 0; j < newPositions[i].zLength; j++) {
 			airports.push_back(newPositions[i].z[j]);
 		}
@@ -511,17 +518,30 @@ bool FlightSystem::updateFlights(int* indices, FlightPosition* newPositions, int
 			return false;
 		}
 
+		int* newAirports = new int[d_flightZData.size()];
+		cudaError_t errorA = cudaMemcpy(newAirports, thrust::raw_pointer_cast(d_flightZData.data()), d_flightZData.size() * sizeof(int), cudaMemcpyDeviceToHost);
+
 		// Copy flights from device to host
-		cudaError_t error = cudaMemcpy(hostFlights, d_flights, numFlights * sizeof(Flight), cudaMemcpyDeviceToHost);
-		if (error != cudaSuccess) {
-			std::cerr << "Failed to copy flights to host for updating: " << cudaGetErrorString(error) << std::endl;
+		cudaError_t errorB = cudaMemcpy(hostFlights, d_flights, numFlights * sizeof(Flight), cudaMemcpyDeviceToHost);
+		if (errorA != cudaSuccess || errorB != cudaSuccess) {
+			std::cerr << "Failed to copy flights to host for updating: " << cudaGetErrorString(errorA) << " and/or " << cudaGetErrorString(errorB) << std::endl;
 			delete[] hostFlights;
+			delete[] newAirports;
 			return false;
+		}
+
+		// Reconstruct the flights on the host
+		for (int i = 0; i < numFlights; i++) {
+			if (hostFlights[i].position.zLength <= 0) {
+				continue;
+			}
+			hostFlights[i].position.z = newAirports + hostFlights[i].position.zOffset;
 		}
 
 		// Do the actual updating of the flights
 		for (int i = 0; i < updateCount; i++) {
 			int updateIdx = indices[i];
+			hostFlights[updateIdx].isRecalculating = false;
 			hostFlights[updateIdx].position = newPositions[i];
 			hostFlights[updateIdx].flightDuration = newDurations[i];
 		}
@@ -530,6 +550,7 @@ bool FlightSystem::updateFlights(int* indices, FlightPosition* newPositions, int
 		bool result = initialize(hostFlights, numFlights);
 
 		delete[] hostFlights;
+		delete[] newAirports;
 		return result;
 	}
 	else
@@ -586,7 +607,7 @@ int* FlightSystem::getMinMaxIndex(int min, int max) {
 }
 
 // Detect collisions with a bounding box
-bool FlightSystem::detectCollisions(const BoundingBox& box, int* collisionResults) {
+bool FlightSystem::detectCollisions(const BoundingBox& box, bool autoSetRecalculating, int* collisionResults) {
 	if (!initialized) {
 		std::cerr << "Flight system not initialized" << std::endl;
 		return false;
@@ -601,8 +622,8 @@ bool FlightSystem::detectCollisions(const BoundingBox& box, int* collisionResult
 	delete[] minMaxIndex; // Free the memory
 
 	// Uncomment this to scan all flights
-	//offset = 0;
-	//numFlightsInsideBox = numFlights;
+	/*int offset = 0;
+	int numFlightsInsideBox = numFlights;*/
 #if _DEBUG
 	std::cout << COLOR_GRAY << "[DEBUG] Saving: " << numFlights - numFlightsInsideBox << " flight lookups through Sort and Sweep" << COLOR_RESET << std::endl;
 #endif
@@ -617,7 +638,7 @@ bool FlightSystem::detectCollisions(const BoundingBox& box, int* collisionResult
 
 	int* zValues = thrust::raw_pointer_cast(d_flightZData.data());
 	checkCollisionsKernel << <numBlocks, blockSize >> > (
-		d_flights, numFlights, d_indices, zValues, box, offset, d_collisionResults);
+		d_flights, numFlights, d_indices, zValues, box, offset, autoSetRecalculating, d_collisionResults);
 
 	// Wait for kernel to finish
 	cudaDeviceSynchronize();
@@ -658,6 +679,8 @@ void FlightSystem::cleanup() {
 	}
 
 	d_flightZData.clear();
+	d_flightZData.shrink_to_fit();
+	//thrust::device_vector<int>().swap(d_flightZData); // Free the memory
 
 	initialized = false;
 	numFlights = 0;

@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) {
 	std::cout << "Running initial collision detection..." << std::endl;
 	auto startGpu = std::chrono::high_resolution_clock::now();
 
-	bool success = flightSystem.detectCollisions(box, gpuResults.data());
+	bool success = flightSystem.detectCollisions(box, false, gpuResults.data());
 	if (!success) {
 		std::cerr << COLOR_RED << "Collision detection failed" << COLOR_RESET << std::endl;
 		return 1;
@@ -162,7 +162,7 @@ int main(int argc, char* argv[]) {
 	std::cout << "Re-running collision detection after update..." << std::endl;
 	auto startRedetect = std::chrono::high_resolution_clock::now();
 
-	success = flightSystem.detectCollisions(box, gpuResults.data());
+	success = flightSystem.detectCollisions(box, false, gpuResults.data());
 
 	auto endRedetect = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double, std::milli> redetectTime = endRedetect - startRedetect;
@@ -192,9 +192,10 @@ int main(int argc, char* argv[]) {
 	std::cout << "\nAdding just a single flight" << std::endl;
 
 	Flight newFlight;
+	newFlight.isRecalculating = false;
 	newFlight.id = 1337;
 	newFlight.flightDuration = 420;
-	newFlight.position = { 0, 0, new int[1] {0}, 1 };
+	newFlight.position = { 0, 0, new int[2] {0, 0}, 2 };
 
 	auto startAddFlight = std::chrono::high_resolution_clock::now();
 
@@ -221,7 +222,7 @@ int main(int argc, char* argv[]) {
 	gpuResults.resize(flightSystem.getFlightCount());
 
 	// Re-run collision detection after adding a flight. Should be one higher than before
-	success = flightSystem.detectCollisions(box, gpuResults.data());
+	success = flightSystem.detectCollisions(box, false, gpuResults.data());
 
 	if (!success) {
 		std::cerr << COLOR_RED << "Collision re-detection (after add) failed" << COLOR_RESET << std::endl;
@@ -269,7 +270,7 @@ int main(int argc, char* argv[]) {
 	gpuResults.resize(countAfterRemoval);
 
 	// Re-run collision detection after removing some flights.
-	success = flightSystem.detectCollisions(box, gpuResults.data());
+	success = flightSystem.detectCollisions(box, false, gpuResults.data());
 
 	if (!success) {
 		std::cerr << COLOR_RED << "Collision re-detection (after remvoe) failed" << COLOR_RESET << std::endl;
@@ -296,6 +297,93 @@ int main(int argc, char* argv[]) {
 	}
 	std::cout << "Removing flights took: " << std::fixed << std::setprecision(2)
 		<< removeTime.count() << " ms" << std::endl;
+
+
+	std::cout << "\nTesting isRecalculating flag..." << std::endl;
+
+	auto firstRecalcStart = std::chrono::high_resolution_clock::now();
+	success = flightSystem.detectCollisions(box, true, gpuResults.data());
+	auto firstRecalcEnd = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double, std::milli> firstRecalcTime = firstRecalcEnd - firstRecalcStart;
+
+	if (!success) {
+		std::cerr << COLOR_RED << "Collision re-detection (with recalculating flag) failed" << COLOR_RESET << std::endl;
+		return 1;
+	}
+
+	int collisionsWhenRecalculating = std::count(gpuResults.begin(), gpuResults.end(), 1);
+
+	std::cout << "After first recalc, collisions: " << collisionsWhenRecalculating << ". Time: " << std::fixed << std::setprecision(2)
+		<< firstRecalcTime.count() << " ms" << std::endl;
+	if (collisionsWhenRecalculating != newCollisionCountAfterRemove) {
+		std::cerr << COLOR_RED << "Collision count mismatch when recalculating. Current count: " << collisionsWhenRecalculating << COLOR_RESET << std::endl;
+	}
+	else {
+		std::cout << COLOR_GREEN << "Collision count matches expected value when recalculating" << COLOR_RESET << std::endl;
+	}
+
+	// Before detecting collisions again, we keep the indicies of the flights that should be updated
+	std::vector<int> updateIndices2;
+	std::vector<FlightPosition> newPositions2;
+	std::vector<int> newDurations2;
+	for (int i = 0; i < gpuResults.size(); i++) {
+		if (gpuResults[i] == 1) {
+			updateIndices2.push_back(i);
+			newPositions2.push_back({ 1, 2, new int[2] { 3, 4 }, 2 });
+			newDurations2.push_back(posDuration(gen));
+		}
+	}
+
+	auto secondRecalcStart = std::chrono::high_resolution_clock::now();
+	success = flightSystem.detectCollisions(box, true, gpuResults.data());
+	auto secondRecalcEnd = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double, std::milli> secondRecalcTime = secondRecalcEnd - secondRecalcStart;
+	if (!success) {
+		std::cerr << COLOR_RED << "Collision re-detection (with recalculating flag 2nd time) failed" << COLOR_RESET << std::endl;
+		return 1;
+	}
+
+	int collisionsWhenRecalculatingAgain = std::count(gpuResults.begin(), gpuResults.end(), 1);
+	std::cout << "After second recalc, collisions: " << collisionsWhenRecalculatingAgain << ". Time: " << std::fixed << std::setprecision(2)
+		<< secondRecalcTime.count() << " ms" << std::endl;
+	if (collisionsWhenRecalculatingAgain != 0) {
+		std::cerr << COLOR_RED << "When recalculating 2nd time, the count was not 0. Current count: " << collisionsWhenRecalculatingAgain << COLOR_RESET << std::endl;
+	}
+	else {
+		std::cout << COLOR_GREEN << "Collision count when recalculating again is 0 as expected" << COLOR_RESET << std::endl;
+	}
+
+	std::cout << "\nTesting update with isRecalculating flag..." << std::endl;
+
+	success = flightSystem.updateFlights(updateIndices2.data(), newPositions2.data(), newDurations2.data(), updateIndices2.size());
+	if (!success) {
+		std::cerr << COLOR_RED << "Updating flights to check recalculation failed" << COLOR_RESET << std::endl;
+		return 1;
+	}
+
+	for (int i = 0; i < newPositions2.size(); i++) {
+		delete[] newPositions2[i].z;
+	}
+
+	auto thirdRecalcStart = std::chrono::high_resolution_clock::now();
+	success = flightSystem.detectCollisions(box, true, gpuResults.data());
+	auto thirdRecalcEnd = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double, std::milli> thirdRecalcTime = thirdRecalcEnd - thirdRecalcStart;
+	if (!success) {
+		std::cerr << COLOR_RED << "Collision re-detection (with recalculating flag after update) failed" << COLOR_RESET << std::endl;
+		return 1;
+	}
+
+	int collisionsWhenRecalculatingAfterUpdate = std::count(gpuResults.begin(), gpuResults.end(), 1);
+	std::cout << "After third recalc, collisions: " << collisionsWhenRecalculatingAfterUpdate << ". Time: " << std::fixed << std::setprecision(2)
+		<< thirdRecalcTime.count() << " ms" << std::endl;
+	if (collisionsWhenRecalculatingAfterUpdate != collisionsWhenRecalculating) {
+		std::cerr << COLOR_RED << "Collision count mismatch after updating with recalculating flag did not match expected. "
+			<< "Current count: " << collisionsWhenRecalculatingAfterUpdate << ". Expected: " << collisionsWhenRecalculating << COLOR_RESET << std::endl;
+	}
+	else {
+		std::cout << COLOR_GREEN << "Collision count after updating matches collision count before first recalculation as expected" << COLOR_RESET << std::endl;
+	}
 
 	// Clean up GPU resources
 	flightSystem.cleanup();
@@ -325,7 +413,7 @@ int main(int argc, char* argv[]) {
 	freeFlights(newFlights);
 
 	std::vector<int> collisionResults(flightsToAdd, 0);
-	success = emptyFlightSystem.detectCollisions(box, collisionResults.data());
+	success = emptyFlightSystem.detectCollisions(box, false, collisionResults.data());
 	if (!success) {
 		std::cerr << COLOR_RED << "Collision detection in (no longer) empty system failed" << COLOR_RESET << std::endl;
 		return 1;
