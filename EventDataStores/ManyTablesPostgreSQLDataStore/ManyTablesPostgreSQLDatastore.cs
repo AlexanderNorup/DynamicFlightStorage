@@ -77,27 +77,27 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
 
     public async Task AddOrUpdateFlightAsync(Flight flight)
     {
-        // need to also create the icao tables if they do not exist. Store this information in memory or use "create table if not exists"
-        foreach (var airport in flight.GetAllAirports().Distinct())
+        await using (var batch = new NpgsqlBatch(_insertConnection))
         {
-            if (_tableSet.Contains(airport)) continue;
-
-            string createTableSql = 
-                $"""
-                 CREATE TABLE {airport} (
-                     flightIdentification VARCHAR(36) UNIQUE PRIMARY KEY NOT NULL,
-                     isRecalculating BOOL NOT NULL DEFAULT (FALSE),
-                     lastWeather INT,
-                     departure TIMESTAMP NOT NULL,
-                     arrival TIMESTAMP NOT NULL
-                 );
-                 """;
-            var createTableCmd = new NpgsqlCommand(createTableSql, _insertConnection);
-            await createTableCmd.ExecuteNonQueryAsync().ConfigureAwait(false);
-
-            await using (var batch = new NpgsqlBatch(_insertConnection))
+            foreach (var airport in flight.GetAllAirports().Distinct())
             {
-                string createIndexSql1 = 
+                if (_tableSet.Contains(airport)) continue;
+
+                string createTableSql =
+                    $"""
+                     CREATE TABLE {airport} (
+                         flightIdentification VARCHAR(36) UNIQUE PRIMARY KEY NOT NULL,
+                         isRecalculating BOOL NOT NULL DEFAULT (FALSE),
+                         lastWeather INT,
+                         departure TIMESTAMP NOT NULL,
+                         arrival TIMESTAMP NOT NULL
+                     );
+                     """;
+                var batchCmd0 = new NpgsqlBatchCommand(createTableSql);
+                batch.BatchCommands.Add(batchCmd0);
+
+
+                string createIndexSql1 =
                     $"""
                      CREATE INDEX {airport}_events_idx
                      ON {airport} (lastWeather, isRecalculating, departure, arrival, flightIdentification);
@@ -105,7 +105,7 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
                 var batchCmd1 = new NpgsqlBatchCommand(createIndexSql1);
                 batch.BatchCommands.Add(batchCmd1);
 
-                string createIndexSql2 = 
+                string createIndexSql2 =
                     $"""
                      CREATE INDEX {airport}_recalc_idx
                      ON {airport} (flightIdentification, isRecalculating) WHERE isRecalculating = FALSE;
@@ -113,20 +113,12 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
                 var batchCmd2 = new NpgsqlBatchCommand(createIndexSql2);
                 batch.BatchCommands.Add(batchCmd2);
 
-                string createIndexSql3 = 
-                    $"""
-                     CREATE INDEX {airport}_update_idx
-                     ON {airport} (flightIdentification, lastWeather);
-                     """;
-                var batchCmd3 = new NpgsqlBatchCommand(createIndexSql3);
-                batch.BatchCommands.Add(batchCmd3);
-
-                await batch.ExecuteNonQueryAsync().ConfigureAwait(false);
+                _tableSet.Add(airport);
             }
-
-            _tableSet.Add(airport);
+            
+            await batch.ExecuteNonQueryAsync().ConfigureAwait(false);
         }
-        
+
         await using (var batch = new NpgsqlBatch(_insertConnection))
         {
             var weather = _weatherService.GetWeatherCategoriesForFlight(flight);
