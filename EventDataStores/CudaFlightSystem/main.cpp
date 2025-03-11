@@ -84,7 +84,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	// Allocate result arrays
-	std::vector<int> gpuResults(numFlights, 0);
+	std::vector<int> gpuResults(numFlights, INT_MIN);
 
 	// Run initial collision detection
 	std::cout << "Running initial collision detection..." << std::endl;
@@ -100,7 +100,25 @@ int main(int argc, char* argv[]) {
 	std::chrono::duration<double, std::milli> gpuTime = endGpu - startGpu;
 
 	// Count collisions from GPU results
-	int collisionCount = std::count(gpuResults.begin(), gpuResults.end(), 1);
+	int collisionCount = gpuResults[0];
+
+	// Verify the collisionCount is accurate
+	bool countInvalid = false;
+	for (int i = 0; i < collisionCount; i++) {
+		if (gpuResults[i + 1] == INT_MIN) {
+			std::cerr << COLOR_RED << "Invalid flight id detected in collision results. INT_MIN found within the list already at index " << i + 1 << COLOR_RESET << std::endl;
+			countInvalid = true;
+			break;
+		}
+	}
+
+	if (gpuResults[collisionCount + 1] != INT_MIN) {
+		std::cerr << COLOR_RED << "Invalid collision count detected in collision results. The next entry is not INT_MIN as expected. Next entry is: " << gpuResults[collisionCount] << COLOR_RESET << std::endl;
+	}
+	else if (!countInvalid)
+	{
+		std::cout << COLOR_GREEN << "Collision count seems right when compared to the data in the returned pointer." << COLOR_RESET << std::endl;
+	}
 
 	// Output initial results
 	std::cout << "Detected " << collisionCount << " points inside the bounding box out of "
@@ -173,7 +191,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	// Count collisions after update
-	int newCollisionCount = std::count(gpuResults.begin(), gpuResults.end(), 1);
+	int newCollisionCount = gpuResults[0];
 
 	// Output updated results
 	std::cout << "After update: Detected " << newCollisionCount << " points inside the bounding box." << std::endl;
@@ -229,7 +247,7 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	int newCollisionCountAfterAdd = std::count(gpuResults.begin(), gpuResults.end(), 1);
+	int newCollisionCountAfterAdd = gpuResults[0];
 
 	std::cout << "After adding one flight: Detected " << newCollisionCountAfterAdd << " points inside the bounding box." << std::endl;
 	if (newCollisionCountAfterAdd == newCollisionCount + 1) {
@@ -295,7 +313,7 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	int newCollisionCountAfterRemove = std::count(gpuResults.begin(), gpuResults.end(), 1);
+	int newCollisionCountAfterRemove = gpuResults[0];
 
 	std::cout << "Stored Flights before removal: " << numFlights << " and after removal: " << countAfterRemoval << std::endl;
 	if (numFlights - numFlightsToRemove != countAfterRemoval) {
@@ -329,7 +347,7 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	int collisionsWhenRecalculating = std::count(gpuResults.begin(), gpuResults.end(), 1);
+	int collisionsWhenRecalculating = gpuResults[0];
 
 	std::cout << "After first recalc, collisions: " << collisionsWhenRecalculating << ". Time: " << std::fixed << std::setprecision(2)
 		<< firstRecalcTime.count() << " ms" << std::endl;
@@ -341,15 +359,14 @@ int main(int argc, char* argv[]) {
 	}
 
 	// Before detecting collisions again, we keep the indicies of the flights that should be updated
-	std::vector<int> updateIndices2;
+	std::vector<int> updateIds2;
 	std::vector<FlightPosition> newPositions2;
 	std::vector<int> newDurations2;
-	for (int i = 0; i < gpuResults.size(); i++) {
-		if (gpuResults[i] == 1) {
-			updateIndices2.push_back(i);
-			newPositions2.push_back({ 1, 2, new int[2] { 3, 4 }, 2 });
-			newDurations2.push_back(posDuration(gen));
-		}
+	for (int i = 0; i < gpuResults[0]; i++) {
+		int idToUpdate = gpuResults[i + 1];
+		updateIds2.push_back(idToUpdate);
+		newPositions2.push_back({ 1, 2, new int[2] { 3, 4 }, 2 });
+		newDurations2.push_back(posDuration(gen));
 	}
 
 	auto secondRecalcStart = std::chrono::high_resolution_clock::now();
@@ -361,7 +378,7 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	int collisionsWhenRecalculatingAgain = std::count(gpuResults.begin(), gpuResults.end(), 1);
+	int collisionsWhenRecalculatingAgain = gpuResults[0];
 	std::cout << "After second recalc, collisions: " << collisionsWhenRecalculatingAgain << ". Time: " << std::fixed << std::setprecision(2)
 		<< secondRecalcTime.count() << " ms" << std::endl;
 	if (collisionsWhenRecalculatingAgain != 0) {
@@ -373,7 +390,7 @@ int main(int argc, char* argv[]) {
 
 	std::cout << "\nTesting update with isRecalculating flag..." << std::endl;
 
-	success = flightSystem.updateFlights(updateIndices2.data(), newPositions2.data(), newDurations2.data(), updateIndices2.size());
+	success = flightSystem.updateFlights(updateIds2.data(), newPositions2.data(), newDurations2.data(), updateIds2.size());
 	if (!success) {
 		std::cerr << COLOR_RED << "Updating flights to check recalculation failed" << COLOR_RESET << std::endl;
 		return 1;
@@ -392,7 +409,7 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	int collisionsWhenRecalculatingAfterUpdate = std::count(gpuResults.begin(), gpuResults.end(), 1);
+	int collisionsWhenRecalculatingAfterUpdate = gpuResults[0];
 	std::cout << "After third recalc, collisions: " << collisionsWhenRecalculatingAfterUpdate << ". Time: " << std::fixed << std::setprecision(2)
 		<< thirdRecalcTime.count() << " ms" << std::endl;
 	if (collisionsWhenRecalculatingAfterUpdate != collisionsWhenRecalculating) {
@@ -437,7 +454,7 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	int emptyCollisionCount = std::count(collisionResults.begin(), collisionResults.end(), 1);
+	int emptyCollisionCount = collisionResults[0];
 
 	std::cout << "Empty system now has " << emptyFlightSystem.getFlightCount() << " flights." << std::endl;
 	std::cout << "Detected " << emptyCollisionCount << " points inside the bounding box out of "

@@ -13,8 +13,8 @@ void testCase(char* desc, Flight* flight, Vec3* position, bool shouldCollide, Fl
 		flight->position.zLength = 1;
 	}
 
-	std::vector<int> indicies(1, 0);
-	flightSystem->updateFlights(indicies.data(), &flight->position, &flight->flightDuration, 1);
+	std::vector<int> ids(1, 0);
+	flightSystem->updateFlights(ids.data(), &flight->position, &flight->flightDuration, 1);
 
 	delete[] flight->position.z;
 
@@ -22,7 +22,7 @@ void testCase(char* desc, Flight* flight, Vec3* position, bool shouldCollide, Fl
 	box.min = { -10, -10, -10 };
 	box.max = { 10, 10, 10 };
 
-	std::vector<int> collisionResults(1, 0);
+	std::vector<int> collisionResults(5, 0);
 
 	bool success2 = flightSystem->detectCollisions(box, false, collisionResults.data());
 	bool collided = collisionResults[0] > 0;

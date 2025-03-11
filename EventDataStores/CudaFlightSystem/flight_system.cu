@@ -47,7 +47,7 @@ __global__ void checkCollisionsKernel(Flight* flights, int numFlights,
 		FlightPosition dep = flights[flightIdx].position;
 		int duration = flights[flightIdx].flightDuration;
 
-		collisionResults[flightIdx] = 0; // Default to no collision
+		collisionResults[idx] = INT_MIN; // Default to no collision
 
 		if (flights[flightIdx].isRecalculating) {
 			return;
@@ -81,11 +81,12 @@ __global__ void checkCollisionsKernel(Flight* flights, int numFlights,
 			((dep.x >= box.min.x) && (dep.x <= box.max.x)) // Checks if flight starts inside the box
 			|| (dep.x < box.min.x && xDest > box.min.x); // Checks if flight intersects the box
 
-		if (setRecalculating && collision) {
-			flights[flightIdx].isRecalculating = true;
+		if (collision) {
+			if (setRecalculating) {
+				flights[flightIdx].isRecalculating = true;
+			}
+			collisionResults[idx] = flights[flightIdx].id;
 		}
-
-		collisionResults[flightIdx] = collision ? 1 : 0;
 	}
 }
 
@@ -448,8 +449,11 @@ bool FlightSystem::updateFlights(int* ids, FlightPosition* newPositions, int* ne
 	// Copy the airport data over
 
 	std::vector<int> airports;
+	int counter = 0;
 	airports.reserve(updateCount * 2.5);
 	for (int i = 0; i < updateCount; i++) {
+		newPositions[i].zOffset = counter;
+		counter += newPositions[i].zLength;
 		for (int j = 0; j < newPositions[i].zLength; j++) {
 			airports.push_back(newPositions[i].z[j]);
 		}
@@ -643,6 +647,7 @@ bool FlightSystem::detectCollisions(const BoundingBox& box, bool autoSetRecalcul
 #endif
 
 	if (numFlightsInsideBox <= 0) {
+		collisionResults[0] = 0;
 		return true; // No flights to check, we know they're all outside.
 	}
 
@@ -665,12 +670,22 @@ bool FlightSystem::detectCollisions(const BoundingBox& box, bool autoSetRecalcul
 	}
 
 	// Copy results back to host
-	error = cudaMemcpy(collisionResults, d_collisionResults, numFlights * sizeof(int), cudaMemcpyDeviceToHost);
+	std::vector<int> hostCollisionResults(numFlightsInsideBox);
+	error = cudaMemcpy(hostCollisionResults.data(), d_collisionResults + offset, numFlightsInsideBox * sizeof(int), cudaMemcpyDeviceToHost);
 	if (error != cudaSuccess) {
 		std::cerr << "Failed to copy collision results to host: "
 			<< cudaGetErrorString(error) << std::endl;
 		return false;
 	}
+
+	// Copy results to output array, skipping the first entry (which will become the length of the array)
+	int collisionCount = 0;
+	for (int i = 0; i < numFlightsInsideBox; i++) {
+		if (hostCollisionResults[i] != INT_MIN) {
+			collisionResults[++collisionCount] = hostCollisionResults[i];
+		}
+	}
+	collisionResults[0] = collisionCount;
 
 	return true;
 }
@@ -689,9 +704,9 @@ bool FlightSystem::getIndicesFromIds(int* ids, int count, int* indices)
 	}
 
 	for (int i = 0; i < count; i++) {
-		int idx = getIndexFromId(flightIdToIndex[i]);
+		int idx = getIndexFromId(ids[i]);
 		if (idx == -1) {
-			std::cerr << "Requested flight ID " << flightIdToIndex[i] << " not found" << std::endl;
+			std::cerr << "Requested flight ID " << ids[i] << " not found" << std::endl;
 			return false;
 		}
 		indices[i] = idx;

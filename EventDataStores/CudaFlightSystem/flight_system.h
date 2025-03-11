@@ -22,7 +22,7 @@ public:
 	bool removeFlights(int* indices, int count);
 
 	// Update specific flights
-	bool updateFlights(int* indices, FlightPosition* newPositions, int* newDurations, int updateCount);
+	bool updateFlights(int* ids, FlightPosition* newPositions, int* newDurations, int updateCount);
 
 	// Detect collisions with a bounding box
 	bool detectCollisions(const BoundingBox& box, bool autoSetRecalculating, int* collisionResults);
