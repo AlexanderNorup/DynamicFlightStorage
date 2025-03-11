@@ -14,6 +14,7 @@ namespace DynamicFlightStorageSimulation
         private ConsumerDataLogger _consumerLogger;
         private bool cleanState;
         private bool disposedValue;
+        private bool _isCancelled = false;
 
         public SimulationConsumer(SimulationEventBus simulationEventBus, WeatherService weatherService, ConsumerDataLogger consumerDataLogger, IEventDataStore eventDataStore, ILogger<SimulationConsumer> logger)
         {
@@ -42,6 +43,10 @@ namespace DynamicFlightStorageSimulation
 
         private async Task OnWeatherRecieved(WeatherEvent weatherEvent)
         {
+            if (_isCancelled)
+            {
+                return;
+            }
             _consumerLogger.LogWeatherData(weatherEvent);
             if (cleanState)
             {
@@ -54,6 +59,10 @@ namespace DynamicFlightStorageSimulation
 
         private async Task OnFlightRecieved(FlightEvent flight)
         {
+            if (_isCancelled)
+            {
+                return;
+            }
             _consumerLogger.LogFlightData(flight);
             if (cleanState)
             {
@@ -130,11 +139,27 @@ namespace DynamicFlightStorageSimulation
                     }).ConfigureAwait(false);
                     break;
                 case SystemMessage.SystemMessageType.NewExperiment:
+                    _isCancelled = false;
                     await ResetStateAsync(message).ConfigureAwait(false);
                     break;
                 case SystemMessage.SystemMessageType.ExperimentComplete:
                     await _consumerLogger.PersistDataAsync(_simulationEventBus.CurrentExperimentId, ClientId).ConfigureAwait(false);
                     _consumerLogger.ResetLogger();
+                    break;
+                case SystemMessage.SystemMessageType.AbortExperiment:
+                    _logger?.LogWarning("Consumer aborting experiment");
+                    _isCancelled = true;
+                    await _simulationEventBus.ClearExchanges().ConfigureAwait(false);
+                    await _consumerLogger.PersistDataAsync(_simulationEventBus.CurrentExperimentId, ClientId).ConfigureAwait(false);
+                    _consumerLogger.ResetLogger();
+                    var response = new SystemMessage()
+                    {
+                        MessageType = SystemMessage.SystemMessageType.AbortSuccess,
+                        Message = message.Message,
+                        Source = _simulationEventBus.ClientId,
+                    };
+                    await _simulationEventBus.PublishSystemMessage(response);
+                    _logger?.LogDebug($"Consumer aborted experiment and responded with {response}");
                     break;
                 default:
                     break;

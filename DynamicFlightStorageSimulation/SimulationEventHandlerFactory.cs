@@ -14,7 +14,7 @@ namespace DynamicFlightStorageSimulation
         {
             return async (sender, ea) =>
             {
-                if (channel is null)
+                if (channel is null ) // might need "|| channel.IsClosed"?
                 {
                     return;
                 }
@@ -30,7 +30,7 @@ namespace DynamicFlightStorageSimulation
                         }
                     }
                     await Task.WhenAll(tasks).ConfigureAwait(false);
-                    await channel.BasicAckAsync(ea.DeliveryTag, false);
+                    await channel.BasicAckAsync(ea.DeliveryTag, false); // fails here, something about channel being disposed? doesnt seem right
                 }
                 catch (Exception ex)
                 {

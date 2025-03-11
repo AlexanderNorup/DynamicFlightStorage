@@ -29,6 +29,17 @@ namespace DynamicFlightStorageDTOs
             NewExperiment = 3,
             NewExperimentReady = 4,
             ExperimentComplete = 5,
+            AbortExperiment = 6,
+            AbortSuccess = 7,
+        }
+        
+        public override string ToString()
+        {
+            var targets = Targets.Count > 0 ? string.Join(", ", Targets) : "All Clients";
+            var data = Data != null ? string.Join(", ", Data.Select(kv => $"{kv.Key}: {kv.Value}")) : "None";
+
+            return $"[{TimeStamp:O}] {MessageType} from {Source}: \"{Message}\" " +
+                   $"(Targets: {targets}, Data: {data})";
         }
     }
 }

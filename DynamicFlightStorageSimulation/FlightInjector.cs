@@ -49,6 +49,7 @@ public class FlightInjector
         int flightCount = 0;
         foreach (var flightBatch in flightsToPublish)
         {
+            if (cancellationToken.IsCancellationRequested) break;
             await _eventBus.PublishFlightAsync(flightBatch, experimentId).ConfigureAwait(false);
             if (++flightCount % 1000 == 0)
             {

@@ -33,6 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Neo4jDataStore", "EventData
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SingleTablePostgreSQLDataStore", "EventDataStores\SingleTablePostgreSQLDataStore\SingleTablePostgreSQLDataStore.csproj", "{CAAEE191-B151-47F7-B9E9-D90CFDC4358E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManyTablesPostgreSQLDataStore", "EventDataStores\ManyTablesPostgreSQLDataStore\ManyTablesPostgreSQLDataStore.csproj", "{2535D5B5-EC25-4985-A880-EC3511D5376A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -91,6 +93,10 @@ Global
 		{CAAEE191-B151-47F7-B9E9-D90CFDC4358E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CAAEE191-B151-47F7-B9E9-D90CFDC4358E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CAAEE191-B151-47F7-B9E9-D90CFDC4358E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2535D5B5-EC25-4985-A880-EC3511D5376A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2535D5B5-EC25-4985-A880-EC3511D5376A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2535D5B5-EC25-4985-A880-EC3511D5376A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2535D5B5-EC25-4985-A880-EC3511D5376A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -104,6 +110,7 @@ Global
 		{A354DC2C-0874-483C-B822-7E7AE148024C} = {F618F1D0-7CB1-442B-8CCA-C90FF84D66AE}
 		{E7B64365-3D92-4962-A1C3-1BC57D3430C9} = {F618F1D0-7CB1-442B-8CCA-C90FF84D66AE}
 		{CAAEE191-B151-47F7-B9E9-D90CFDC4358E} = {F618F1D0-7CB1-442B-8CCA-C90FF84D66AE}
+		{2535D5B5-EC25-4985-A880-EC3511D5376A} = {F618F1D0-7CB1-442B-8CCA-C90FF84D66AE}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B1900E86-D897-43A4-8BD5-B4074AF1F004}
