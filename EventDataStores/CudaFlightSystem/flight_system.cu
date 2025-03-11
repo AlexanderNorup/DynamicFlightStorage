@@ -11,16 +11,17 @@
 
 // CUDA kernel to update specific flights
 __global__ void updateFlightsKernel(Flight* flights, int* indices, int* zData,
-	FlightPosition* newPositions, int* newDurations, int* newZData, int updateCount) {
+	FlightPosition* newPositions, int* newDurations, int* newZData, int* zDifferentFlag, int updateCount) {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (idx < updateCount) {
 		int flightIdx = indices[idx];
 		int oldZLength = flights[flightIdx].position.zLength;
 
-		if (oldZLength != newPositions[idx].zLength) {
-			// Unsupported case. What should we do?
-			printf("%sUnsupported kernel case: New position has different amount of z-values than the old one%s\n",
-				COLOR_RED, COLOR_RESET);
+		if (oldZLength != newPositions[idx].zLength && zDifferentFlag[0] == 0) {
+			// We can't just update in place, since new z-length is different from what we have allocated for
+			// We could somewhat easily fix it in the case where the new zLength is less than the allocated one.
+			// But when the new zLength is bigger, we have no choice but to rebuild the system.
+			zDifferentFlag[0] = 1;
 		}
 
 		int* zAddr = flights[flightIdx].position.zOffset + zData;
@@ -448,19 +449,34 @@ bool FlightSystem::updateFlights(int* indices, FlightPosition* newPositions, int
 		return false;
 	}
 
+	int* d_zDifferentFlag;
+	error = cudaMalloc(&d_zDifferentFlag, sizeof(int));
+
+	if (error != cudaSuccess) {
+		std::cerr << "Failed to allocate device memory for zDifferentFlag: "
+			<< cudaGetErrorString(error) << std::endl;
+		cudaFree(d_updateIndices);
+		cudaFree(d_newPositions);
+		cudaFree(d_newDurations);
+		cudaFree(d_newZData);
+		return false;
+	}
+
 	// Copy indices and new positions to device
 	cudaMemcpy(d_updateIndices, indices, updateCount * sizeof(int), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_newPositions, newPositions, updateCount * sizeof(FlightPosition), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_newDurations, newDurations, updateCount * sizeof(int), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_newZData, airports.data(), airports.size() * sizeof(int), cudaMemcpyHostToDevice);
+	thrust::fill(thrust::device, d_zDifferentFlag, d_zDifferentFlag + 1, 0); // Set to 0
 
 	// Launch kernel to update flights
 	int blockSize = 256;
 	int numBlocks = (updateCount + blockSize - 1) / blockSize;
 
 	int* oldZData = thrust::raw_pointer_cast(d_flightZData.data());
+
 	updateFlightsKernel << <numBlocks, blockSize >> > (
-		d_flights, d_updateIndices, oldZData, d_newPositions, d_newDurations, d_newZData, updateCount);
+		d_flights, d_updateIndices, oldZData, d_newPositions, d_newDurations, d_newZData, d_zDifferentFlag, updateCount);
 
 	// Wait for kernel to finish
 	cudaDeviceSynchronize();
@@ -478,8 +494,50 @@ bool FlightSystem::updateFlights(int* indices, FlightPosition* newPositions, int
 		return false;
 	}
 
-	// Re-sort flights by X coordinate after update
-	sortFlightsByX();
+	int zDifferentFlag;
+	cudaMemcpy(&zDifferentFlag, d_zDifferentFlag, sizeof(int), cudaMemcpyDeviceToHost);
+	cudaFree(d_zDifferentFlag);
+
+	if (zDifferentFlag == 1) {
+		std::cout << COLOR_YELLOW << "Warning: Slow flight update due to rebuilding of airport array" << COLOR_RESET << std::endl;
+		// We got new flights with different amount of z-values which we don't have space for. 
+		// We need to reinitialize the system. We copy all flights out of the GPU.
+		// Manually update the flights, and then reinsert them.
+
+		// Create a temporary host array of all flights
+		Flight* hostFlights = new Flight[numFlights];
+		if (!hostFlights) {
+			std::cerr << "Failed to allocate host memory for flight updating" << std::endl;
+			return false;
+		}
+
+		// Copy flights from device to host
+		cudaError_t error = cudaMemcpy(hostFlights, d_flights, numFlights * sizeof(Flight), cudaMemcpyDeviceToHost);
+		if (error != cudaSuccess) {
+			std::cerr << "Failed to copy flights to host for updating: " << cudaGetErrorString(error) << std::endl;
+			delete[] hostFlights;
+			return false;
+		}
+
+		// Do the actual updating of the flights
+		for (int i = 0; i < updateCount; i++) {
+			int updateIdx = indices[i];
+			hostFlights[updateIdx].position = newPositions[i];
+			hostFlights[updateIdx].flightDuration = newDurations[i];
+		}
+
+		// Reinstailize the system
+		bool result = initialize(hostFlights, numFlights);
+
+		delete[] hostFlights;
+		return result;
+	}
+	else
+	{
+		// Everything went fine
+		// Re-sort flights by X coordinate after update
+		sortFlightsByX();
+	}
 
 	return true;
 }
@@ -546,7 +604,7 @@ bool FlightSystem::detectCollisions(const BoundingBox& box, int* collisionResult
 	//offset = 0;
 	//numFlightsInsideBox = numFlights;
 #if _DEBUG
-	std::cout << "[DEBUG] Saving: " << numFlights - numFlightsInsideBox << " flight lookups through Sort and Sweep" << std::endl;
+	std::cout << COLOR_GRAY << "[DEBUG] Saving: " << numFlights - numFlightsInsideBox << " flight lookups through Sort and Sweep" << COLOR_RESET << std::endl;
 #endif
 
 	if (numFlightsInsideBox <= 0) {

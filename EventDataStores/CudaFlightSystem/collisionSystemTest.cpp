@@ -9,8 +9,8 @@ void testCase(char* desc, Flight* flight, Vec3* position, bool shouldCollide, Fl
 	if (position != nullptr) {
 		flight->position.x = position->x;
 		flight->position.y = position->y;
-		flight->position.z = new int[3] {position->z, 999, 999}; // The two 999's are just placeholders
-		flight->position.zLength = 3;
+		flight->position.z = new int[1] {position->z};
+		flight->position.zLength = 1;
 	}
 
 	std::vector<int> indicies(1, 0);
