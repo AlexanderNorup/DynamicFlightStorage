@@ -170,7 +170,6 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
                     $"""
                     DELETE FROM {icao} WHERE flightIdentification = @id;
                     """;
-                deleteSql = string.Format(deleteSql, icao);
                 var batchCmd = new NpgsqlBatchCommand(deleteSql);
                 batchCmd.Parameters.AddWithValue("id", id);
                 batch.BatchCommands.Add(batchCmd);
