@@ -128,10 +128,10 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
                     $"""
                     INSERT INTO {airport} (flightIdentification, lastWeather, departure, arrival)
                     VALUES (
-                        @flightId,
-                        @weather,
-                        @departure,
-                        @arrival
+                        $1,
+                        $2,
+                        $3,
+                        $4
                     )
                     ON CONFLICT (flightIdentification)  
                     DO UPDATE SET 
@@ -140,10 +140,10 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
                     """;
                 
                 var batchCmd = new NpgsqlBatchCommand(insertFlightEventSql);
-                batchCmd.Parameters.AddWithValue("flightId", flight.FlightIdentification);
-                batchCmd.Parameters.AddWithValue("weather", (int)weather.GetValueOrDefault(airport, WeatherCategory.Undefined));
-                batchCmd.Parameters.AddWithValue("departure", flight.ScheduledTimeOfDeparture);
-                batchCmd.Parameters.AddWithValue("arrival", flight.ScheduledTimeOfArrival);
+                batchCmd.Parameters.AddWithValue(flight.FlightIdentification);
+                batchCmd.Parameters.AddWithValue((int)weather.GetValueOrDefault(airport, WeatherCategory.Undefined));
+                batchCmd.Parameters.AddWithValue(flight.ScheduledTimeOfDeparture);
+                batchCmd.Parameters.AddWithValue(flight.ScheduledTimeOfArrival);
                 batch.BatchCommands.Add(batchCmd);
             }
             await batch.ExecuteNonQueryAsync().ConfigureAwait(false);
@@ -168,11 +168,11 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
             {
                 var deleteSql =
                     $"""
-                    DELETE FROM {icao} WHERE flightIdentification = @id;
+                    DELETE FROM {icao} WHERE flightIdentification = $1;
                     """;
                 deleteSql = string.Format(deleteSql, icao);
                 var batchCmd = new NpgsqlBatchCommand(deleteSql);
-                batchCmd.Parameters.AddWithValue("id", id);
+                batchCmd.Parameters.AddWithValue(id);
                 batch.BatchCommands.Add(batchCmd);
             }
             await batch.ExecuteNonQueryAsync().ConfigureAwait(false);
@@ -188,10 +188,10 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
             $"""
             SELECT flightIdentification 
             FROM {weather.Airport}
-            WHERE lastWeather < @newWeather
+            WHERE lastWeather < $1
             AND isRecalculating = FALSE
-            AND departure <= @validTo
-            AND arrival >= @validFrom;
+            AND departure <= $2
+            AND arrival >= $3;
             """;
         
         await using (var updateBatch = new NpgsqlBatch(_updateConnection))
@@ -199,9 +199,9 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
             await using (var cmd = new NpgsqlCommand(searchSql, _updateConnection) 
                          {
                              Parameters = {
-                                 new ("newWeather", newWeather),
-                                 new ("validTo", weather.ValidTo),
-                                 new ("validFrom", weather.ValidFrom)
+                                 new () { Value = newWeather },
+                                 new () { Value = weather.ValidTo },
+                                 new () { Value = weather.ValidFrom }
                              }
                          })
             await using (var reader = await cmd.ExecuteReaderAsync())
@@ -216,13 +216,13 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
                         string updateRecalculatingSql = 
                             $"""
                              UPDATE {airport} SET isRecalculating = TRUE
-                             WHERE flightIdentification = @id AND isRecalculating = FALSE;
+                             WHERE flightIdentification = $1 AND isRecalculating = FALSE;
                              """;
                         updateBatch.BatchCommands.Add(new NpgsqlBatchCommand(updateRecalculatingSql)
                         {
                             Parameters =
                             {
-                                new ("id", flightId)
+                                new () { Value = flightId }
                             }
                         });
                     }
