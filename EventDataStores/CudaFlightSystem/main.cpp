@@ -118,7 +118,7 @@ int main(int argc, char* argv[]) {
 
 	// Demonstrate updating specific flights
 	int numFlightsToUpdate = std::min(1000, numFlights);
-	std::vector<int> updateIndices(numFlightsToUpdate);
+	std::vector<int> updateIds(numFlightsToUpdate);
 	std::vector<FlightPosition> newPositions(numFlightsToUpdate);
 	std::vector<int> newDurations(numFlightsToUpdate);
 
@@ -132,7 +132,7 @@ int main(int argc, char* argv[]) {
 	std::cout << "Updating positions of " << numFlightsToUpdate << " random flights..." << std::endl;
 
 	for (int i = 0; i < numFlightsToUpdate; i++) {
-		updateIndices[i] = idxDist(gen);
+		updateIds[i] = idxDist(gen);
 		newPositions[i].x = posDist(gen);
 		newPositions[i].y = posDist(gen);
 		newPositions[i].z = new int[2] { posDist(gen), posDist(gen) };
@@ -142,7 +142,7 @@ int main(int argc, char* argv[]) {
 
 	// Update flights in GPU memory
 	auto startUpdate = std::chrono::high_resolution_clock::now();
-	success = flightSystem.updateFlights(updateIndices.data(), newPositions.data(), newDurations.data(), numFlightsToUpdate);
+	success = flightSystem.updateFlights(updateIds.data(), newPositions.data(), newDurations.data(), numFlightsToUpdate);
 	auto endUpdate = std::chrono::high_resolution_clock::now();
 
 	if (!success) {

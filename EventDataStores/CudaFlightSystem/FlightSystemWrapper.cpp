@@ -91,8 +91,8 @@ bool RemoveFlights(void* flightSystem, int* indices, int count) {
 }
 
 // Update specific flights
-bool UpdateFlights(void* flightSystem, int* indices, int* newPositions, int* newDurations, int updateCount, int positionCount) {
-	if (!flightSystem || !indices || !newPositions || !newDurations || updateCount <= 0 || positionCount <= 0) {
+bool UpdateFlights(void* flightSystem, int* ids, int* newPositions, int* newDurations, int updateCount, int positionCount) {
+	if (!flightSystem || !ids || !newPositions || !newDurations || updateCount <= 0 || positionCount <= 0) {
 		return false;
 	}
 
@@ -119,7 +119,7 @@ bool UpdateFlights(void* flightSystem, int* indices, int* newPositions, int* new
 			durations[i] = newDurations[i];
 		}
 
-		return system->updateFlights(indices, positions.data(), durations.data(), updateCount);
+		return system->updateFlights(ids, positions.data(), durations.data(), updateCount);
 	}
 	catch (...) {
 		return false;

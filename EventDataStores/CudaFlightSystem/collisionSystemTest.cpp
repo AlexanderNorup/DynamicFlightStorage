@@ -47,7 +47,7 @@ void testCollisionSystem() {
 	FlightSystem flightsystem;
 
 	Flight flight;
-	flight.id = 1;
+	flight.id = 0;
 	flight.flightDuration = 100;
 	flight.position.z = new int[3] { 0, 0, 0 };
 	flight.position.zLength = 3;
@@ -55,7 +55,7 @@ void testCollisionSystem() {
 	bool success = flightsystem.initialize(&flight, 1);
 
 	if (!success) {
-		std::cerr << COLOR_RED << "flight system initialization failed for collision test" << COLOR_RESET << std::endl;
+		std::cerr << COLOR_RED << "Flight system initialization failed for collision test" << COLOR_RESET << std::endl;
 		return;
 	}
 	delete[] flight.position.z;

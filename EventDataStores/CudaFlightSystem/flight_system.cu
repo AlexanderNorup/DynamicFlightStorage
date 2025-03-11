@@ -405,13 +405,13 @@ bool FlightSystem::removeFlights(int* indices, int count) {
 }
 
 // Update specific flights with new positions
-bool FlightSystem::updateFlights(int* indices, FlightPosition* newPositions, int* newDurations, int updateCount) {
+bool FlightSystem::updateFlights(int* ids, FlightPosition* newPositions, int* newDurations, int updateCount) {
 	if (!initialized) {
 		std::cerr << "Flight system not initialized" << std::endl;
 		return false;
 	}
 
-	if (updateCount <= 0 || indices == nullptr || newPositions == nullptr || newDurations == nullptr) {
+	if (updateCount <= 0 || ids == nullptr || newPositions == nullptr || newDurations == nullptr) {
 		std::cerr << "Invalid data provided for flight update" << std::endl;
 		return false;
 	}
@@ -479,8 +479,12 @@ bool FlightSystem::updateFlights(int* indices, FlightPosition* newPositions, int
 		return false;
 	}
 
+	// Find the indicies
+	std::vector<int> indices(updateCount);
+	getIndicesFromIds(ids, updateCount, indices.data());
+
 	// Copy indices and new positions to device
-	cudaMemcpy(d_updateIndices, indices, updateCount * sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_updateIndices, indices.data(), updateCount * sizeof(int), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_newPositions, newPositions, updateCount * sizeof(FlightPosition), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_newDurations, newDurations, updateCount * sizeof(int), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_newZData, airports.data(), airports.size() * sizeof(int), cudaMemcpyHostToDevice);
@@ -678,6 +682,7 @@ int FlightSystem::getIndexFromId(int flightId) const {
 
 bool FlightSystem::getIndicesFromIds(int* ids, int count, int* indices)
 {
+	// Would love to make this a kernel function, but CUDA does not have a unordered_map equivalent, so this is the fastest we're going to be.
 	if (!initialized) {
 		std::cerr << "Flight system not initialized" << std::endl;
 		return false;
@@ -705,7 +710,7 @@ __global__ void fetchFlightIdKernel(Flight* flights, int* idsInOrder, int flight
 
 // Update the ID to index mapping
 void FlightSystem::updateIdToIndexMap() {
-	if (!initialized || numFlights <= 0) {
+	if (numFlights <= 0) {
 		flightIdToIndex.clear();
 		flightIdMapDirty = false;
 		return;

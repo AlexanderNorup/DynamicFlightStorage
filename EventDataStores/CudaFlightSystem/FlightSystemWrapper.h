@@ -27,7 +27,7 @@ extern "C" {
 
 	// Update flight positions
 	FLIGHT_API bool UpdateFlights(void* flightSystem,
-		int* indices, int* newPositions, int* newDurations,
+		int* ids, int* newPositions, int* newDurations,
 		int updateCount, int positionCount);
 
 	// Detect collisions with a bounding box
