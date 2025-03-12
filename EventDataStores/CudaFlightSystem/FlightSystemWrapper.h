@@ -1,9 +1,13 @@
 #pragma once
 
+#if defined(_WIN32)
 #ifdef FLIGHTSYSTEMWRAPPER_EXPORTS
 #define FLIGHT_API __declspec(dllexport)
 #else
 #define FLIGHT_API __declspec(dllimport)
+#endif
+#else
+#define FLIGHT_API
 #endif
 
 // C-compatible flight system interface
