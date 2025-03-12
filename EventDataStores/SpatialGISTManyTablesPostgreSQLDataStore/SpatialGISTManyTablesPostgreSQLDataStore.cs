@@ -2,9 +2,9 @@ using DynamicFlightStorageDTOs;
 using Npgsql;
 using Testcontainers.PostgreSql;
 
-namespace ManyTablesPostgreSQLDataStore;
+namespace SpatialGISTManyTablesPostgreSQLDataStore;
 
-public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
+public class SpatialGISTManyTablesPostgreSQLDataStore : IEventDataStore, IDisposable
 {
     private PostgreSqlContainer? _container;
     private NpgsqlConnection? _insertConnection;
@@ -12,14 +12,13 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
     private readonly IWeatherService _weatherService;
     private readonly IRecalculateFlightEventPublisher _flightRecalculation;
     private readonly string _initScriptPath;
-    // Currently these two keep track of which tables exist and which tables each flight is related to. In-memory
     private Dictionary<string, HashSet<string>> _icaoDictionary;
     private HashSet<string> _tableSet;
-
-    public ManyTablesPostgreSQLDatastore(IWeatherService weatherService,
+    
+    public SpatialGISTManyTablesPostgreSQLDataStore(IWeatherService weatherService,
         IRecalculateFlightEventPublisher recalculateFlightEventPublisher)
     {
-        var initScriptName = "manyInit.sql";
+        var initScriptName = "manyGistInit.sql";
         _weatherService = weatherService ?? throw new ArgumentNullException(nameof(weatherService));
         _flightRecalculation = recalculateFlightEventPublisher ?? throw new ArgumentNullException(nameof(recalculateFlightEventPublisher));
         _initScriptPath = Path.Combine(AppContext.BaseDirectory, "DatabaseInit", initScriptName ?? throw new ArgumentNullException(nameof(initScriptName)));
@@ -30,7 +29,7 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
         _icaoDictionary = new Dictionary<string, HashSet<string>>();
         _tableSet = new HashSet<string>();
     }
-
+    
     public async Task StartAsync()
     {
         _container = new PostgreSqlBuilder().Build();
@@ -74,7 +73,7 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
 
         await StartAsync();
     }
-
+    
     public async Task AddOrUpdateFlightAsync(Flight flight)
     {
         await using (var batch = new NpgsqlBatch(_insertConnection))
@@ -90,7 +89,8 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
                          isRecalculating BOOL NOT NULL DEFAULT (FALSE),
                          lastWeather INT,
                          departure TIMESTAMP NOT NULL,
-                         arrival TIMESTAMP NOT NULL
+                         arrival TIMESTAMP NOT NULL,
+                         line2d CUBE NOT NULL
                      );
                      """;
                 var batchCmd0 = new NpgsqlBatchCommand(createTableSql);
@@ -99,8 +99,8 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
 
                 string createIndexSql1 =
                     $"""
-                     CREATE INDEX {airport}_events_idx
-                     ON {airport} (lastWeather, isRecalculating, departure, arrival, flightIdentification);
+                     CREATE INDEX {airport}_events_gist_idx
+                     ON {airport} USING GIST (line2d);
                      """;
                 var batchCmd1 = new NpgsqlBatchCommand(createIndexSql1);
                 batch.BatchCommands.Add(batchCmd1);
@@ -121,22 +121,29 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
 
         await using (var batch = new NpgsqlBatch(_insertConnection))
         {
+            var departureEpoch = ((DateTimeOffset)flight.ScheduledTimeOfDeparture).ToUnixTimeSeconds();
+            var arrivalEpoch = ((DateTimeOffset)flight.ScheduledTimeOfArrival).ToUnixTimeSeconds();
             var weather = _weatherService.GetWeatherCategoriesForFlight(flight);
             foreach (var airport in flight.GetAllAirports().Distinct())
             {
+                int icaoNum = IcaoConversionHelper.ConvertIcaoToInt(airport);
+                
                 string insertFlightEventSql =
                     $"""
-                    INSERT INTO {airport} (flightIdentification, lastWeather, departure, arrival)
+                    INSERT INTO {airport} (flightIdentification, lastWeather, departure, arrival, line2d)
                     VALUES (
                         $1,
                         $2,
                         $3,
-                        $4
+                        $4,
+                        cube(ARRAY[$2, $5], ARRAY[$2, $6])
                     )
                     ON CONFLICT (flightIdentification)  
                     DO UPDATE SET 
                         lastWeather = EXCLUDED.lastWeather,
-                        isRecalculating = FALSE;
+                        isRecalculating = FALSE,
+                        line2d = cube(ARRAY[EXCLUDED.lastWeather, $5], 
+                                        ARRAY[EXCLUDED.lastWeather, $6]);
                     """;
                 
                 var batchCmd = new NpgsqlBatchCommand(insertFlightEventSql);
@@ -144,6 +151,8 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
                 batchCmd.Parameters.AddWithValue((int)weather.GetValueOrDefault(airport, WeatherCategory.Undefined));
                 batchCmd.Parameters.AddWithValue(flight.ScheduledTimeOfDeparture);
                 batchCmd.Parameters.AddWithValue(flight.ScheduledTimeOfArrival);
+                batchCmd.Parameters.AddWithValue(departureEpoch);
+                batchCmd.Parameters.AddWithValue(arrivalEpoch);
                 batch.BatchCommands.Add(batchCmd);
             }
             await batch.ExecuteNonQueryAsync().ConfigureAwait(false);
@@ -182,15 +191,17 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
     public async Task AddWeatherAsync(Weather weather)
     {
         if (!_tableSet.Contains(weather.Airport)) return;
-        int newWeather = (int)weather.WeatherLevel ;
+        var departureEpoch = ((DateTimeOffset)weather.ValidFrom).ToUnixTimeSeconds();
+        var arrivalEpoch = ((DateTimeOffset)weather.ValidTo).ToUnixTimeSeconds();
+        int weatherMin = (int)WeatherCategory.Undefined;
+        int weatherMax = (int)weather.WeatherLevel - 1;
         string searchSql =
             $"""
             SELECT DISTINCT ON (flightIdentification) flightIdentification
             FROM {weather.Airport}
-            WHERE lastWeather < $1
-            AND isRecalculating = FALSE
-            AND departure <= $2
-            AND arrival >= $3;
+            WHERE line2d && cube(ARRAY[$1, $2],
+                                ARRAY[$3, $4])
+            AND isRecalculating = FALSE;
             """;
         
         await using (var updateBatch = new NpgsqlBatch(_updateConnection))
@@ -198,9 +209,10 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
             await using (var cmd = new NpgsqlCommand(searchSql, _updateConnection) 
                          {
                              Parameters = {
-                                 new () { Value = newWeather },
-                                 new () { Value = weather.ValidTo },
-                                 new () { Value = weather.ValidFrom }
+                                 new () { Value = weatherMin },
+                                 new () { Value = departureEpoch },
+                                 new () { Value = weatherMax },
+                                 new () { Value = arrivalEpoch }
                              }
                          })
             await using (var reader = await cmd.ExecuteReaderAsync())
@@ -257,4 +269,5 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
             _container = null;
         }
     }
+    
 }

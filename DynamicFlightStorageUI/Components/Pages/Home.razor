@@ -306,6 +306,7 @@
         { "Optimized PostgreSQL (BTree indexes)", (w, e) => new OptimizedPostgreSQLDataStore.BTreePostgreSQLDataStore(w, e) },
         { "Many tables PostgreSQL", (w, e) => new ManyTablesPostgreSQLDataStore.ManyTablesPostgreSQLDatastore(w, e) },
         { "Spatial PostreSQL (GIST index)", (w, e) => new SpatialGISTPostgreSQL.SpatialPostgreSQLDatastore(w, e)},
+        {"Many Tables Cube (GIST index)", (w, e) => new ManyTablesPostgreSQLDataStore.ManyTablesPostgreSQLDatastore(w, e)},
         { "PostgreSQL but only one table (B-tree)", (w, e) => new SingleTablePostgreSQLDataStore.SingleTablePostgreSQLDataStore(w,e)},
         { "Neo4J Relational", (w, e) => new Neo4jDataStore.RelationalNeo4jDataStore(w, e) },
         { "Neo4J Time-Buckets", (w, e) => new Neo4jDataStore.TimeBucketedNeo4jDataStore(w, e) },

@@ -12,3 +12,6 @@ CREATE TABLE flight_events (
 );
 
 CREATE INDEX flight_events_gist_idx ON flight_events USING GIST (line3d);
+
+CREATE INDEX flight_events_recalc_idx ON flight_events
+    (flightIdentification, isRecalculating) WHERE isRecalculating = FALSE;

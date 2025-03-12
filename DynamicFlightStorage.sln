@@ -35,6 +35,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SingleTablePostgreSQLDataSt
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManyTablesPostgreSQLDataStore", "EventDataStores\ManyTablesPostgreSQLDataStore\ManyTablesPostgreSQLDataStore.csproj", "{2535D5B5-EC25-4985-A880-EC3511D5376A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpatialGISTManyTablesPostgreSQLDataStore", "EventDataStores\SpatialGISTManyTablesPostgreSQLDataStore\SpatialGISTManyTablesPostgreSQLDataStore.csproj", "{A8CD79E7-7305-4A9B-9D79-6B3ADE776478}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -97,6 +99,10 @@ Global
 		{2535D5B5-EC25-4985-A880-EC3511D5376A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2535D5B5-EC25-4985-A880-EC3511D5376A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2535D5B5-EC25-4985-A880-EC3511D5376A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A8CD79E7-7305-4A9B-9D79-6B3ADE776478}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A8CD79E7-7305-4A9B-9D79-6B3ADE776478}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A8CD79E7-7305-4A9B-9D79-6B3ADE776478}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A8CD79E7-7305-4A9B-9D79-6B3ADE776478}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -111,6 +117,7 @@ Global
 		{E7B64365-3D92-4962-A1C3-1BC57D3430C9} = {F618F1D0-7CB1-442B-8CCA-C90FF84D66AE}
 		{CAAEE191-B151-47F7-B9E9-D90CFDC4358E} = {F618F1D0-7CB1-442B-8CCA-C90FF84D66AE}
 		{2535D5B5-EC25-4985-A880-EC3511D5376A} = {F618F1D0-7CB1-442B-8CCA-C90FF84D66AE}
+		{A8CD79E7-7305-4A9B-9D79-6B3ADE776478} = {F618F1D0-7CB1-442B-8CCA-C90FF84D66AE}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B1900E86-D897-43A4-8BD5-B4074AF1F004}
