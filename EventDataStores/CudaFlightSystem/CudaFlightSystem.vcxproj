@@ -101,8 +101,6 @@
   <ItemGroup>
     <None Include=".gitignore" />
     <None Include="create_linux_so.sh" />
-    <None Include="docker_entrypoint.sh" />
-    <None Include="Dockerfile" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
