@@ -73,14 +73,14 @@ namespace OptimizedPostgreSQLDataStore
                 """
                 INSERT INTO flights (flightIdentification,departureTime,arrivalTime)
                 VALUES
-                  (@id,@dep,@arr)
+                  ($1,$2,$3)
                 ON CONFLICT (flightidentification) DO UPDATE SET isrecalculating = false;
                 """;
 
                 var flightCmd = new NpgsqlBatchCommand(InsertFlightSql);
-                flightCmd.Parameters.AddWithValue("id", flight.FlightIdentification);
-                flightCmd.Parameters.AddWithValue("dep", flight.ScheduledTimeOfDeparture);
-                flightCmd.Parameters.AddWithValue("arr", flight.ScheduledTimeOfArrival);
+                flightCmd.Parameters.AddWithValue(flight.FlightIdentification);
+                flightCmd.Parameters.AddWithValue(flight.ScheduledTimeOfDeparture);
+                flightCmd.Parameters.AddWithValue(flight.ScheduledTimeOfArrival);
 
                 batch.BatchCommands.Add(flightCmd);
 
@@ -93,14 +93,14 @@ namespace OptimizedPostgreSQLDataStore
                     """
                     INSERT INTO airports (icao, flightidentification, lastseenweather)
                     VALUES
-                     (@icao, @flightIdent, @lastSeenWeather)
+                     ($1, $2, $3)
                     ON CONFLICT (icao, flightidentification) DO UPDATE SET lastseenweather = EXCLUDED.lastseenweather;
                     """;
 
                     var batchCmd = new NpgsqlBatchCommand(InsertAirportSql);
-                    batchCmd.Parameters.AddWithValue("icao", airport);
-                    batchCmd.Parameters.AddWithValue("flightIdent", flight.FlightIdentification);
-                    batchCmd.Parameters.AddWithValue("lastSeenWeather", (int)weather.GetValueOrDefault(airport, WeatherCategory.Undefined));
+                    batchCmd.Parameters.AddWithValue(airport);
+                    batchCmd.Parameters.AddWithValue(flight.FlightIdentification);
+                    batchCmd.Parameters.AddWithValue((int)weather.GetValueOrDefault(airport, WeatherCategory.Undefined));
                     batch.BatchCommands.Add(batchCmd);
                 }
                 await batch.ExecuteNonQueryAsync().ConfigureAwait(false);
@@ -113,17 +113,17 @@ namespace OptimizedPostgreSQLDataStore
                 """
                 SELECT a.flightIdentification FROM Airports a
                 INNER JOIN Flights f on f.flightIdentification = a.flightIdentification
-                WHERE a.icao = @icao
-                    AND a.lastSeenWeather < @newWeather
+                WHERE a.icao = $1
+                    AND a.lastSeenWeather < $2
                     AND f.isRecalculating = false
-                    AND f.departureTime <= @validTo
-                    AND @validFrom <= f.arrivalTime
+                    AND f.departureTime <= $3
+                    AND $4 <= f.arrivalTime
                 """;
 
             const string UpdateRecalculatingSql =
                 """
                 UPDATE flights SET isRecalculating = true
-                WHERE flightidentification = @id;
+                WHERE flightidentification = $1;
                 """;
 
             await using (var updateBatch = new NpgsqlBatch(_updateConnection))
@@ -131,10 +131,10 @@ namespace OptimizedPostgreSQLDataStore
                 await using (var cmd = new NpgsqlCommand(SearchSql, _updateConnection)
                 {
                     Parameters = {
-                        new("icao", weather.Airport),
-                        new("newWeather", (int)weather.WeatherLevel),
-                        new("validFrom", weather.ValidFrom),
-                        new("validTo", weather.ValidTo),
+                        new() { Value = weather.Airport },
+                        new() { Value = (int)weather.WeatherLevel },
+                        new() { Value = weather.ValidTo },
+                        new() { Value = weather.ValidFrom },
                     }
                 })
                 await using (var reader = await cmd.ExecuteReaderAsync())
@@ -145,7 +145,7 @@ namespace OptimizedPostgreSQLDataStore
                         await _flightRecalculation.PublishRecalculationAsync(flightId);
                         updateBatch.BatchCommands.Add(new NpgsqlBatchCommand(UpdateRecalculatingSql)
                         {
-                            Parameters = { new("id", flightId) }
+                            Parameters = { new() { Value = flightId } }
                         });
                     }
                 }
@@ -160,12 +160,12 @@ namespace OptimizedPostgreSQLDataStore
         {
             const string DeleteSql =
                 """
-                DELETE FROM flights WHERE flightidentification = @id;
+                DELETE FROM flights WHERE flightidentification = $1;
                 """;
             // TODO: Make a _deleteConnection if this is actually needed.
             await using (var cmd = new NpgsqlCommand(DeleteSql, _insertConnection))
             {
-                cmd.Parameters.AddWithValue("id", id);
+                cmd.Parameters.AddWithValue(id);
                 await cmd.ExecuteNonQueryAsync();
             }
         }

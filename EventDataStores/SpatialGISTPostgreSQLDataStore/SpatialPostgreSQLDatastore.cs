@@ -80,31 +80,31 @@ public class SpatialPostgreSQLDatastore : IEventDataStore, IDisposable
                     """
                     INSERT INTO flight_events (flightIdentification, lastWeather, departure, arrival, icao, line3d)
                     VALUES (
-                        @flightId,
-                        @weather,
-                        @departure,
-                        @arrival,
-                        @icao,
-                        cube(ARRAY[@weather, @departureEpoch, @icaoNum],
-                            ARRAY[@weather, @arrivalEpoch, @icaoNum])
+                        $1,
+                        $2,
+                        $3,
+                        $4,
+                        $5,
+                        cube(ARRAY[$2, $6, $7],
+                            ARRAY[$2, $8, $7])
                     )
                     ON CONFLICT (flightIdentification, icao)  
                     DO UPDATE SET 
                         lastWeather = EXCLUDED.lastWeather,
                         isRecalculating = FALSE,
-                        line3d = cube(ARRAY[EXCLUDED.lastWeather, @departureEpoch, @icaoNum],
-                                      ARRAY[EXCLUDED.lastWeather, @arrivalEpoch, @icaoNum]);
+                        line3d = cube(ARRAY[EXCLUDED.lastWeather, $6, $7],
+                                      ARRAY[EXCLUDED.lastWeather, $8, $7]);
                         
                     """;
                 var batchCmd = new NpgsqlBatchCommand(insertFlightEventSql);
-                batchCmd.Parameters.AddWithValue("flightId", flight.FlightIdentification);
-                batchCmd.Parameters.AddWithValue("weather", (int)weather.GetValueOrDefault(airport, WeatherCategory.Undefined));
-                batchCmd.Parameters.AddWithValue("departure", flight.ScheduledTimeOfDeparture);
-                batchCmd.Parameters.AddWithValue("arrival", flight.ScheduledTimeOfArrival);
-                batchCmd.Parameters.AddWithValue("icao", airport);
-                batchCmd.Parameters.AddWithValue("departureEpoch", departureEpoch);
-                batchCmd.Parameters.AddWithValue("arrivalEpoch", arrivalEpoch);
-                batchCmd.Parameters.AddWithValue("icaoNum", icaoNum);
+                batchCmd.Parameters.AddWithValue(flight.FlightIdentification);
+                batchCmd.Parameters.AddWithValue((int)weather.GetValueOrDefault(airport, WeatherCategory.Undefined));
+                batchCmd.Parameters.AddWithValue(flight.ScheduledTimeOfDeparture);
+                batchCmd.Parameters.AddWithValue(flight.ScheduledTimeOfArrival);
+                batchCmd.Parameters.AddWithValue(airport);
+                batchCmd.Parameters.AddWithValue(departureEpoch);
+                batchCmd.Parameters.AddWithValue(icaoNum);
+                batchCmd.Parameters.AddWithValue(arrivalEpoch);
                 batch.BatchCommands.Add(batchCmd);
             }
             await batch.ExecuteNonQueryAsync().ConfigureAwait(false);
@@ -115,11 +115,11 @@ public class SpatialPostgreSQLDatastore : IEventDataStore, IDisposable
     {
         const string deleteSql =
             """
-            DELETE FROM flight_events WHERE flightIdentification = @id;
+            DELETE FROM flight_events WHERE flightIdentification = $1;
             """;
         await using (var cmd = new NpgsqlCommand(deleteSql, _insertConnection))
         {
-            cmd.Parameters.AddWithValue("id", id);
+            cmd.Parameters.AddWithValue(id);
             await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
         }
     }
@@ -135,25 +135,25 @@ public class SpatialPostgreSQLDatastore : IEventDataStore, IDisposable
             """
             SELECT DISTINCT ON (flightIdentification) flightIdentification
             FROM flight_events
-            WHERE line3d && cube(ARRAY[@weatherMin, @departureEpoch, @icaoNum],
-                                 ARRAY[@weatherMax, @arrivalEpoch, @icaoNum])
+            WHERE line3d && cube(ARRAY[$1, $2, $3],
+                                 ARRAY[$4, $5, $3])
             AND isRecalculating = FALSE;
             """;
         const string updateRecalculatingSql = 
             """
             UPDATE flight_events SET isRecalculating = TRUE
-            WHERE flightIdentification = @id AND isRecalculating = FALSE;
+            WHERE flightIdentification = $1 AND isRecalculating = FALSE;
             """;
         await using (var updateBatch = new NpgsqlBatch(_updateConnection))
         {
             await using (var cmd = new NpgsqlCommand(searchSql, _updateConnection) 
             {
                 Parameters = {
-                    new ("weatherMin", weatherMin),
-                    new ("departureEpoch", departureEpoch),
-                    new ("icaoNum", icaoNum),
-                    new ("weatherMax", weatherMax),
-                    new ("arrivalEpoch", arrivalEpoch)
+                    new () { Value = weatherMin },
+                    new () { Value = departureEpoch },
+                    new () { Value = icaoNum },
+                    new () { Value = weatherMax },
+                    new () { Value = arrivalEpoch }
                 }
             })
             await using (var reader = await cmd.ExecuteReaderAsync())
@@ -164,7 +164,7 @@ public class SpatialPostgreSQLDatastore : IEventDataStore, IDisposable
                     await _flightRecalculation.PublishRecalculationAsync(flightId);
                     updateBatch.BatchCommands.Add(new NpgsqlBatchCommand(updateRecalculatingSql)
                     {
-                        Parameters = { new ("id", flightId) }
+                        Parameters = { new () { Value = flightId } }
                     });
                 }
             }
