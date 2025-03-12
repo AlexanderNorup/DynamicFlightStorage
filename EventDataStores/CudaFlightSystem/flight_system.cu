@@ -276,7 +276,7 @@ bool FlightSystem::initialize(Flight* hostFlights, int count) {
 		}
 
 		// Initialize indices and sort flights
-		sortFlightsByX();
+		indicesDirty = true;
 
 		// Update the ID to index mapping
 		updateIdToIndexMap();
@@ -322,7 +322,7 @@ bool FlightSystem::addFlights(Flight* newFlights, int count) {
 	numFlights = newTotal;
 
 	// Re-sort flights by X coordinate
-	sortFlightsByX();
+	indicesDirty = true;
 
 	flightIdToIndex.reserve(numFlights);
 	for (int i = 0; i < count; i++) {
@@ -578,7 +578,7 @@ bool FlightSystem::updateFlights(int* ids, FlightPosition* newPositions, int* ne
 	{
 		// Everything went fine
 		// Re-sort flights by X coordinate after update
-		sortFlightsByX();
+		indicesDirty = true;
 	}
 
 	return true;
@@ -594,6 +594,7 @@ void FlightSystem::sortFlightsByX() {
 		CompareByX(d_flights));
 
 	findLongestFlightDuration();
+	indicesDirty = false;
 }
 
 void FlightSystem::findLongestFlightDuration() {
@@ -632,6 +633,13 @@ int* FlightSystem::detectCollisions(const BoundingBox& box, bool autoSetRecalcul
 	if (!initialized) {
 		std::cerr << "Flight system not initialized" << std::endl;
 		return false;
+	}
+
+	if (indicesDirty) {
+#if _DEBUG
+		std::cout << COLOR_YELLOW << "[DEBUG] Flights not sorted by X, sorting during collision detection" << COLOR_RESET << std::endl;
+#endif 
+		sortFlightsByX();
 	}
 
 	// Binary search to find the first flight that might intersect the box
@@ -774,7 +782,7 @@ void FlightSystem::updateIdToIndexMap() {
 	cudaFree(d_idsInOrder);
 
 	// Clear and rebuild the map
-	std::swap(flightIdToIndex, std::unordered_map<int, int>());
+	flightIdToIndex.clear();
 	flightIdToIndex.reserve(numFlights);
 	for (int i = 0; i < numFlights; i++) {
 		flightIdToIndex[hostIds[i]] = i;

@@ -15,7 +15,7 @@ void testCase(char* desc, Flight* flight, Vec3* position, bool shouldCollide, Fl
 
 	std::vector<int> ids(1, 0);
 	flightSystem->updateFlights(ids.data(), &flight->position, &flight->flightDuration, 1);
-
+	flightSystem->sortFlightsByX();
 	delete[] flight->position.z;
 
 	BoundingBox box;

@@ -24,7 +24,7 @@ public:
 	// Update specific flights
 	bool updateFlights(int* ids, FlightPosition* newPositions, int* newDurations, int updateCount);
 
-	// Detect collisions with a bounding box
+	// Detect collisions with a bounding box. Will automatically call sortFlightByX if needed
 	int* detectCollisions(const BoundingBox& box, bool autoSetRecalculating);
 
 	// Release collision results
@@ -35,6 +35,9 @@ public:
 
 	// Get flight indicies by ID
 	bool getIndicesFromIds(int* ids, int count, int* indices);
+
+	// Sort flights by X. Needs to be done before collision detection
+	void sortFlightsByX();
 
 	// Free GPU resources
 	void cleanup();
@@ -52,10 +55,9 @@ private:
 	int deviceId;              // CUDA device ID
 	int longestFlightDuration; // Longest flight duration
 	bool flightIdMapDirty;     // Whether the flight ID map is dirty
+	bool indicesDirty;         // Whether the indices are dirty
 	std::unordered_map<int, int> flightIdToIndex; // Map of flight ID to index
 
-	// Private method to sort flights by X coordinate
-	void sortFlightsByX();
 	void findLongestFlightDuration();
 
 	// Update the ID to index mapping
