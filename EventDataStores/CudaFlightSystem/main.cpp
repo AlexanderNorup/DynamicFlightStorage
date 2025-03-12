@@ -83,24 +83,17 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	// Allocate result arrays
-	std::vector<int> gpuResults(numFlights, INT_MIN);
-
 	// Run initial collision detection
 	std::cout << "Running initial collision detection..." << std::endl;
 	auto startGpu = std::chrono::high_resolution_clock::now();
 
-	bool success = flightSystem.detectCollisions(box, false, gpuResults.data());
-	if (!success) {
-		std::cerr << COLOR_RED << "Collision detection failed" << COLOR_RESET << std::endl;
-		return 1;
-	}
+	int* gpuResults = flightSystem.detectCollisions(box, false);
 
 	auto endGpu = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double, std::milli> gpuTime = endGpu - startGpu;
 
 	// Count collisions from GPU results
-	int collisionCount = gpuResults[0];
+	int collisionCount = gpuResults[0];;
 
 	// Verify the collisionCount is accurate
 	bool countInvalid = false;
@@ -112,13 +105,12 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-	if (gpuResults[collisionCount + 1] != INT_MIN) {
-		std::cerr << COLOR_RED << "Invalid collision count detected in collision results. The next entry is not INT_MIN as expected. Next entry is: " << gpuResults[collisionCount] << COLOR_RESET << std::endl;
-	}
-	else if (!countInvalid)
+	if (!countInvalid)
 	{
 		std::cout << COLOR_GREEN << "Collision count seems right when compared to the data in the returned pointer." << COLOR_RESET << std::endl;
 	}
+
+	flightSystem.releaseCollisionResults(gpuResults);
 
 	// Output initial results
 	std::cout << "Detected " << collisionCount << " points inside the bounding box out of "
@@ -160,7 +152,7 @@ int main(int argc, char* argv[]) {
 
 	// Update flights in GPU memory
 	auto startUpdate = std::chrono::high_resolution_clock::now();
-	success = flightSystem.updateFlights(updateIds.data(), newPositions.data(), newDurations.data(), numFlightsToUpdate);
+	bool success = flightSystem.updateFlights(updateIds.data(), newPositions.data(), newDurations.data(), numFlightsToUpdate);
 	auto endUpdate = std::chrono::high_resolution_clock::now();
 
 	if (!success) {
@@ -180,18 +172,14 @@ int main(int argc, char* argv[]) {
 	std::cout << "Re-running collision detection after update..." << std::endl;
 	auto startRedetect = std::chrono::high_resolution_clock::now();
 
-	success = flightSystem.detectCollisions(box, false, gpuResults.data());
+	gpuResults = flightSystem.detectCollisions(box, false);
 
 	auto endRedetect = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double, std::milli> redetectTime = endRedetect - startRedetect;
 
-	if (!success) {
-		std::cerr << COLOR_RED << "Collision re-detection failed" << COLOR_RESET << std::endl;
-		return 1;
-	}
-
 	// Count collisions after update
 	int newCollisionCount = gpuResults[0];
+	flightSystem.releaseCollisionResults(gpuResults);
 
 	// Output updated results
 	std::cout << "After update: Detected " << newCollisionCount << " points inside the bounding box." << std::endl;
@@ -236,18 +224,11 @@ int main(int argc, char* argv[]) {
 		std::cerr << COLOR_RED << "Adding a flight did not increase flight-count by 1. Count before: " << numFlights << " count now: " << flightSystem.getFlightCount() << COLOR_RESET << std::endl;
 	}
 
-	// Resize to fit the new flight
-	gpuResults.resize(flightSystem.getFlightCount());
-
 	// Re-run collision detection after adding a flight. Should be one higher than before
-	success = flightSystem.detectCollisions(box, false, gpuResults.data());
-
-	if (!success) {
-		std::cerr << COLOR_RED << "Collision re-detection (after add) failed" << COLOR_RESET << std::endl;
-		return 1;
-	}
+	gpuResults = flightSystem.detectCollisions(box, false);
 
 	int newCollisionCountAfterAdd = gpuResults[0];
+	flightSystem.releaseCollisionResults(gpuResults);
 
 	std::cout << "After adding one flight: Detected " << newCollisionCountAfterAdd << " points inside the bounding box." << std::endl;
 	if (newCollisionCountAfterAdd == newCollisionCount + 1) {
@@ -303,17 +284,12 @@ int main(int argc, char* argv[]) {
 	}
 
 	int countAfterRemoval = flightSystem.getFlightCount();
-	gpuResults.resize(countAfterRemoval);
 
 	// Re-run collision detection after removing some flights.
-	success = flightSystem.detectCollisions(box, false, gpuResults.data());
-
-	if (!success) {
-		std::cerr << COLOR_RED << "Collision re-detection (after remvoe) failed" << COLOR_RESET << std::endl;
-		return 1;
-	}
+	gpuResults = flightSystem.detectCollisions(box, false);
 
 	int newCollisionCountAfterRemove = gpuResults[0];
+	flightSystem.releaseCollisionResults(gpuResults);
 
 	std::cout << "Stored Flights before removal: " << numFlights << " and after removal: " << countAfterRemoval << std::endl;
 	if (numFlights - numFlightsToRemove != countAfterRemoval) {
@@ -338,14 +314,9 @@ int main(int argc, char* argv[]) {
 	std::cout << "\nTesting isRecalculating flag..." << std::endl;
 
 	auto firstRecalcStart = std::chrono::high_resolution_clock::now();
-	success = flightSystem.detectCollisions(box, true, gpuResults.data());
+	gpuResults = flightSystem.detectCollisions(box, true);
 	auto firstRecalcEnd = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double, std::milli> firstRecalcTime = firstRecalcEnd - firstRecalcStart;
-
-	if (!success) {
-		std::cerr << COLOR_RED << "Collision re-detection (with recalculating flag) failed" << COLOR_RESET << std::endl;
-		return 1;
-	}
 
 	int collisionsWhenRecalculating = gpuResults[0];
 
@@ -369,16 +340,15 @@ int main(int argc, char* argv[]) {
 		newDurations2.push_back(posDuration(gen));
 	}
 
+	flightSystem.releaseCollisionResults(gpuResults);
+
 	auto secondRecalcStart = std::chrono::high_resolution_clock::now();
-	success = flightSystem.detectCollisions(box, true, gpuResults.data());
+	gpuResults = flightSystem.detectCollisions(box, true);
 	auto secondRecalcEnd = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double, std::milli> secondRecalcTime = secondRecalcEnd - secondRecalcStart;
-	if (!success) {
-		std::cerr << COLOR_RED << "Collision re-detection (with recalculating flag 2nd time) failed" << COLOR_RESET << std::endl;
-		return 1;
-	}
 
 	int collisionsWhenRecalculatingAgain = gpuResults[0];
+	flightSystem.releaseCollisionResults(gpuResults);
 	std::cout << "After second recalc, collisions: " << collisionsWhenRecalculatingAgain << ". Time: " << std::fixed << std::setprecision(2)
 		<< secondRecalcTime.count() << " ms" << std::endl;
 	if (collisionsWhenRecalculatingAgain != 0) {
@@ -401,7 +371,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	auto thirdRecalcStart = std::chrono::high_resolution_clock::now();
-	success = flightSystem.detectCollisions(box, true, gpuResults.data());
+	gpuResults = flightSystem.detectCollisions(box, true);
 	auto thirdRecalcEnd = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double, std::milli> thirdRecalcTime = thirdRecalcEnd - thirdRecalcStart;
 	if (!success) {
@@ -410,6 +380,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	int collisionsWhenRecalculatingAfterUpdate = gpuResults[0];
+	flightSystem.releaseCollisionResults(gpuResults);
 	std::cout << "After third recalc, collisions: " << collisionsWhenRecalculatingAfterUpdate << ". Time: " << std::fixed << std::setprecision(2)
 		<< thirdRecalcTime.count() << " ms" << std::endl;
 	if (collisionsWhenRecalculatingAfterUpdate != collisionsWhenRecalculating) {
@@ -447,14 +418,10 @@ int main(int argc, char* argv[]) {
 	}
 	freeFlights(newFlights);
 
-	std::vector<int> collisionResults(flightsToAdd, 0);
-	success = emptyFlightSystem.detectCollisions(box, false, collisionResults.data());
-	if (!success) {
-		std::cerr << COLOR_RED << "Collision detection in (no longer) empty system failed" << COLOR_RESET << std::endl;
-		return 1;
-	}
+	gpuResults = emptyFlightSystem.detectCollisions(box, false);
 
-	int emptyCollisionCount = collisionResults[0];
+	int emptyCollisionCount = gpuResults[0];
+	emptyFlightSystem.releaseCollisionResults(gpuResults);
 
 	std::cout << "Empty system now has " << emptyFlightSystem.getFlightCount() << " flights." << std::endl;
 	std::cout << "Detected " << emptyCollisionCount << " points inside the bounding box out of "

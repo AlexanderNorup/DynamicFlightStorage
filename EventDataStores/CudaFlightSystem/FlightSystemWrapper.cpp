@@ -127,8 +127,8 @@ bool UpdateFlights(void* flightSystem, int* ids, int* newPositions, int* newDura
 }
 
 // Detect collisions with a bounding box
-bool DetectCollisions(void* flightSystem, float* boxMin, float* boxMax, int* results) {
-	if (!flightSystem || !boxMin || !boxMax || !results) {
+int* DetectCollisions(void* flightSystem, float* boxMin, float* boxMax) {
+	if (!flightSystem || !boxMin || !boxMax) {
 		return false;
 	}
 
@@ -144,7 +144,22 @@ bool DetectCollisions(void* flightSystem, float* boxMin, float* boxMax, int* res
 		box.max.y = boxMax[1];
 		box.max.z = boxMax[2];
 
-		return system->detectCollisions(box, true, results);
+		return system->detectCollisions(box, true);
+	}
+	catch (...) {
+		return false;
+	}
+}
+
+bool ReleaseCollisionResults(void* flightSystem, int* results)
+{
+	if (!results)
+	{
+		return false;
+	}
+	try {
+		FlightSystem* system = static_cast<FlightSystem*>(flightSystem);
+		return system->releaseCollisionResults(results);
 	}
 	catch (...) {
 		return false;

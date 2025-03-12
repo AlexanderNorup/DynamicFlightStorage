@@ -22,14 +22,10 @@ void testCase(char* desc, Flight* flight, Vec3* position, bool shouldCollide, Fl
 	box.min = { -10, -10, -10 };
 	box.max = { 10, 10, 10 };
 
-	std::vector<int> collisionResults(5, 0);
 
-	bool success2 = flightSystem->detectCollisions(box, false, collisionResults.data());
+	int* collisionResults = flightSystem->detectCollisions(box, false);
 	bool collided = collisionResults[0] > 0;
-	if (!success2) {
-		std::cerr << COLOR_RED << "Collision detection failed" << COLOR_RESET << std::endl;
-		return;
-	}
+	flightSystem->releaseCollisionResults(collisionResults);
 
 	if (shouldCollide == collided) {
 		std::cout << COLOR_GREEN << "[PASS] " << COLOR_RESET;

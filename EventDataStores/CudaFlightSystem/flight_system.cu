@@ -625,7 +625,7 @@ int* FlightSystem::getMinMaxIndex(int min, int max) {
 }
 
 // Detect collisions with a bounding box
-bool FlightSystem::detectCollisions(const BoundingBox& box, bool autoSetRecalculating, int* collisionResults) {
+int* FlightSystem::detectCollisions(const BoundingBox& box, bool autoSetRecalculating) {
 	if (!initialized) {
 		std::cerr << "Flight system not initialized" << std::endl;
 		return false;
@@ -647,8 +647,7 @@ bool FlightSystem::detectCollisions(const BoundingBox& box, bool autoSetRecalcul
 #endif
 
 	if (numFlightsInsideBox <= 0) {
-		collisionResults[0] = 0;
-		return true; // No flights to check, we know they're all outside.
+		return new int[1] { 0 }; // No flights to check, we know they're all outside.
 	}
 
 	// Launch collision detection kernel
@@ -679,6 +678,7 @@ bool FlightSystem::detectCollisions(const BoundingBox& box, bool autoSetRecalcul
 	}
 
 	// Copy results to output array, skipping the first entry (which will become the length of the array)
+	int* collisionResults = new int[numFlightsInsideBox + 1];
 	int collisionCount = 0;
 	for (int i = 0; i < numFlightsInsideBox; i++) {
 		if (hostCollisionResults[i] != INT_MIN) {
@@ -687,7 +687,16 @@ bool FlightSystem::detectCollisions(const BoundingBox& box, bool autoSetRecalcul
 	}
 	collisionResults[0] = collisionCount;
 
-	return true;
+	return collisionResults;
+}
+
+bool FlightSystem::releaseCollisionResults(int* results)
+{
+	if (results != nullptr) {
+		delete[] results;
+		return true;
+	}
+	return false;
 }
 
 int FlightSystem::getIndexFromId(int flightId) const {

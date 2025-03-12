@@ -25,7 +25,10 @@ public:
 	bool updateFlights(int* ids, FlightPosition* newPositions, int* newDurations, int updateCount);
 
 	// Detect collisions with a bounding box
-	bool detectCollisions(const BoundingBox& box, bool autoSetRecalculating, int* collisionResults);
+	int* detectCollisions(const BoundingBox& box, bool autoSetRecalculating);
+
+	// Release collision results
+	bool releaseCollisionResults(int* results);
 
 	// Get index for a flight ID (returns -1 if not found)
 	int getIndexFromId(int flightId) const;

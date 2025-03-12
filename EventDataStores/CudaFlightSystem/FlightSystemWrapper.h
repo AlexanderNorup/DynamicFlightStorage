@@ -30,9 +30,12 @@ extern "C" {
 		int* ids, int* newPositions, int* newDurations,
 		int updateCount, int positionCount);
 
-	// Detect collisions with a bounding box
-	FLIGHT_API bool DetectCollisions(void* flightSystem,
-		float* boxMin, float* boxMax,
+	// Detect collisions with a bounding box. Remember to release results with ReleaseCollisionResults
+	FLIGHT_API int* DetectCollisions(void* flightSystem,
+		float* boxMin, float* boxMax);
+
+	// Release collision results
+	FLIGHT_API bool ReleaseCollisionResults(void* flightSystem,
 		int* results);
 
 	// Get the number of flights
