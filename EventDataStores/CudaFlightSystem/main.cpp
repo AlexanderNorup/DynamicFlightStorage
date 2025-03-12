@@ -264,17 +264,17 @@ int main(int argc, char* argv[]) {
 	// Select random flights to remove
 	numFlights = flightSystem.getFlightCount();
 	int numFlightsToRemove = std::min(1000, numFlights);
-	std::vector<int> removeIndices(numFlightsToRemove);
+	std::vector<int> removeIds(numFlightsToRemove);
 
 	for (int i = 0; i < numFlightsToRemove; i++) {
-		removeIndices[i] = idxDist(gen);
+		removeIds[i] = idxDist(gen);
 	}
 
 	std::cout << "\nRemoving " << numFlightsToRemove << " random flights..." << std::endl;
 
 	// Remove flights in GPU memory
 	auto startRemove = std::chrono::high_resolution_clock::now();
-	success = flightSystem.removeFlights(removeIndices.data(), numFlightsToRemove);
+	success = flightSystem.removeFlights(removeIds.data(), numFlightsToRemove);
 	auto endRemove = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double, std::milli> removeTime = endRemove - startRemove;
 

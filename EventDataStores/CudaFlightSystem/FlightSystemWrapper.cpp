@@ -75,15 +75,15 @@ bool AddFlights(void* flightSystem, int* ids, int* positions, int* durations, in
 	}
 }
 
-// Remove flights by indices
-bool RemoveFlights(void* flightSystem, int* indices, int count) {
-	if (!flightSystem || !indices || count <= 0) {
+// Remove flights by ids
+bool RemoveFlights(void* flightSystem, int* ids, int count) {
+	if (!flightSystem || !ids || count <= 0) {
 		return false;
 	}
 
 	try {
 		FlightSystem* system = static_cast<FlightSystem*>(flightSystem);
-		return system->removeFlights(indices, count);
+		return system->removeFlights(ids, count);
 	}
 	catch (...) {
 		return false;

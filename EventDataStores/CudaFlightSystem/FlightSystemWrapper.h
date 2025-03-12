@@ -21,9 +21,9 @@ extern "C" {
 	FLIGHT_API bool AddFlights(void* flightSystem,
 		int* ids, int* positions, int* durations, int flightCount, int positionCount);
 
-	// Remove flights by indices
+	// Remove flights by ids
 	FLIGHT_API bool RemoveFlights(void* flightSystem,
-		int* indices, int count);
+		int* ids, int count);
 
 	// Update flight positions
 	FLIGHT_API bool UpdateFlights(void* flightSystem,

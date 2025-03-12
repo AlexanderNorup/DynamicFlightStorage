@@ -18,8 +18,8 @@ public:
 	// Add new flights to the system
 	bool addFlights(Flight* newFlights, int count);
 
-	// Remove flights by indices
-	bool removeFlights(int* indices, int count);
+	// Remove flights by ids
+	bool removeFlights(int* ids, int count);
 
 	// Update specific flights
 	bool updateFlights(int* ids, FlightPosition* newPositions, int* newDurations, int updateCount);

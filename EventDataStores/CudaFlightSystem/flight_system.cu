@@ -332,17 +332,20 @@ bool FlightSystem::addFlights(Flight* newFlights, int count) {
 	return true;
 }
 
-// Remove flights by indices
-bool FlightSystem::removeFlights(int* indices, int count) {
+// Remove flights by ids
+bool FlightSystem::removeFlights(int* ids, int count) {
 	if (!initialized) {
 		std::cerr << "Flight system not initialized" << std::endl;
 		return false;
 	}
 
-	if (count <= 0 || indices == nullptr) {
-		std::cerr << "Invalid indices provided for removal" << std::endl;
+	if (count <= 0 || ids == nullptr) {
+		std::cerr << "Invalid ids provided for removal" << std::endl;
 		return false;
 	}
+
+	int* indices = new int[count];
+	getIndicesFromIds(ids, count, indices);
 
 	// Create a temporary host array of all flights
 	Flight* hostFlights = new Flight[numFlights];
