@@ -3,6 +3,23 @@
 #include <vector>
 #include <memory>
 
+#define SHOULD_LOG true
+
+#if SHOULD_LOG
+template<typename T>
+std::ostream& operator<<(std::ostream& os, std::vector<T> vec)
+{
+	os << "{";
+	if (vec.size() != 0)
+	{
+		std::copy(vec.begin(), vec.end() - 1, std::ostream_iterator<T>(os, " "));
+		os << vec.back();
+	}
+	os << "}";
+	return os;
+}
+#endif 
+
 // Create a new flight system
 void* CreateFlightSystem() {
 	try {
@@ -66,6 +83,9 @@ bool AddFlights(void* flightSystem, int* ids, int* positions, int* durations, in
 
 			flights[i].flightDuration = durations[i];
 			flights[i].id = ids[i];
+#if SHOULD_LOG
+			std::cout << "Adding Flight #" << i << " ID: " << flights[i].id << " Position: " << flights[i].position.x << ", " << flights[i].position.y << ", " << z << " Duration: " << flights[i].flightDuration << std::endl;
+#endif
 		}
 
 		return system->addFlights(flights.data(), flightCount);
@@ -117,6 +137,9 @@ bool UpdateFlights(void* flightSystem, int* ids, int* newPositions, int* newDura
 			positions[i].zLength = z.size();
 
 			durations[i] = newDurations[i];
+#if SHOULD_LOG
+			std::cout << "Updating Flight #" << i << " ID: " << ids[i] << " Position: " << positions[i].x << ", " << positions[i].y << ", " << z << " Duration: " << durations[i] << std::endl;
+#endif
 		}
 
 		return system->updateFlights(ids, positions.data(), durations.data(), updateCount);
@@ -127,7 +150,7 @@ bool UpdateFlights(void* flightSystem, int* ids, int* newPositions, int* newDura
 }
 
 // Detect collisions with a bounding box
-int* DetectCollisions(void* flightSystem, float* boxMin, float* boxMax) {
+int* DetectCollisions(void* flightSystem, int* boxMin, int* boxMax) {
 	if (!flightSystem || !boxMin || !boxMax) {
 		return false;
 	}
@@ -143,6 +166,10 @@ int* DetectCollisions(void* flightSystem, float* boxMin, float* boxMax) {
 		box.max.x = boxMax[0];
 		box.max.y = boxMax[1];
 		box.max.z = boxMax[2];
+
+#if SHOULD_LOG
+		std::cout << "Detecting collision with box: " << box.min.x << ", " << box.min.y << ", " << box.min.z << " - " << box.max.x << ", " << box.max.y << ", " << box.max.z << std::endl;
+#endif
 
 		return system->detectCollisions(box, true);
 	}

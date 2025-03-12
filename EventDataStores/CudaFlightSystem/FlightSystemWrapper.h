@@ -32,7 +32,7 @@ extern "C" {
 
 	// Detect collisions with a bounding box. Remember to release results with ReleaseCollisionResults
 	FLIGHT_API int* DetectCollisions(void* flightSystem,
-		float* boxMin, float* boxMax);
+		int* boxMin, int* boxMax);
 
 	// Release collision results
 	FLIGHT_API bool ReleaseCollisionResults(void* flightSystem,

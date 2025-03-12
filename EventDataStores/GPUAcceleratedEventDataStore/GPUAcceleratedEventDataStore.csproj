@@ -10,11 +10,12 @@
     <ProjectReference Include="..\..\DynamicFlightStorageDTOs\DynamicFlightStorageDTOs.csproj" />
   </ItemGroup>
 
-  <Target Name="CopyNativeDLL" AfterTargets="Build">
-    <Copy SourceFiles="..\CudaFlightSystem\x64\Release\CudaFlightSystem.dll"
-          DestinationFolder="$(OutputPath)"
-          SkipUnchangedFiles="true"
-          Condition="Exists('..\CudaFlightSystem\x64\Release\CudaFlightSystem.dll')" />
-  </Target>
+  <ItemGroup>
+    <Content Include="..\CudaFlightSystem\x64\Release\CudaFlightSystem.dll"
+             Link="CudaFlightSystem.dll"
+             Condition="Exists('..\CudaFlightSystem\x64\Release\CudaFlightSystem.dll')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
 </Project>
