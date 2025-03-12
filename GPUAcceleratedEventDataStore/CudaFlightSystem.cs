@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using DynamicFlightStorageDTOs;
+using System.Runtime.InteropServices;
 
 namespace GPUAcceleratedEventDataStore
 {
@@ -14,12 +15,12 @@ namespace GPUAcceleratedEventDataStore
         /// <summary>
         /// Number of flights in the system
         /// </summary>
-        public int FlightCount => NativeMethods.GetFlightCount(_handle);
+        internal int FlightCount => NativeMethods.GetFlightCount(_handle);
 
         /// <summary>
         /// Creates a new flight system
         /// </summary>
-        public CudaFlightSystem()
+        internal CudaFlightSystem()
         {
             _handle = NativeMethods.CreateFlightSystem();
             if (_handle == IntPtr.Zero)
@@ -32,7 +33,7 @@ namespace GPUAcceleratedEventDataStore
         /// Initialize the flight system with the given positions
         /// </summary>
         /// <returns>True if initialization succeeded</returns>
-        public bool Initialize()
+        internal bool Initialize()
         {
             return NativeMethods.InitializeFlights(_handle);
         }
@@ -40,55 +41,77 @@ namespace GPUAcceleratedEventDataStore
         /// <summary>
         /// Add new flights to the system
         /// </summary>
-        /// <param name="positions">Array of positions (x,y,z triplets)</param>
         /// <returns>True if addition succeeded</returns>
-        public bool AddFlights(int[] positions)
+        internal bool AddFlights(params GPUFlight[] flights)
         {
-            if (positions is null || positions.Length % 3 != 0)
+            ArgumentNullException.ThrowIfNull(flights);
+
+            if (flights.Length is 0)
             {
-                throw new ArgumentException("Positions must be a multiple of 3 (x,y,z)", nameof(positions));
+                return true;
             }
 
-            int count = positions.Length / 3;
+            int[] ids = new int[flights.Length];
+            int[] newDurations = new int[flights.Length];
+            List<int> positions = new(flights.Length * 3);
+
+            for (int i = 0; i < flights.Length; i++)
+            {
+                ids[i] = flights[i].InternalId;
+                newDurations[i] = GetFlightDurationInSeconds(flights[i].Flight);
+                positions.AddRange(GetFlightPositions(flights[i].Flight, flights[i].lastSeenWeather));
+            }
+
+            int[] newPositions = positions.ToArray();
             bool result = false;
 
             // Pin the array
-            GCHandle positionsHandle = GCHandle.Alloc(positions, GCHandleType.Pinned);
+            GCHandle idHandle = GCHandle.Alloc(ids, GCHandleType.Pinned);
+            GCHandle positionsHandle = GCHandle.Alloc(newPositions, GCHandleType.Pinned);
+            GCHandle durationsHandle = GCHandle.Alloc(newDurations, GCHandleType.Pinned);
             try
             {
-                result = NativeMethods.AddFlights(_handle, positionsHandle.AddrOfPinnedObject(), count);
+                result = NativeMethods.AddFlights(_handle,
+                    idHandle.AddrOfPinnedObject(),
+                    positionsHandle.AddrOfPinnedObject(),
+                    durationsHandle.AddrOfPinnedObject(),
+                    flights.Length,
+                    newPositions.Length);
             }
             finally
             {
+                idHandle.Free();
                 positionsHandle.Free();
+                durationsHandle.Free();
             }
 
             return result;
         }
 
         /// <summary>
-        /// Remove flights by their indices
+        /// Remove flights by their ids
         /// </summary>
-        /// <param name="indices">Indices of flights to remove</param>
+        /// <param name="ids">Ids of flights to remove</param>
         /// <returns>True if removal succeeded</returns>
-        public bool RemoveFlights(int[] indices)
+        internal bool RemoveFlights(params int[] ids)
         {
-            if (indices is null || indices.Length is 0)
+            ArgumentNullException.ThrowIfNull(ids);
+            if (ids.Length is 0)
             {
-                throw new ArgumentException("Must provide at least one index", nameof(indices));
+                return true;
             }
 
             bool result = false;
 
             // Pin the array
-            GCHandle indicesHandle = GCHandle.Alloc(indices, GCHandleType.Pinned);
+            GCHandle idsHandle = GCHandle.Alloc(ids, GCHandleType.Pinned);
             try
             {
-                result = NativeMethods.RemoveFlights(_handle, indicesHandle.AddrOfPinnedObject(), indices.Length);
+                result = NativeMethods.RemoveFlights(_handle, idsHandle.AddrOfPinnedObject(), ids.Length);
             }
             finally
             {
-                indicesHandle.Free();
+                idsHandle.Free();
             }
 
             return result;
@@ -97,20 +120,33 @@ namespace GPUAcceleratedEventDataStore
         /// <summary>
         /// Update specific flights with new positions
         /// </summary>
-        /// <param name="indices">Indices of flights to update</param>
-        /// <param name="newPositions">New positions (x,y,z triplets)</param>
         /// <returns>True if update succeeded</returns>
-        public bool UpdateFlights(int[] indices, int[] newPositions, int[] newDurations)
+        internal bool UpdateFlights(params GPUFlight[] flights)
         {
-            if (indices is null || newPositions is null || newDurations is null || indices.Length * 3 != newPositions.Length)
+            ArgumentNullException.ThrowIfNull(flights);
+
+            if (flights.Length is 0)
             {
-                throw new ArgumentException("Must have 3 position values (x,y,z) for each index");
+                return true;
             }
+
+            int[] ids = new int[flights.Length];
+            int[] newDurations = new int[flights.Length];
+            List<int> positions = new(flights.Length * 3);
+
+            for (int i = 0; i < flights.Length; i++)
+            {
+                ids[i] = flights[i].InternalId;
+                newDurations[i] = GetFlightDurationInSeconds(flights[i].Flight);
+                positions.AddRange(GetFlightPositions(flights[i].Flight, flights[i].lastSeenWeather));
+            }
+
+            int[] newPositions = positions.ToArray();
 
             bool result = false;
 
             // Pin arrays in memory
-            GCHandle indicesHandle = GCHandle.Alloc(indices, GCHandleType.Pinned);
+            GCHandle idsHandle = GCHandle.Alloc(ids, GCHandleType.Pinned);
             GCHandle positionsHandle = GCHandle.Alloc(newPositions, GCHandleType.Pinned);
             GCHandle durationsHandle = GCHandle.Alloc(newDurations, GCHandleType.Pinned);
 
@@ -118,14 +154,15 @@ namespace GPUAcceleratedEventDataStore
             {
                 result = NativeMethods.UpdateFlights(
                     _handle,
-                    indicesHandle.AddrOfPinnedObject(),
+                    idsHandle.AddrOfPinnedObject(),
                     positionsHandle.AddrOfPinnedObject(),
                     durationsHandle.AddrOfPinnedObject(),
-                    indices.Length);
+                    flights.Length,
+                    newPositions.Length);
             }
             finally
             {
-                indicesHandle.Free();
+                idsHandle.Free();
                 positionsHandle.Free();
                 durationsHandle.Free();
             }
@@ -136,58 +173,78 @@ namespace GPUAcceleratedEventDataStore
         /// <summary>
         /// Detect collisions between flights and a bounding box
         /// </summary>
-        /// <param name="boxMin">Minimum corner of bounding box (x,y,z)</param>
-        /// <param name="boxMax">Maximum corner of bounding box (x,y,z)</param>
-        /// <returns>Array of boolean values indicating collision status for each flight</returns>
-        public bool[] DetectCollisions(int[] boxMin, int[] boxMax)
+        /// <returns>Array of ids of the flights that need recalculation</returns>
+        internal int[] FindFlightsAffectedByWeather(Weather weather)
         {
-            if (boxMin is null || boxMin.Length != 3 || boxMax is null || boxMax.Length != 3)
+            ArgumentNullException.ThrowIfNull(weather);
+
+            if (FlightCount <= 0)
             {
-                throw new ArgumentException("Box min and max must be arrays of 3 values (x,y,z)");
+                return [];
             }
 
-            int flightCount = FlightCount;
-            if (flightCount <= 0)
-            {
-                throw new InvalidOperationException("Flight system not initialized or empty");
-            }
-
-            int[] results = new int[flightCount];
-            bool success = false;
+            // X = TIME
+            // Y = WEATHER
+            // Z = AIRPORT
+            int icaoAsInt = IcaoConversionHelper.ConvertIcaoToInt(weather.Airport);
+            int[] boxMin = [weather.ValidFrom.ToUnixTimeSeconds(), (int)WeatherCategory.Undefined, icaoAsInt];
+            int[] boxMax = [weather.ValidTo.ToUnixTimeSeconds(), (int)weather.WeatherLevel, icaoAsInt];
 
             // Pin arrays in memory
             GCHandle boxMinHandle = GCHandle.Alloc(boxMin, GCHandleType.Pinned);
             GCHandle boxMaxHandle = GCHandle.Alloc(boxMax, GCHandleType.Pinned);
-            GCHandle resultsHandle = GCHandle.Alloc(results, GCHandleType.Pinned);
+            IntPtr results = IntPtr.Zero;
 
+            int[] affectedFlights = [];
             try
             {
-                success = NativeMethods.DetectCollisions(
+                results = NativeMethods.DetectCollisions(
                     _handle,
                     boxMinHandle.AddrOfPinnedObject(),
-                    boxMaxHandle.AddrOfPinnedObject(),
-                    resultsHandle.AddrOfPinnedObject());
+                    boxMaxHandle.AddrOfPinnedObject());
+                if (results == IntPtr.Zero)
+                {
+                    throw new InvalidOperationException("Failed to detect collisions");
+                }
+                int affectedCount = Marshal.ReadInt32(results);
+                if (affectedCount > 0)
+                {
+                    affectedFlights = new int[affectedCount];
+                    Marshal.Copy(results, affectedFlights, 1, affectedCount);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Collision detection threw an exception of type {e.GetType().FullName}: {e.Message}");
+                throw;
             }
             finally
             {
                 boxMinHandle.Free();
                 boxMaxHandle.Free();
-                resultsHandle.Free();
+                NativeMethods.ReleaseCollisionResults(_handle, results);
             }
 
-            if (!success)
+            return affectedFlights;
+        }
+
+        private static int GetFlightDurationInSeconds(Flight flight)
+        {
+            return (int)(flight.ScheduledTimeOfArrival - flight.ScheduledTimeOfDeparture).TotalSeconds;
+        }
+
+        private static IEnumerable<int> GetFlightPositions(Flight flight, WeatherCategory lastSeenWeatherCategory)
+        {
+            // X: TIME
+            yield return flight.ScheduledTimeOfDeparture.ToUnixTimeSeconds();
+            // Y: WEATHER
+            yield return (int)lastSeenWeatherCategory;
+            // Z: AIRPORT(s)
+            foreach (var airport in flight.GetAllAirports().Distinct())
             {
-                throw new InvalidOperationException("Failed to detect collisions");
+                yield return IcaoConversionHelper.ConvertIcaoToInt(airport);
             }
-
-            // Convert results to boolean array
-            bool[] collisions = new bool[flightCount];
-            for (int i = 0; i < flightCount; i++)
-            {
-                collisions[i] = results[i] != 0;
-            }
-
-            return collisions;
+            yield return -1; // We signal the end of z-positions for a flight with a negative number
         }
 
         #region IDisposable Implementation
@@ -240,16 +297,20 @@ namespace GPUAcceleratedEventDataStore
         public static extern bool InitializeFlights(IntPtr flightSystem);
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool AddFlights(IntPtr flightSystem, IntPtr positions, int count);
+        public static extern bool AddFlights(IntPtr flightSystem, IntPtr ids,
+            IntPtr positions, IntPtr durations, int flightCount, int positionCount);
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool RemoveFlights(IntPtr flightSystem, IntPtr indices, int count);
+        public static extern bool RemoveFlights(IntPtr flightSystem, IntPtr ids, int count);
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool UpdateFlights(IntPtr flightSystem, IntPtr indices, IntPtr newPositions, IntPtr newDurations, int updateCount);
+        public static extern bool UpdateFlights(IntPtr flightSystem, IntPtr ids, IntPtr newPositions, IntPtr newDurations, int updateCount, int positionCount);
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool DetectCollisions(IntPtr flightSystem, IntPtr boxMin, IntPtr boxMax, IntPtr results);
+        public static extern IntPtr DetectCollisions(IntPtr flightSystem, IntPtr boxMin, IntPtr boxMax);
+
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern bool ReleaseCollisionResults(IntPtr flightSystem, IntPtr results);
 
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
         public static extern int GetFlightCount(IntPtr flightSystem);
