@@ -1,5 +1,5 @@
 #include "flight_system.h"
-#include "console_colors.h";
+#include "console_colors.h"
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <thrust/sort.h>
@@ -632,7 +632,7 @@ int* FlightSystem::getMinMaxIndex(int min, int max) {
 int* FlightSystem::detectCollisions(const BoundingBox& box, bool autoSetRecalculating) {
 	if (!initialized) {
 		std::cerr << "Flight system not initialized" << std::endl;
-		return false;
+		return nullptr;
 	}
 
 	if (indicesDirty) {
@@ -676,7 +676,7 @@ int* FlightSystem::detectCollisions(const BoundingBox& box, bool autoSetRecalcul
 	auto error = cudaGetLastError();
 	if (error != cudaSuccess) {
 		std::cerr << "Error detecting collisions: " << cudaGetErrorString(error) << std::endl;
-		return false;
+		return nullptr;
 	}
 
 	// Copy results back to host
@@ -685,7 +685,7 @@ int* FlightSystem::detectCollisions(const BoundingBox& box, bool autoSetRecalcul
 	if (error != cudaSuccess) {
 		std::cerr << "Failed to copy collision results to host: "
 			<< cudaGetErrorString(error) << std::endl;
-		return false;
+		return nullptr;
 	}
 
 	// Copy results to output array, skipping the first entry (which will become the length of the array)
@@ -811,7 +811,7 @@ void FlightSystem::cleanup() {
 	d_flightZData.shrink_to_fit();
 
 	// Free the map memory
-	std::swap(flightIdToIndex, std::unordered_map<int, int>());
+	flightIdToIndex.clear();
 
 	initialized = false;
 	numFlights = 0;

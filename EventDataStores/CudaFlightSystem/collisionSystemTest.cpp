@@ -3,7 +3,7 @@
 #include "flight_system.h"
 #include "collisionSystemTest.h"
 
-void testCase(char* desc, Flight* flight, Vec3* position, bool shouldCollide, FlightSystem* flightSystem) {
+void testCase(const char* desc, Flight* flight, Vec3* position, bool shouldCollide, FlightSystem* flightSystem) {
 	std::cout << "\n== Collision Test case: " << desc << " ==" << std::endl;
 
 	if (position != nullptr) {

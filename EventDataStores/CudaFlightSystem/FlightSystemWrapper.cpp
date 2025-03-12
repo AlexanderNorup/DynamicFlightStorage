@@ -152,7 +152,7 @@ bool UpdateFlights(void* flightSystem, int* ids, int* newPositions, int* newDura
 // Detect collisions with a bounding box
 int* DetectCollisions(void* flightSystem, int* boxMin, int* boxMax) {
 	if (!flightSystem || !boxMin || !boxMax) {
-		return false;
+		return nullptr;
 	}
 
 	try {
@@ -174,7 +174,7 @@ int* DetectCollisions(void* flightSystem, int* boxMin, int* boxMax) {
 		return system->detectCollisions(box, true);
 	}
 	catch (...) {
-		return false;
+		return nullptr;
 	}
 }
 
