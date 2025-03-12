@@ -13,7 +13,8 @@
   <Target Name="CopyNativeDLL" AfterTargets="Build">
     <Copy SourceFiles="..\CudaFlightSystem\x64\Release\CudaFlightSystem.dll"
           DestinationFolder="$(OutputPath)"
-          SkipUnchangedFiles="true" />
+          SkipUnchangedFiles="true"
+          Condition="Exists('..\CudaFlightSystem\x64\Release\CudaFlightSystem.dll')" />
   </Target>
 
 </Project>

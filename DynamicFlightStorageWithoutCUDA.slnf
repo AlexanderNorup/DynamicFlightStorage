@@ -1,0 +1,23 @@
+{
+  "solution": {
+    "path": "DynamicFlightStorage.sln",
+    "projects": [
+      "DynamicFlightStorageDTOs\\DynamicFlightStorageDTOs.csproj",
+      "DynamicFlightStorageSimulation\\DynamicFlightStorageSimulation.csproj",
+      "DynamicFlightStorageUI\\DynamicFlightStorageUI.csproj",
+      "DynamicFlightTest\\DynamicFlightTest.csproj",
+      "EventDataStores\\BasicEventDataStore\\BasicEventDataStore.csproj",
+      "EventDataStores\\GPUAcceleratedEventDataStore\\GPUAcceleratedEventDataStore.csproj",
+      "EventDataStores\\ManyTablesPostgreSQLDataStore\\ManyTablesPostgreSQLDataStore.csproj",
+      "EventDataStores\\Neo4jDataStore\\Neo4jDataStore.csproj",
+      "EventDataStores\\OptimizedPostgreSQLDataStore\\OptimizedPostgreSQLDataStore.csproj",
+      "EventDataStores\\SimplePostgreSQLDataStore\\SimplePostgreSQLDataStore.csproj",
+      "EventDataStores\\SingleTablePostgreSQLDataStore\\SingleTablePostgreSQLDataStore.csproj",
+      "EventDataStores\\SpatialGISTManyTablesPostgreSQLDataStore\\SpatialGISTManyTablesPostgreSQLDataStore.csproj",
+      "EventDataStores\\SpatialGISTPostgreSQLDataStore\\SpatialGISTPostgreSQLDataStore.csproj",
+      "ExperimentRunner\\ExperimentRunner.csproj",
+      "scripts\\FlightGenerator\\FlightGenerator.csproj",
+      "scripts\\FlightRequestCleaner\\FlightRequestCleaner.csproj"
+    ]
+  }
+}
