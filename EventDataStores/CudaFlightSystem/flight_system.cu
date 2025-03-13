@@ -42,7 +42,7 @@ __global__ void updateFlightsKernel(Flight* flights, int* indices, int* zData,
 __global__ void checkCollisionsKernel(Flight* flights, int numFlights,
 	int* indices, int* zValues, BoundingBox box, int offset, bool setRecalculating, int* collisionResults) {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-	if (idx < numFlights) {
+	if (idx + offset < numFlights) {
 		int flightIdx = indices[idx + offset];
 		FlightPosition dep = flights[flightIdx].position;
 		int duration = flights[flightIdx].flightDuration;
