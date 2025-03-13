@@ -53,7 +53,8 @@ namespace GPUAcceleratedEventDataStore
             int[] affectedFlights = _cudaFlightSystem.FindFlightsAffectedByWeather(weather);
             foreach (var flight in affectedFlights)
             {
-                if(_flightIdToIdentMap.TryGetValue(flight, out var ident)) { 
+                if (_flightIdToIdentMap.TryGetValue(flight, out var ident))
+                {
                     await _flightRecalculation.PublishRecalculationAsync(ident);
                 }
                 else

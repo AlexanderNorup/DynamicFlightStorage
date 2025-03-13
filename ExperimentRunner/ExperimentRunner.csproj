@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\DynamicFlightStorageSimulation\DynamicFlightStorageSimulation.csproj" />
     <ProjectReference Include="..\EventDataStores\BasicEventDataStore\BasicEventDataStore.csproj" />
+    <ProjectReference Include="..\EventDataStores\GPUAcceleratedEventDataStore\GPUAcceleratedEventDataStore.csproj" />
     <ProjectReference Include="..\EventDataStores\Neo4jDataStore\Neo4jDataStore.csproj" />
     <ProjectReference Include="..\EventDataStores\OptimizedPostgreSQLDataStore\OptimizedPostgreSQLDataStore.csproj" />
     <ProjectReference Include="..\EventDataStores\SimplePostgreSQLDataStore\SimplePostgreSQLDataStore.csproj" />

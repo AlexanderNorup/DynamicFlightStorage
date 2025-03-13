@@ -1,9 +1,10 @@
 #include "FlightSystemWrapper.h"
 #include "flight_system.h"
+#include "console_colors.h"
 #include <vector>
 #include <memory>
 
-#define SHOULD_LOG true
+#define SHOULD_LOG false
 
 #if SHOULD_LOG
 template<typename T>
@@ -171,9 +172,24 @@ int* DetectCollisions(void* flightSystem, int* boxMin, int* boxMax) {
 		std::cout << "Detecting collision with box: " << box.min.x << ", " << box.min.y << ", " << box.min.z << " - " << box.max.x << ", " << box.max.y << ", " << box.max.z << std::endl;
 #endif
 
-		return system->detectCollisions(box, true);
+		int* results = system->detectCollisions(box, true);
+
+#if SHOULD_LOG
+		int count = results[0];
+		if (count > 0) {
+			std::vector<int> resultsVec(results + 1, results + std::min(count, 5) + 1);
+			std::cout << "Found " << count << " collisions: " << resultsVec << "..." << std::endl;
+		}
+		else {
+			std::cout << "Found no collisions" << std::endl;
+		}
+#endif
+
+		return results;
 	}
 	catch (...) {
+		std::cout << COLOR_RED << "Detecting collision with box threw an c++ exception" << COLOR_RESET << std::endl;
+
 		return nullptr;
 	}
 }

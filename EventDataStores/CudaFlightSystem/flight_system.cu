@@ -47,7 +47,7 @@ __global__ void checkCollisionsKernel(Flight* flights, int numFlights,
 		FlightPosition dep = flights[flightIdx].position;
 		int duration = flights[flightIdx].flightDuration;
 
-		collisionResults[idx] = INT_MIN; // Default to no collision
+		collisionResults[idx + offset] = INT_MIN; // Default to no collision
 
 		if (flights[flightIdx].isRecalculating) {
 			return;

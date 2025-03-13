@@ -210,7 +210,7 @@ namespace GPUAcceleratedEventDataStore
                 if (affectedCount > 0)
                 {
                     affectedFlights = new int[affectedCount];
-                    Marshal.Copy(results, affectedFlights, 1, affectedCount);
+                    Marshal.Copy(results + 1, affectedFlights, 0, affectedCount);
                 }
             }
             catch (Exception e)
@@ -224,8 +224,8 @@ namespace GPUAcceleratedEventDataStore
                 boxMaxHandle.Free();
                 if (results != IntPtr.Zero)
                 {
-                NativeMethods.ReleaseCollisionResults(_handle, results);
-            }
+                    NativeMethods.ReleaseCollisionResults(_handle, results);
+                }
             }
 
             return affectedFlights;
