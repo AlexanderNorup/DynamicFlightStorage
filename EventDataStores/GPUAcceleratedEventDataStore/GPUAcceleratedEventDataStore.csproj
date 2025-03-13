@@ -16,6 +16,11 @@
              Condition="Exists('..\CudaFlightSystem\x64\Release\CudaFlightSystem.dll')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\CudaFlightSystem\out\libcuda_flight_system.so"
+             Link="CudaFlightSystem.so"
+             Condition="Exists('..\CudaFlightSystem\out\libcuda_flight_system.so')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>
