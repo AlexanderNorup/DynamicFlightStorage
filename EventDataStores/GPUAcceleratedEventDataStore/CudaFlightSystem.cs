@@ -59,7 +59,7 @@ namespace GPUAcceleratedEventDataStore
             {
                 ids[i] = flights[i].InternalId;
                 newDurations[i] = GetFlightDurationInSeconds(flights[i].Flight);
-                positions.AddRange(GetFlightPositions(flights[i].Flight, flights[i].lastSeenWeather));
+                positions.AddRange(GetFlightPositions(flights[i].Flight, flights[i].Weather));
             }
 
             int[] newPositions = positions.ToArray();
@@ -138,7 +138,7 @@ namespace GPUAcceleratedEventDataStore
             {
                 ids[i] = flights[i].InternalId;
                 newDurations[i] = GetFlightDurationInSeconds(flights[i].Flight);
-                positions.AddRange(GetFlightPositions(flights[i].Flight, flights[i].lastSeenWeather));
+                positions.AddRange(GetFlightPositions(flights[i].Flight, flights[i].Weather));
             }
 
             int[] newPositions = positions.ToArray();
@@ -236,18 +236,21 @@ namespace GPUAcceleratedEventDataStore
             return (int)(flight.ScheduledTimeOfArrival - flight.ScheduledTimeOfDeparture).TotalSeconds;
         }
 
-        private static IEnumerable<int> GetFlightPositions(Flight flight, WeatherCategory lastSeenWeatherCategory)
+        const int EndOfArraySignalNumber = -1337; // This is dumb, but it works. "What if null-termination but different?"
+        private static IEnumerable<int> GetFlightPositions(Flight flight, Dictionary<string, WeatherCategory> flightWeather)
         {
             // X: TIME
             yield return flight.ScheduledTimeOfDeparture.ToUnixTimeSeconds();
-            // Y: WEATHER
-            yield return (int)lastSeenWeatherCategory;
-            // Z: AIRPORT(s)
+
+            // For each X position, we have multiple Y and Z position
             foreach (var airport in flight.GetAllAirports().Distinct())
             {
+                // Y: WEATHER
+                yield return (int)flightWeather.GetValueOrDefault(airport, WeatherCategory.Undefined);
+                // Z: ICAO
                 yield return IcaoConversionHelper.ConvertIcaoToInt(airport);
             }
-            yield return -1; // We signal the end of z-positions for a flight with a negative number
+            yield return EndOfArraySignalNumber; // We signal the end of z-positions for a flight with the special signal number
         }
 
         #region IDisposable Implementation

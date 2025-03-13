@@ -26,8 +26,7 @@ namespace GPUAcceleratedEventDataStore
                 throw new InvalidOperationException("CUDA Flight System is not ready");
             }
 
-            // TEMP: I done goofed. There's just one weather for now.
-            var weather = _weatherService.GetWeatherCategoriesForFlight(flight).FirstOrDefault().Value;
+            var weather = _weatherService.GetWeatherCategoriesForFlight(flight);
 
             if (_flightIdentToIdMap.TryGetValue(flight.FlightIdentification, out var id))
             {

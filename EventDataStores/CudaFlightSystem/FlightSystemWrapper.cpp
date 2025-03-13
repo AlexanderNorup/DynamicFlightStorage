@@ -6,7 +6,23 @@
 
 #define SHOULD_LOG false
 
+#define SPECIAL_SIGNAL_NUMBER (-1337)
+
 #if SHOULD_LOG
+std::ostream& operator<<(std::ostream& os, std::vector<Airport> vec)
+{
+	os << "{";
+	if (vec.size() != 0)
+	{
+		for (int i = 0; i < vec.size(); i++)
+		{
+			os << "{y=" << vec[i].y << ",z=" << vec[i].z << "}, ";
+		}
+	}
+	os << "}";
+	return os;
+}
+
 template<typename T>
 std::ostream& operator<<(std::ostream& os, std::vector<T> vec)
 {
@@ -57,7 +73,7 @@ bool InitializeFlights(void* flightSystem) {
 
 // Add new flights to the system
 bool AddFlights(void* flightSystem, int* ids, int* positions, int* durations, int flightCount, int positionCount) {
-	// Position works as follows: There are 2 ints for x and y. Then any amount of z's up to a negative number.
+	// Position works as follows: There are 2 ints for x and y. Then any amount of z's up to the special signal-number -1337.
 	// The negative numbers must be included in the positionCount-count.
 	if (!flightSystem || !ids || !positions || !durations || flightCount <= 0 || positionCount <= 0) {
 		return false;
@@ -74,7 +90,7 @@ bool AddFlights(void* flightSystem, int* ids, int* positions, int* durations, in
 			flights[i].position.x = positions[positionCounter++];
 
 			std::vector<Airport> yz;
-			while (positionCounter < positionCount && positions[positionCounter] >= 0) {
+			while (positionCounter < positionCount && positions[positionCounter] != SPECIAL_SIGNAL_NUMBER) {
 				yz.push_back({ positions[positionCounter++], positions[positionCounter++] });
 			}
 
@@ -128,7 +144,7 @@ bool UpdateFlights(void* flightSystem, int* ids, int* newPositions, int* newDura
 			positions[i].x = newPositions[positionCounter++];
 
 			std::vector<Airport> yz;
-			while (positionCounter < positionCount && newPositions[positionCounter] >= 0) {
+			while (positionCounter < positionCount && newPositions[positionCounter] != SPECIAL_SIGNAL_NUMBER) {
 				yz.push_back({ newPositions[positionCounter++], newPositions[positionCounter++] });
 			}
 

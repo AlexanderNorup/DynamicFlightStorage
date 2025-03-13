@@ -2,5 +2,5 @@
 
 namespace GPUAcceleratedEventDataStore
 {
-    internal record GPUFlight(Flight Flight, int InternalId, WeatherCategory lastSeenWeather);
+    internal record GPUFlight(Flight Flight, int InternalId, Dictionary<string, WeatherCategory> Weather);
 }
