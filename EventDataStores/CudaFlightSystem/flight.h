@@ -8,12 +8,16 @@ struct Vec3 {
 		z;   // Airport coordinate
 };
 
+struct Airport {
+	int y,	// Weather level
+		z;  // Airport ICAO
+};
+
 struct FlightPosition {
 	int x;  // Time coordinate (unix time seconds)
-	int y;  // Weather coordinates
-	int* z; // Airport coorindates
-	int zLength;
-	int zOffset; // Only used internally
+	Airport* airport; // Airport coorindates
+	int airportLength;
+	int airportOffset; // Only used internally
 };
 
 // Flight structure (point in space)

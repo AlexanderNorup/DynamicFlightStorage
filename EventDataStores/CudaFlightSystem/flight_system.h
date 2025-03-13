@@ -67,7 +67,7 @@ private:
 
 	// Allocate or reallocate device memory
 	bool allocateDeviceMemory(int requiredSize);
-	thrust::device_vector<int> d_flightZData; // Device flight Z data
+	thrust::device_vector<Airport> d_flightAirportData; // Device flight Airport data
 
 	void copyZDataToDeviceManaged(Flight* hostFlights, int count);
 

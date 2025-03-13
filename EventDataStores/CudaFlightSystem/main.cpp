@@ -22,9 +22,8 @@ void generateRandomFlights(std::vector<Flight>& flights, int count, int position
 
 	for (int i = 0; i < count; i++) {
 		flights[i].position.x = posDist(gen);
-		flights[i].position.y = posDist(gen);
-		flights[i].position.z = new int[2] { posDist(gen), posDist(gen) };
-		flights[i].position.zLength = 2;
+		flights[i].position.airport = new Airport[2]{ {posDist(gen),posDist(gen)}, {posDist(gen),posDist(gen)} };
+		flights[i].position.airportLength = 2;
 		flights[i].flightDuration = durDist(gen);
 		flights[i].id = i;
 	}
@@ -32,7 +31,7 @@ void generateRandomFlights(std::vector<Flight>& flights, int count, int position
 
 void freeFlights(std::vector<Flight>& flights) {
 	for (int i = 0; i < flights.size(); i++) {
-		delete[] flights[i].position.z;
+		delete[] flights[i].position.airport;
 	}
 }
 
@@ -144,9 +143,8 @@ int main(int argc, char* argv[]) {
 	for (int i = 0; i < numFlightsToUpdate; i++) {
 		updateIds[i] = idxDist(gen);
 		newPositions[i].x = posDist(gen);
-		newPositions[i].y = posDist(gen);
-		newPositions[i].z = new int[2] { posDist(gen), posDist(gen) };
-		newPositions[i].zLength = 2;
+		newPositions[i].airport = new Airport[2]{ {posDist(gen),posDist(gen)}, {posDist(gen),posDist(gen)} };
+		newPositions[i].airportLength = 2;
 		newDurations[i] = posDuration(gen);
 	}
 
@@ -161,7 +159,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	for (int i = 0; i < numFlightsToUpdate; i++) {
-		delete[] newPositions[i].z; // Clear memory
+		delete[] newPositions[i].airport; // Clear memory
 	}
 
 	std::chrono::duration<double, std::milli> updateTime = endUpdate - startUpdate;
@@ -201,7 +199,7 @@ int main(int argc, char* argv[]) {
 	newFlight.isRecalculating = false;
 	newFlight.id = -1337;
 	newFlight.flightDuration = 420;
-	newFlight.position = { 0, 0, new int[2] {0, 0}, 2 };
+	newFlight.position = { 0, new Airport[2] {{0, 0}, {0, 0}}, 2 };
 
 	auto startAddFlight = std::chrono::high_resolution_clock::now();
 
@@ -210,7 +208,7 @@ int main(int argc, char* argv[]) {
 	auto endAddFlight = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double, std::milli> addFlightTime = endAddFlight - startAddFlight;
 
-	delete[] newFlight.position.z;
+	delete[] newFlight.position.airport;
 
 	if (!success) {
 		std::cerr << COLOR_RED << "Adding flight failed" << COLOR_RESET << std::endl;
@@ -336,7 +334,7 @@ int main(int argc, char* argv[]) {
 	for (int i = 0; i < gpuResults[0]; i++) {
 		int idToUpdate = gpuResults[i + 1];
 		updateIds2.push_back(idToUpdate);
-		newPositions2.push_back({ 1, 2, new int[2] { 3, 4 }, 2 });
+		newPositions2.push_back({ 1, new Airport[2] { {2, 3}, {4, 5} }, 2 });
 		newDurations2.push_back(posDuration(gen));
 	}
 
@@ -367,7 +365,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	for (int i = 0; i < newPositions2.size(); i++) {
-		delete[] newPositions2[i].z;
+		delete[] newPositions2[i].airport;
 	}
 
 	auto thirdRecalcStart = std::chrono::high_resolution_clock::now();

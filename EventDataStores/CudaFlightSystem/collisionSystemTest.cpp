@@ -8,15 +8,14 @@ void testCase(const char* desc, Flight* flight, Vec3* position, bool shouldColli
 
 	if (position != nullptr) {
 		flight->position.x = position->x;
-		flight->position.y = position->y;
-		flight->position.z = new int[1] {position->z};
-		flight->position.zLength = 1;
+		flight->position.airport = new Airport[2]{ position->y, position->z };
+		flight->position.airportLength = 1;
 	}
 
 	std::vector<int> ids(1, 0);
 	flightSystem->updateFlights(ids.data(), &flight->position, &flight->flightDuration, 1);
 	flightSystem->sortFlightsByX();
-	delete[] flight->position.z;
+	delete[] flight->position.airport;
 
 	BoundingBox box;
 	box.min = { -10, -10, -10 };
@@ -45,8 +44,8 @@ void testCollisionSystem() {
 	Flight flight;
 	flight.id = 0;
 	flight.flightDuration = 100;
-	flight.position.z = new int[3] { 0, 0, 0 };
-	flight.position.zLength = 3;
+	flight.position.airport = new Airport[3]{ { 0, 0 }, { 0, 0 }, { 0, 0 } };
+	flight.position.airportLength = 3;
 	Vec3 position;
 	bool success = flightsystem.initialize(&flight, 1);
 
@@ -54,7 +53,7 @@ void testCollisionSystem() {
 		std::cerr << COLOR_RED << "Flight system initialization failed for collision test" << COLOR_RESET << std::endl;
 		return;
 	}
-	delete[] flight.position.z;
+	delete[] flight.position.airport;
 
 	// Run tests
 	position = { 0, 0, 0 };
@@ -106,21 +105,24 @@ void testCollisionSystem() {
 	position = { -11, 0, 0 };
 	testCase("From outside, stops inside", &flight, &position, true, &flightsystem);
 
-	// Test cases with multiple z-values
+	// Test cases with multiple airport-z-values
 	flight.position.x = 0;
-	flight.position.y = 0;
 
-	flight.position.z = new int[3] { 1, 2, 3 };
-	flight.position.zLength = 3;
-	testCase("Multiple z-values, all inside", &flight, nullptr, true, &flightsystem);
+	flight.position.airport = new Airport[3]{ { 0, 1 }, { 0, 2 }, { 0, 3 } };
+	flight.position.airportLength = 3;
+	testCase("Multiple airport-z-values, all inside", &flight, nullptr, true, &flightsystem);
 
-	flight.position.z = new int[3] { -11, -12, 0 };
-	flight.position.zLength = 3;
-	testCase("Multiple z-values, 1 inside", &flight, nullptr, true, &flightsystem);
+	flight.position.airport = new Airport[3]{ { 0, -11 }, { 0, -12 }, { 0, 0 } };
+	flight.position.airportLength = 3;
+	testCase("Multiple airport-z-values, 1 inside", &flight, nullptr, true, &flightsystem);
 
-	flight.position.z = new int[3] { -11, -12, -13 };
-	flight.position.zLength = 3;
-	testCase("Multiple z-values, all outside", &flight, nullptr, false, &flightsystem);
+	flight.position.airport = new Airport[3]{ { 0, -11 }, { 0, -12 }, { 0, -13 } };
+	flight.position.airportLength = 3;
+	testCase("Multiple airport-z-values, all outside", &flight, nullptr, false, &flightsystem);
+
+	flight.position.airport = new Airport[3]{ { -11, -11 }, { -12, -12 }, { -13, -13 } };
+	flight.position.airportLength = 3;
+	testCase("Multiple airport-yz-values, all outside", &flight, nullptr, false, &flightsystem);
 
 	std::cout << "\nCollision system test complete." << std::endl;
 	flightsystem.cleanup();

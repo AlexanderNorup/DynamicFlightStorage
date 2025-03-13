@@ -72,20 +72,19 @@ bool AddFlights(void* flightSystem, int* ids, int* positions, int* durations, in
 		// Convert flat float array into flights
 		for (int i = 0; i < flightCount; i++) {
 			flights[i].position.x = positions[positionCounter++];
-			flights[i].position.y = positions[positionCounter++];
 
-			std::vector<int> z;
+			std::vector<Airport> yz;
 			while (positionCounter < positionCount && positions[positionCounter] >= 0) {
-				z.push_back(positions[positionCounter++]);
+				yz.push_back({ positions[positionCounter++], positions[positionCounter++] });
 			}
 
-			flights[i].position.z = z.data();
-			flights[i].position.zLength = z.size();
+			flights[i].position.airport = yz.data();
+			flights[i].position.airportLength = yz.size();
 
 			flights[i].flightDuration = durations[i];
 			flights[i].id = ids[i];
 #if SHOULD_LOG
-			std::cout << "Adding Flight #" << i << " ID: " << flights[i].id << " Position: " << flights[i].position.x << ", " << flights[i].position.y << ", " << z << " Duration: " << flights[i].flightDuration << std::endl;
+			std::cout << "Adding Flight #" << i << " ID: " << flights[i].id << " Position: " << flights[i].position.x << ", " << yz << " Duration: " << flights[i].flightDuration << std::endl;
 #endif
 		}
 
@@ -127,19 +126,18 @@ bool UpdateFlights(void* flightSystem, int* ids, int* newPositions, int* newDura
 		// Convert flat float array into Vec3 positions
 		for (int i = 0; i < updateCount; i++) {
 			positions[i].x = newPositions[positionCounter++];
-			positions[i].y = newPositions[positionCounter++];
 
-			std::vector<int> z;
+			std::vector<Airport> yz;
 			while (positionCounter < positionCount && newPositions[positionCounter] >= 0) {
-				z.push_back(newPositions[positionCounter++]);
+				yz.push_back({ newPositions[positionCounter++], newPositions[positionCounter++] });
 			}
 
-			positions[i].z = z.data();
-			positions[i].zLength = z.size();
+			positions[i].airport = yz.data();
+			positions[i].airportLength = yz.size();
 
 			durations[i] = newDurations[i];
 #if SHOULD_LOG
-			std::cout << "Updating Flight #" << i << " ID: " << ids[i] << " Position: " << positions[i].x << ", " << positions[i].y << ", " << z << " Duration: " << durations[i] << std::endl;
+			std::cout << "Updating Flight #" << i << " ID: " << ids[i] << " Position: " << positions[i].x << ", " << yz << " Duration: " << durations[i] << std::endl;
 #endif
 		}
 
