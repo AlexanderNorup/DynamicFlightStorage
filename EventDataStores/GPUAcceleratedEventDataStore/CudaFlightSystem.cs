@@ -188,7 +188,7 @@ namespace GPUAcceleratedEventDataStore
             // Z = AIRPORT
             int icaoAsInt = IcaoConversionHelper.ConvertIcaoToInt(weather.Airport);
             int[] boxMin = [weather.ValidFrom.ToUnixTimeSeconds(), (int)WeatherCategory.Undefined, icaoAsInt];
-            int[] boxMax = [weather.ValidTo.ToUnixTimeSeconds(), (int)weather.WeatherLevel, icaoAsInt];
+            int[] boxMax = [weather.ValidTo.ToUnixTimeSeconds(), (int)weather.WeatherLevel - 1, icaoAsInt];
 
             // Pin arrays in memory
             GCHandle boxMinHandle = GCHandle.Alloc(boxMin, GCHandleType.Pinned);
@@ -222,7 +222,10 @@ namespace GPUAcceleratedEventDataStore
             {
                 boxMinHandle.Free();
                 boxMaxHandle.Free();
+                if (results != IntPtr.Zero)
+                {
                 NativeMethods.ReleaseCollisionResults(_handle, results);
+            }
             }
 
             return affectedFlights;
