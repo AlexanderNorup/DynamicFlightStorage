@@ -54,7 +54,14 @@ namespace DynamicFlightStorageSimulation
             }
             var weather = weatherEvent.Weather;
             _weatherService.AddWeather(weather);
-            await _eventDataStore.AddWeatherAsync(weather).ConfigureAwait(false);
+            try
+            {
+                await _eventDataStore.AddWeatherAsync(weather).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                await HandleDataStoreException(e, nameof(_eventDataStore.AddWeatherAsync)).ConfigureAwait(false);
+            }
         }
 
         private async Task OnFlightRecieved(FlightEvent flight)
@@ -68,7 +75,14 @@ namespace DynamicFlightStorageSimulation
             {
                 cleanState = false;
             }
-            await _eventDataStore.AddOrUpdateFlightAsync(flight.Flight).ConfigureAwait(false);
+            try
+            {
+                await _eventDataStore.AddOrUpdateFlightAsync(flight.Flight).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                await HandleDataStoreException(e, nameof(_eventDataStore.AddOrUpdateFlightAsync)).ConfigureAwait(false);
+            }
         }
 
         private async Task ResetStateAsync(SystemMessage message)
@@ -147,11 +161,7 @@ namespace DynamicFlightStorageSimulation
                     _consumerLogger.ResetLogger();
                     break;
                 case SystemMessage.SystemMessageType.AbortExperiment:
-                    _logger?.LogWarning("Consumer aborting experiment");
-                    _isCancelled = true;
-                    await _simulationEventBus.ClearExchanges().ConfigureAwait(false);
-                    await _consumerLogger.PersistDataAsync(_simulationEventBus.CurrentExperimentId, ClientId).ConfigureAwait(false);
-                    _consumerLogger.ResetLogger();
+                    await AbortExperiment().ConfigureAwait(false);
                     var response = new SystemMessage()
                     {
                         MessageType = SystemMessage.SystemMessageType.AbortSuccess,
@@ -164,6 +174,28 @@ namespace DynamicFlightStorageSimulation
                 default:
                     break;
             }
+        }
+
+        private async Task HandleDataStoreException(Exception e, string methodName)
+        {
+            _logger?.LogError(e, "Unhandled exception from {DataStoreType} when calling {MethodName}.",
+                EventDataStoreName, methodName);
+            await _simulationEventBus.PublishSystemMessage(new SystemMessage()
+            {
+                MessageType = SystemMessage.SystemMessageType.ConsumerExperimentAbort,
+                Message = $"Exception of type {e.GetType().FullName} from {EventDataStoreName}.{methodName}: {e.Message}",
+                Source = ClientId,
+            }).ConfigureAwait(false);
+            await AbortExperiment().ConfigureAwait(false);
+        }
+
+        private async Task AbortExperiment()
+        {
+            _logger?.LogWarning("Consumer aborting experiment");
+            _isCancelled = true;
+            await _simulationEventBus.ClearExchanges().ConfigureAwait(false);
+            await _consumerLogger.PersistDataAsync(_simulationEventBus.CurrentExperimentId, ClientId).ConfigureAwait(false);
+            _consumerLogger.ResetLogger();
         }
 
         protected virtual void Dispose(bool disposing)

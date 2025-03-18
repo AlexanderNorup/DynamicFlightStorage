@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Vært: hosting.alexandernorup.com
--- Genereringstid: 17. 02 2025 kl. 14:54:52
+-- Genereringstid: 18. 03 2025 kl. 12:53:34
 -- Serverversion: 10.5.23-MariaDB-0+deb11u1-log
--- PHP-version: 8.3.16
+-- PHP-version: 8.3.19
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -75,6 +75,7 @@ CREATE TABLE `Experiment` (
   `DataSetName` varchar(255) NOT NULL DEFAULT 'default',
   `TimeScale` double NOT NULL,
   `LoggingEnabled` tinyint(1) NOT NULL DEFAULT 0,
+  `DoRecalculationBounce` tinyint(1) NOT NULL DEFAULT 0,
   `SimulatedStartTime` datetime NOT NULL,
   `SimulatedEndTime` datetime NOT NULL,
   `SimulatedPreloadStartTime` datetime NOT NULL,
@@ -110,7 +111,7 @@ CREATE TABLE `ExperimentResult` (
   `ExperimentRunDescription` varchar(255) NOT NULL,
   `UTCStartTime` datetime DEFAULT NULL,
   `UTCEndTime` datetime DEFAULT NULL,
-  `ExperimentError` varchar(255) DEFAULT NULL,
+  `ExperimentError` text DEFAULT NULL,
   `ExperimentSuccess` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 

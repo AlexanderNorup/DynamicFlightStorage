@@ -43,6 +43,8 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             _experimentChecker.AutoReset = true;
 
             _logger.OnLog += OnLog;
+
+            _eventBus.SubscribeToSystemEvent(SystemMessageRecieved);
         }
 
         private const int LogsToKeep = 30;
@@ -192,10 +194,10 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 // Do preload here.
                 var st = Stopwatch.StartNew();
                 var minimumWaitPreloadWaitTime = Task.Delay(TimeSpan.FromMilliseconds(MinimumWaitTimeForConsumptionMs));
-                
+
                 _weatherInjector.SkipWeatherUntil(CurrentExperiment.SimulatedPreloadStartTime, ccToken.Token);
                 await _weatherInjector.PublishWeatherUntil(CurrentExperiment.SimulatedPreloadEndTime, CurrentExperiment.Id, _logger, ccToken.Token).ConfigureAwait(false);
-                
+
                 _logger.LogInformation("Finished preloading weather. Took {Time}. Waiting to be consumed...", st.Elapsed);
                 await minimumWaitPreloadWaitTime; // Wait for the minium time of 10 seconds before checking if everything is consumed
                 await _consumingMonitor.WaitForExchangesToBeConsumedAsync(ExperimentRunnerClientIds.ToArray(), ccToken.Token);
@@ -381,6 +383,11 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
         public async Task AbortExperimentAsync()
         {
+            if (CurrentExperiment is null)
+            {
+                _logger.LogWarning("Cannot abort experiment because there is no experiment set.");
+                return;
+            }
             _logger.LogWarning("Aborting experiment");
             await _abortSemaphore.WaitAsync().ConfigureAwait(false);
             OrchestratorState = OrchestratorState.Aborting;
@@ -398,20 +405,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     await _experimentDataCollector.AddOrUpdateExperimentResultAsync(CurrentExperimentResult);
                     await _experimentDataCollector.FinishDataCollectionAsync(ExperimentRunnerClientIds);
                 }
-                if (ExperimentTask is not null)
-                {
-                    // Will "Join the thread" and wait for completion.
-                    try
-                    {
-                        _logger.LogDebug("Joining the experiment task to wait for exit..");
-                        await ExperimentTask.ConfigureAwait(false);
-                    }
-                    catch (Exception e) when (e is not OperationCanceledException)
-                    {
-                        _logger.LogError(e, "Experiment threw an error while running.");
-                    }
-                    ExperimentTask = null;
-                }
+                await KillExperimentTask().ConfigureAwait(false);
                 // The wait for response function is used because it might be nice to get confirmation. But if the experiment is huge, long and the consumer is overloaded with events
                 // then it might not see the abort request within the 120 second timeout. It will still abort, but this won't be waiting indefinitely
                 var result = await SendSystemMessageAndWaitForResponseAsync(new SystemMessage()
@@ -428,6 +422,76 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 _logger.LogWarning("Experiment aborted successfully!");
                 ResetExperimentState();
                 _abortSemaphore.Release();
+            }
+        }
+
+        private async Task KillExperimentTask()
+        {
+            if (ExperimentTask is not null)
+            {
+                // Will "Join the thread" and wait for completion.
+                try
+                {
+                    _logger.LogDebug("Joining the experiment task to wait for exit..");
+                    await ExperimentTask.ConfigureAwait(false);
+                }
+                catch (Exception e) when (e is not OperationCanceledException)
+                {
+                    _logger.LogError(e, "Experiment threw an error while running.");
+                }
+                ExperimentTask = null;
+            }
+        }
+
+        private async Task SystemMessageRecieved(SystemMessage systemMessage)
+        {
+            if (systemMessage.MessageType is SystemMessageType.ConsumerExperimentAbort)
+            {
+                if (!ExperimentRunnerClientIds.Contains(systemMessage.Source))
+                {
+                    // Not for us
+                    return;
+                }
+                await _abortSemaphore.WaitAsync().ConfigureAwait(false);
+                try
+                {
+                    OrchestratorState = OrchestratorState.Aborting;
+                    _logger.LogError("Recieved abort message from consumer: {Message}", systemMessage.Message);
+                    OnExperimentStateChanged?.Invoke();
+
+                    if (!ExperimentCancellationToken.IsCancellationRequested)
+                    {
+                        ExperimentCancellationToken.Cancel();
+                    }
+                    await KillExperimentTask().ConfigureAwait(false);
+
+                    if (CurrentExperimentResult is { ExperimentSuccess: false, UTCEndTime: null } currentResult)
+                    {
+                        currentResult.ExperimentError = $"Consumer abort: {systemMessage.Message}";
+                        currentResult.UTCEndTime = DateTime.UtcNow;
+                        currentResult.ExperimentSuccess = false;
+                        await _experimentDataCollector.AddOrUpdateExperimentResultAsync(CurrentExperimentResult);
+                        await _experimentDataCollector.FinishDataCollectionAsync(ExperimentRunnerClientIds);
+                    }
+
+                    var otherExperimentRunners = ExperimentRunnerClientIds.Except([systemMessage.Source]).ToHashSet();
+                    if (CurrentExperiment is not null && otherExperimentRunners.Count > 0)
+                    {
+                        var result = await SendSystemMessageAndWaitForResponseAsync(new SystemMessage()
+                        {
+                            Message = CurrentExperiment.Id,
+                            MessageType = SystemMessageType.AbortExperiment,
+                            Source = _eventBus.ClientId,
+                            Targets = otherExperimentRunners,
+                        }, SystemMessageType.AbortSuccess, TimeSpan.FromSeconds(120)).ConfigureAwait(false);
+                    }
+                }
+                finally
+                {
+                    _abortSemaphore.Release();
+                    _logger.LogError("Experiment aborted!");
+                    ResetExperimentState();
+                }
             }
         }
 
@@ -598,6 +662,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             _experimentChecker.Dispose();
             _experimentDataCollector.OnRecalculationAsync -= RecalculationMessageRecieved;
             _logger.OnLog -= OnLog;
+            _eventBus.UnSubscribeToSystemEvent(SystemMessageRecieved);
         }
     }
 }
