@@ -31,8 +31,9 @@ namespace DynamicFlightStorageDTOs
             ExperimentComplete = 5,
             AbortExperiment = 6,
             AbortSuccess = 7,
+            ConsumerExperimentAbort = 8,
         }
-        
+
         public override string ToString()
         {
             var targets = Targets.Count > 0 ? string.Join(", ", Targets) : "All Clients";
