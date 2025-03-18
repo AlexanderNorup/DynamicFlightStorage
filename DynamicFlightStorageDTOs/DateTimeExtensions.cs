@@ -4,7 +4,7 @@
     {
         public static int ToUnixTimeSeconds(this DateTime dateTime)
         {
-            return (int)new DateTimeOffset(dateTime).ToUnixTimeSeconds();
+            return (int)((DateTimeOffset)dateTime).ToUnixTimeSeconds();
         }
     }
 }
