@@ -310,6 +310,7 @@
         { "PostgreSQL but only one table (B-tree)", (w, e) => new SingleTablePostgreSQLDataStore.SingleTablePostgreSQLDataStore(w,e)},
         { "Neo4J Relational", (w, e) => new Neo4jDataStore.RelationalNeo4jDataStore(w, e) },
         { "Neo4J Time-Buckets", (w, e) => new Neo4jDataStore.TimeBucketedNeo4jDataStore(w, e) },
+        { "GPU Accelerated data-store", (w, e) => new GPUAcceleratedEventDataStore.CUDAEventDataStore(w, e) }
     };
 
     private async Task CreateConsumer()
