@@ -71,7 +71,7 @@ else
         AllExperiments = (await dbContext.Experiments
             .Include(x=>x.ExperimentResults)
             .ToListAsync())
-                .OrderByDescending(x=>x.ExperimentResults.LastOrDefault()?.UTCEndTime ?? DateTime.MinValue)
+                .OrderByDescending(x=>x.ExperimentResults.LastOrDefault()?.UTCStartTime ?? DateTime.MinValue)
                 .ToList();
     }
 }
