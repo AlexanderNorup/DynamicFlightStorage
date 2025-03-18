@@ -71,7 +71,7 @@ __global__ void checkCollisionsKernel(Flight* flights, int numFlights,
 			return;
 		}
 
-		float xDest = dep.x + duration;
+		int xDest = dep.x + duration;
 		bool collision =
 			((dep.x >= box.min.x) && (dep.x <= box.max.x)) // Checks if flight starts inside the box
 			|| (dep.x < box.min.x && xDest > box.min.x); // Checks if flight intersects the box
@@ -80,7 +80,7 @@ __global__ void checkCollisionsKernel(Flight* flights, int numFlights,
 			if (setRecalculating) {
 				flights[flightIdx].isRecalculating = true;
 			}
-			collisionResults[idx] = flights[flightIdx].id;
+			collisionResults[idx + offset] = flights[flightIdx].id;
 		}
 	}
 }
