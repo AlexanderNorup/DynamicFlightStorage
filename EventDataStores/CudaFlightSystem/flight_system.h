@@ -45,10 +45,13 @@ public:
 	// Get the number of flights
 	int getFlightCount() const { return numFlights; }
 
+	int* ZeroCollisionResults; // Static Zero collision results 
+
 private:
 	Flight* d_flights;         // Device flights array
 	int* d_indices;            // Device flight indices for sorting
 	int* d_collisionResults;   // Device collision results
+	int* d_collisionFlag;      // Device collision flag
 	int numFlights;            // Total flight count
 	int allocatedFlights;      // Number of flights allocated in GPU memory
 	bool initialized;          // Whether system is initialized
@@ -63,7 +66,8 @@ private:
 	// Update the ID to index mapping
 	void updateIdToIndexMap();
 
-	int* getMinMaxIndex(int min, int max);
+	int* minMaxResult; // MinMax result array
+	void calculateMinMaxIndex(int min, int max);
 
 	// Allocate or reallocate device memory
 	bool allocateDeviceMemory(int requiredSize);

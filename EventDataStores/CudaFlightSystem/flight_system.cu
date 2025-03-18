@@ -40,7 +40,8 @@ __global__ void updateFlightsKernel(Flight* flights, int* indices, Airport* airp
 
 // CUDA kernel to check collisions between flights and a bounding box
 __global__ void checkCollisionsKernel(Flight* flights, int numFlights,
-	int* indices, Airport* airportValues, BoundingBox box, int offset, bool setRecalculating, int* collisionResults) {
+	int* indices, Airport* airportValues, BoundingBox box, int offset, bool setRecalculating, int* collisionResults,
+	int* collisionFlag) {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (idx + offset < numFlights) {
 		int flightIdx = indices[idx + offset];
@@ -81,6 +82,7 @@ __global__ void checkCollisionsKernel(Flight* flights, int numFlights,
 				flights[flightIdx].isRecalculating = true;
 			}
 			collisionResults[idx + offset] = flights[flightIdx].id;
+			collisionFlag[0] = 1;
 		}
 	}
 }
@@ -119,12 +121,23 @@ struct CompareByDuration {
 FlightSystem::FlightSystem()
 	: d_flights(nullptr), d_indices(nullptr), d_collisionResults(nullptr),
 	numFlights(0), allocatedFlights(0), initialized(false), deviceId(0) {
+	ZeroCollisionResults = new int[1] { 0 };
+	minMaxResult = new int[2] { 0, 0 };
+
 	// Get the current CUDA device
 	cudaGetDevice(&deviceId);
+	auto error = cudaMalloc(&d_collisionFlag, sizeof(int));
+	if (error != cudaSuccess) {
+		std::cerr << "Failed to allocate device memory for device collision flag: "
+			<< cudaGetErrorString(error) << std::endl;
+	}
 }
 
 // Destructor - cleanup CUDA resources
 FlightSystem::~FlightSystem() {
+	delete[] ZeroCollisionResults;
+	delete[] minMaxResult;
+	cudaFree(d_collisionFlag);
 	cleanup();
 }
 
@@ -490,7 +503,7 @@ bool FlightSystem::updateFlights(int* ids, FlightPosition* newPositions, int* ne
 	cudaMemcpy(d_newPositions, newPositions, updateCount * sizeof(FlightPosition), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_newDurations, newDurations, updateCount * sizeof(int), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_newAirportData, airports.data(), airports.size() * sizeof(Airport), cudaMemcpyHostToDevice);
-	thrust::fill(thrust::device, d_airportDifferentFlag, d_airportDifferentFlag + 1, 0); // Set to 0
+	cudaMemset(d_airportDifferentFlag, 0, sizeof(int)); // Set to 0
 
 	// Launch kernel to update flights
 	int blockSize = 256;
@@ -600,7 +613,7 @@ void FlightSystem::findLongestFlightDuration() {
 	longestFlightDuration = flight[0].flightDuration;
 }
 
-int* FlightSystem::getMinMaxIndex(int min, int max) {
+void FlightSystem::calculateMinMaxIndex(int min, int max) {
 	// When we sort by time (X) we also need to consider the flight duration.
 	// The nicest way to do that is simply to add the longest flight duration to the min value.
 	int adjustedMin = min - longestFlightDuration;
@@ -616,11 +629,8 @@ int* FlightSystem::getMinMaxIndex(int min, int max) {
 	int lowerIdx = lower - d_indices;
 	int upperIdx = higher - d_indices - 1; // -1 because upper_bound gives position after the last element
 
-	int* result = new int[2];
-	result[0] = lowerIdx;
-	result[1] = upperIdx;
-
-	return result;
+	minMaxResult[0] = lowerIdx;
+	minMaxResult[1] = upperIdx;
 }
 
 // Detect collisions with a bounding box
@@ -638,12 +648,10 @@ int* FlightSystem::detectCollisions(const BoundingBox& box, bool autoSetRecalcul
 	}
 
 	// Binary search to find the first flight that might intersect the box
-	int* minMaxIndex = getMinMaxIndex(box.min.x, box.max.x);
+	calculateMinMaxIndex(box.min.x, box.max.x);
 
-	int numFlightsInsideBox = minMaxIndex[1] - minMaxIndex[0] + 1;
-	int offset = minMaxIndex[0];
-
-	delete[] minMaxIndex; // Free the memory
+	int numFlightsInsideBox = minMaxResult[1] - minMaxResult[0] + 1;
+	int offset = minMaxResult[0];
 
 	// Uncomment this to scan all flights
 	/*int offset = 0;
@@ -653,16 +661,18 @@ int* FlightSystem::detectCollisions(const BoundingBox& box, bool autoSetRecalcul
 #endif
 
 	if (numFlightsInsideBox <= 0) {
-		return new int[1] { 0 }; // No flights to check, we know they're all outside.
+		return ZeroCollisionResults; // No flights to check, we know they're all outside.
 	}
+
+	// Set collision flag to 0
+	cudaMemset(d_collisionFlag, 0, sizeof(int));
 
 	// Launch collision detection kernel
 	int blockSize = 256;
 	int numBlocks = (numFlightsInsideBox + blockSize - 1) / blockSize;
-
 	Airport* d_airportValues = thrust::raw_pointer_cast(d_flightAirportData.data());
 	checkCollisionsKernel << <numBlocks, blockSize >> > (
-		d_flights, numFlights, d_indices, d_airportValues, box, offset, autoSetRecalculating, d_collisionResults);
+		d_flights, numFlights, d_indices, d_airportValues, box, offset, autoSetRecalculating, d_collisionResults, d_collisionFlag);
 
 	// Wait for kernel to finish
 	cudaDeviceSynchronize();
@@ -672,6 +682,13 @@ int* FlightSystem::detectCollisions(const BoundingBox& box, bool autoSetRecalcul
 	if (error != cudaSuccess) {
 		std::cerr << "Error detecting collisions: " << cudaGetErrorString(error) << std::endl;
 		return nullptr;
+	}
+
+	int collisionFlag;
+	cudaMemcpy(&collisionFlag, d_collisionFlag, sizeof(int), cudaMemcpyDeviceToHost);
+
+	if (collisionFlag == 0) {
+		return ZeroCollisionResults; // No collisions
 	}
 
 	// Copy results back to host
@@ -699,6 +716,9 @@ int* FlightSystem::detectCollisions(const BoundingBox& box, bool autoSetRecalcul
 bool FlightSystem::releaseCollisionResults(int* results)
 {
 	if (results != nullptr) {
+		if (results == ZeroCollisionResults) {
+			return true;
+		}
 		delete[] results;
 		return true;
 	}
