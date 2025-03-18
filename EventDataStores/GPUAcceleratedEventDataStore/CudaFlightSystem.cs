@@ -210,7 +210,7 @@ namespace GPUAcceleratedEventDataStore
                 if (affectedCount > 0)
                 {
                     affectedFlights = new int[affectedCount];
-                    Marshal.Copy(results + 1, affectedFlights, 0, affectedCount);
+                    Marshal.Copy(results + sizeof(int), affectedFlights, 0, affectedCount);
                 }
             }
             catch (Exception e)
