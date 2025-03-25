@@ -2,7 +2,6 @@ import json
 import uuid
 import random
 from datetime import datetime, timedelta
-import numpy as np
 from scipy.stats import truncnorm
 
 # SETTINGS
@@ -24,6 +23,7 @@ airports = [airport['ICAO'] for airport in airports_data]
 
 def create_taf_conditions(date_start, date_end, base_layer=True): # dates must be in whole hours
     conditions = []
+    conditions_shadow = []
     # Get number of conditions (based on weights from data analysis)
     number_of_conditions= random.choices(num_of_conditions_list, weights=weights_condition_num)[0]
 
@@ -38,13 +38,19 @@ def create_taf_conditions(date_start, date_end, base_layer=True): # dates must b
     initial_condition_end = date_start + timedelta(hours=random_hours_after_start)
     taf_length -= random_hours_after_start
 
-    weights = weights_not_6h if base_layer else weights_6h
-
     conditions.append({
-        "FlightRules": random.choices(flightrule_list, weights=weights)[0],
+        "FlightRules": 'LIFR',
         "Period": {
             "DateStart": date_start.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "DateEnd": initial_condition_end.strftime("%Y-%m-%dT%H:%M:%SZ")
+        }
+    })
+
+    conditions_shadow.append({
+        "FlightRules": 'VFR',
+        "Period": {
+            "DateStart": (date_start + timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "DateEnd": (initial_condition_end  + timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
         }
     })
     
@@ -63,7 +69,7 @@ def create_taf_conditions(date_start, date_end, base_layer=True): # dates must b
         taf_length -= condition_length
 
         conditions.append({
-            "FlightRules": random.choices(flightrule_list, weights=weights)[0],
+            "FlightRules": 'VFR',
             "Period": {
                 "DateStart": current_start.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "DateEnd": current_end.strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -71,11 +77,21 @@ def create_taf_conditions(date_start, date_end, base_layer=True): # dates must b
             "Change": random.choice(changes_list)
         })
 
-    return conditions
+        conditions_shadow.append({
+            "FlightRules": 'LIFR',
+            "Period": {
+                "DateStart": (current_start  + timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "DateEnd": (current_end + timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+            },
+            "Change": random.choice(changes_list)
+        })
+
+    return (conditions, conditions_shadow)
 
 
 def get_taf(icao, date_start, date_end, date_issued, base_layer=True):
-        return {
+    conditions, conditions_shadow = create_taf_conditions(date_start, date_end, base_layer)
+    return ({
         "DateIssued": date_issued.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "ID": str(uuid.uuid4()),
         "Ident": icao,
@@ -83,9 +99,22 @@ def get_taf(icao, date_start, date_end, date_issued, base_layer=True):
             "DateStart": date_start.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "DateEnd": date_end.strftime("%Y-%m-%dT%H:%M:%SZ")
         },
-        "Conditions": create_taf_conditions(date_start, date_end, base_layer),
+        "Conditions": conditions,
         "Text": ""
-    }
+    },
+    {
+        "DateIssued": (date_issued + timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "ID": str(uuid.uuid4()),
+        "Ident": icao,
+        "Period": {
+            "DateStart": (date_start + timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "DateEnd": (date_end + timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        },
+        "Conditions": conditions_shadow,
+        "Text": ""
+    },
+    
+    )
 
 
 def create_base_layer():
@@ -100,8 +129,9 @@ def create_base_layer():
             icao = random.choice(airports)
             date_issued = date_start - timedelta(minutes=round(get_random_value(mean_forecast, median_forecast, min_forecast, max_forecast, std_forecast)))
             date_end = date_start + timedelta(hours=round(get_random_value(mean_length, median_length, min_length, max_length, std_length)))
-
-            tafs.append(get_taf(icao, date_start, date_end, date_issued, True))
+            taf_tuple = get_taf(icao, date_start, date_end, date_issued, True)
+            tafs.append(taf_tuple[0])
+            tafs.append(taf_tuple[1])
         with open(f'/home/sebastian/Desktop/thesis/DynamicFlightStorage/scripts/fake_data_generation/taf/taf{date_start.strftime("%Y-%m-%dT%H:%M:%SZ")}.json', 'w') as outfile:
             json.dump(tafs, outfile, separators=(',', ':'))
 
@@ -119,7 +149,9 @@ def create_6h_spikes():
             date_issued = date_start - timedelta(minutes=round(get_random_value(mean_forecast, median_forecast, min_forecast, max_forecast, std_forecast)))
             date_end = date_start + timedelta(hours=random.choices([24,30], weights=[39829/(39829+10669), 10669/(39829+10669)])[0])
 
-            tafs.append(get_taf(icao, date_start, date_end, date_issued, False))
+            taf_tuple = get_taf(icao, date_start, date_end, date_issued, True)
+            tafs.append(taf_tuple[0])
+            tafs.append(taf_tuple[1])
         file_path = f'/home/sebastian/Desktop/thesis/DynamicFlightStorage/scripts/fake_data_generation/taf/taf{date_start.strftime("%Y-%m-%dT%H:%M:%SZ")}.json'
         try:
             with open(file_path, 'r') as infile:
