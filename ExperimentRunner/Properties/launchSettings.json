@@ -1,0 +1,16 @@
+{
+  "profiles": {
+    "WSL": {
+      "commandName": "WSL2",
+      "distributionName": ""
+    },
+    "Basic In-Memory": {
+      "commandName": "Project",
+      "commandLineArgs": "basicinmemory"
+    },
+    "GPU Accelerated": {
+      "commandName": "Project",
+      "commandLineArgs": "gpuaccelerated"
+    }
+  }
+}

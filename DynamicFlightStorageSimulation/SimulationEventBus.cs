@@ -126,7 +126,7 @@ namespace DynamicFlightStorageSimulation
             }
             catch
             {
-                 // We don't actually care, exhcanged are auto-delete anyway, so they'll die eventually
+                // We don't actually care, exhcanged are auto-delete anyway, so they'll die eventually
             }
         }
 
@@ -317,10 +317,10 @@ namespace DynamicFlightStorageSimulation
                 return;
             }
 
-            _logger.LogDebug("Bus is purging flight and weather queues");
+            _logger?.LogDebug("Bus is purging flight and weather queues");
             await _rabbitChannel.QueuePurgeAsync(FlightQueueName);
             await _rabbitChannel.QueuePurgeAsync(WeatherQueueName);
-            _logger.LogDebug("Bus has purged queues");
+            _logger?.LogDebug("Bus has purged queues");
         }
 
         public async Task DisconnectAsync()
@@ -330,7 +330,7 @@ namespace DynamicFlightStorageSimulation
                 return;
             }
             _logger?.LogInformation("Disconnecting from RabbitMQ.");
-            await _rabbitConnection.CloseAsync();
+            await _rabbitConnection.CloseAsync().ConfigureAwait(false);
         }
 
         public bool IsConnected() => _rabbitConnection?.IsOpen ?? false;

@@ -15,6 +15,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.1" />
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
   </ItemGroup>
 
 
@@ -22,9 +23,13 @@
     <ProjectReference Include="..\DynamicFlightStorageSimulation\DynamicFlightStorageSimulation.csproj" />
     <ProjectReference Include="..\EventDataStores\BasicEventDataStore\BasicEventDataStore.csproj" />
     <ProjectReference Include="..\EventDataStores\GPUAcceleratedEventDataStore\GPUAcceleratedEventDataStore.csproj" />
+    <ProjectReference Include="..\EventDataStores\ManyTablesPostgreSQLDataStore\ManyTablesPostgreSQLDataStore.csproj" />
     <ProjectReference Include="..\EventDataStores\Neo4jDataStore\Neo4jDataStore.csproj" />
     <ProjectReference Include="..\EventDataStores\OptimizedPostgreSQLDataStore\OptimizedPostgreSQLDataStore.csproj" />
     <ProjectReference Include="..\EventDataStores\SimplePostgreSQLDataStore\SimplePostgreSQLDataStore.csproj" />
+    <ProjectReference Include="..\EventDataStores\SingleTablePostgreSQLDataStore\SingleTablePostgreSQLDataStore.csproj" />
+    <ProjectReference Include="..\EventDataStores\SpatialGISTManyTablesPostgreSQLDataStore\SpatialGISTManyTablesPostgreSQLDataStore.csproj" />
+    <ProjectReference Include="..\EventDataStores\SpatialGISTPostgreSQLDataStore\SpatialGISTPostgreSQLDataStore.csproj" />
   </ItemGroup>
 
 
