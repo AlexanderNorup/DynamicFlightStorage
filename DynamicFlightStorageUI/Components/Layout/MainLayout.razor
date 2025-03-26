@@ -1,4 +1,6 @@
 ﻿@inherits LayoutComponentBase
+@inject IHostApplicationLifetime lifetime
+@inject IJSRuntime jsRuntime
 
 <div class="page">
     <div class="sidebar">
@@ -9,6 +11,7 @@
         <div class="top-row px-4">
             <span>UTC Now: @currentTime</span>
             <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank">About</a>
+            <button @onclick="StopApplication" class="btn btn-outline-danger ms-2">Restart</button>
         </div>
 
         <article class="content px-4">
@@ -46,6 +49,14 @@
         {
             currentTime = newTime;
             InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task StopApplication()
+    {
+        if(await jsRuntime.InvokeAsync<bool>("confirm", "Are you sure? This will stop the application and all experiments running.").ConfigureAwait(false))
+        {
+            lifetime.StopApplication();
         }
     }
 
