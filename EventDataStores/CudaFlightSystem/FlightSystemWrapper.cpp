@@ -40,6 +40,7 @@ std::ostream& operator<<(std::ostream& os, std::vector<T> vec)
 // Create a new flight system
 void* CreateFlightSystem() {
 	try {
+		std::cout << "Creating Flight System in C++" << std::endl;
 		return new FlightSystem();
 	}
 	catch (...) {
