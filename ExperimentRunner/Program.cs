@@ -4,17 +4,31 @@ using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.CommandLine;
 using System.ComponentModel.DataAnnotations;
 
 namespace ExperimentRunner
 {
     internal class Program
     {
+
         static async Task Main(string[] args)
+        {
+            var rootCommand = new RootCommand();
+
+            var dataArgument = new Argument<DataStoreType>("dataStoreType", "The type of the event data store to use");
+            rootCommand.AddArgument(dataArgument);
+            rootCommand.SetHandler(RunDataStore, dataArgument);
+            await rootCommand.InvokeAsync(args).ConfigureAwait(false);
+        }
+
+        static async Task RunDataStore(DataStoreType dataStoreType)
         {
             using ILoggerFactory factory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
 
             var logger = factory.CreateLogger<Program>();
+
+            logger.LogInformation("Starting with data store type parsed as {Type}", dataStoreType);
 
             var builder = new ConfigurationBuilder()
                .SetBasePath(AppContext.BaseDirectory)
@@ -42,26 +56,28 @@ namespace ExperimentRunner
             var weatherService = new WeatherService();
 
             // The event store to experiment with. Change me!
-            var eventDataStore = new GPUAcceleratedEventDataStore.CUDAEventDataStore(weatherService, simulationEventBus);
+            //var eventDataStore = new GPUAcceleratedEventDataStore.CUDAEventDataStore(weatherService, simulationEventBus);
+            var eventDataStore = dataStoreType.CreateDataStore(weatherService, simulationEventBus);
 
             logger.LogInformation("Event data store of type {Type} ready", eventDataStore.GetType().FullName);
             using var consumer = new SimulationConsumer(simulationEventBus, weatherService, consumerDataLogger, eventDataStore, factory.CreateLogger<SimulationConsumer>());
 
-            await consumer.StartAsync();
+            await consumer.StartAsync().ConfigureAwait(false);
             logger.LogInformation("Simulation consumer started");
-
+            var cts = new CancellationTokenSource();
             Console.CancelKeyPress += async delegate
             {
+                cts.Cancel();
                 logger.LogInformation("Shutting down...");
-                await simulationEventBus.DisconnectAsync();
+                await simulationEventBus.DisconnectAsync().ConfigureAwait(false);
                 consumer.Dispose();
                 logger.LogInformation("Good bye :(");
-                await Task.Delay(100);
+                await Task.Delay(100).ConfigureAwait(false);
                 Environment.Exit(0);
             };
 
             logger.LogInformation("Press CTRL+C to exit");
-            await Task.Delay(-1); // Wait forever
+            await Task.Delay(-1, cts.Token); // Wait untill cancelled
         }
 
         private static void EnsureValid(object o)
