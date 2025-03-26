@@ -1,0 +1,40 @@
+name: Build and push
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Log in to the Container registry
+      uses: docker/login-action@v3.3.0
+      with:
+        registry: ghcr.io
+        username: alexandernorup
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Build and push the Docker image
+      run: | 
+        docker build -t ghcr.io/alexandernorup/dynamicflightstorage/ui:${{ github.sha }} .
+        docker tag ghcr.io/alexandernorup/dynamicflightstorage/ui:${{ github.sha }} ghcr.io/alexandernorup/dynamicflightstorage/ui:latest
+        docker push ghcr.io/alexandernorup/dynamicflightstorage/ui --all-tags 
+
+  deploy:
+    needs: [build]
+    name: "Deploy image to dynamicflightstorage.app.alexandernorup.com"
+    runs-on: ubuntu-latest
+    environment: dynamicflightstorage.app.alexandernorup.com 
+    steps:
+      - name: Get SSH key
+        run: | 
+          echo "${{secrets.SSH_KEY}}" >> ssh_key
+          chmod 400 ssh_key
+
+      - name: Pull image and restart
+        run: ssh -oStrictHostKeyChecking=no -i ssh_key gh_actions@hosting.alexandernorup.com -t 'cd /home/alex/dynamicflightstorage;docker-compose pull;docker-compose up -d --remove-orphans;docker image prune -f'
