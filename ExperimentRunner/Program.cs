@@ -11,7 +11,6 @@ namespace ExperimentRunner
 {
     internal class Program
     {
-
         static async Task Main(string[] args)
         {
             var rootCommand = new RootCommand();
@@ -38,6 +37,7 @@ namespace ExperimentRunner
             var configuration = builder.Build();
 
             var eventBusConfig = EventBusConfig.GetEmpty();
+            eventBusConfig.FriendlyClientName = $"ExperimentRunner_{dataStoreType}";
             configuration.GetSection("EventBusConfig").Bind(eventBusConfig);
             EnsureValid(eventBusConfig);
 
