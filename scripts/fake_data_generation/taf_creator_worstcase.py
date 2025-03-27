@@ -125,7 +125,7 @@ def create_base_layer():
     for hour in range(0, 24):
         tafs = []
         date_start = file_start_date + timedelta(hours=hour)
-        for i in range(round(get_random_value(mean_prhr, median_prhr, min_prhr, max_prhr, std_prhr))):
+        for i in range(0, round(get_random_value(mean_prhr, median_prhr, min_prhr, max_prhr, std_prhr)), 2):
             icao = random.choice(airports)
             date_issued = date_start - timedelta(minutes=round(get_random_value(mean_forecast, median_forecast, min_forecast, max_forecast, std_forecast)))
             date_end = date_start + timedelta(hours=round(get_random_value(mean_length, median_length, min_length, max_length, std_length)))
@@ -144,7 +144,7 @@ def create_6h_spikes():
     for hour in range(0, 24, 6):
         tafs = []
         date_start = file_start_date + timedelta(hours=hour)
-        for i in range(round(get_random_value(mean_prhr, median_prhr, min_prhr, max_prhr, std_prhr))):
+        for i in range(0, round(get_random_value(mean_prhr, median_prhr, min_prhr, max_prhr, std_prhr)), 2):
             icao = random.choice(airports)
             date_issued = date_start - timedelta(minutes=round(get_random_value(mean_forecast, median_forecast, min_forecast, max_forecast, std_forecast)))
             date_end = date_start + timedelta(hours=random.choices([24,30], weights=[39829/(39829+10669), 10669/(39829+10669)])[0])
