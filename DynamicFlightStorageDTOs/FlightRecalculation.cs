@@ -19,6 +19,12 @@ namespace DynamicFlightStorageDTOs
         [Key(3)]
         public required string ClientId { get; set; }
 
+        [Key(4)]
+        public required string TriggeredBy { get; set; }
+
+        [Key(5)]
+        public required double LagInMilliseconds { get; set; }
+
         public override string ToString()
         {
             return $"Recaculation for {{{FlightIdentification}}}: @ {RecalculatedTime} (Experiment: {ExperimentId}, from: {ClientId})";

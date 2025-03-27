@@ -56,7 +56,7 @@ namespace DynamicFlightStorageSimulation
             _weatherService.AddWeather(weather);
             try
             {
-                await _eventDataStore.AddWeatherAsync(weather).ConfigureAwait(false);
+                await _eventDataStore.AddWeatherAsync(weather, weatherEvent.TimeStamp).ConfigureAwait(false);
             }
             catch (Exception e)
             {

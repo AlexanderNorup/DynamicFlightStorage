@@ -27,16 +27,16 @@ namespace BasicEventDataStore
                 // Add the flight 
                 _flights.Add(flight.FlightIdentification,
                     new FlightWrapper()
-                {
-                    Flight = flight,
-                    LastSeenCategories = _weatherService.GetWeatherCategoriesForFlight(flight)
-                });
+                    {
+                        Flight = flight,
+                        LastSeenCategories = _weatherService.GetWeatherCategoriesForFlight(flight)
+                    });
             }
 
             return Task.CompletedTask;
         }
 
-        public async Task AddWeatherAsync(Weather weather)
+        public async Task AddWeatherAsync(Weather weather, DateTime recievedTime)
         {
             foreach (var flightWrapper in _flights.Values)
             {
@@ -52,7 +52,7 @@ namespace BasicEventDataStore
                         // We need to recalculate
                         Console.WriteLine($"Recalculate flight: {flight.FlightIdentification}");
                         flightWrapper.ToBeRecalculated = true;
-                        await _flightRecalculation.PublishRecalculationAsync(flight.FlightIdentification).ConfigureAwait(false);
+                        await _flightRecalculation.PublishRecalculationAsync(flight.FlightIdentification, weather.Id, DateTime.UtcNow - recievedTime).ConfigureAwait(false);
                     }
                 }
             }

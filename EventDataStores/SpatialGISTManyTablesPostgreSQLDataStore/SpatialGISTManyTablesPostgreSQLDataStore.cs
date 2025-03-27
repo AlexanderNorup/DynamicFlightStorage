@@ -14,7 +14,7 @@ public class SpatialGISTManyTablesPostgreSQLDataStore : IEventDataStore, IDispos
     private readonly string _initScriptPath;
     private Dictionary<string, HashSet<string>> _icaoDictionary;
     private HashSet<string> _tableSet;
-    
+
     public SpatialGISTManyTablesPostgreSQLDataStore(IWeatherService weatherService,
         IRecalculateFlightEventPublisher recalculateFlightEventPublisher)
     {
@@ -29,7 +29,7 @@ public class SpatialGISTManyTablesPostgreSQLDataStore : IEventDataStore, IDispos
         _icaoDictionary = new Dictionary<string, HashSet<string>>();
         _tableSet = new HashSet<string>();
     }
-    
+
     public async Task StartAsync()
     {
         _container = new PostgreSqlBuilder().Build();
@@ -41,11 +41,11 @@ public class SpatialGISTManyTablesPostgreSQLDataStore : IEventDataStore, IDispos
         var insertConn = new NpgsqlConnection(_container.GetConnectionString());
         await insertConn.OpenAsync();
         _insertConnection = insertConn;
-        
+
         var updateConn = new NpgsqlConnection(_container.GetConnectionString());
         await updateConn.OpenAsync();
         _updateConnection = updateConn;
-        
+
         Console.WriteLine($"Started PostgresSQL database with script {Path.GetFileName(_initScriptPath)}");
 #if DEBUG
         Console.WriteLine($"PostgresSQL ConnectionString: {_container.GetConnectionString()}");
@@ -73,7 +73,7 @@ public class SpatialGISTManyTablesPostgreSQLDataStore : IEventDataStore, IDispos
 
         await StartAsync();
     }
-    
+
     public async Task AddOrUpdateFlightAsync(Flight flight)
     {
         await using (var batch = new NpgsqlBatch(_insertConnection))
@@ -115,7 +115,7 @@ public class SpatialGISTManyTablesPostgreSQLDataStore : IEventDataStore, IDispos
 
                 _tableSet.Add(airport);
             }
-            
+
             await batch.ExecuteNonQueryAsync().ConfigureAwait(false);
         }
 
@@ -127,7 +127,7 @@ public class SpatialGISTManyTablesPostgreSQLDataStore : IEventDataStore, IDispos
             foreach (var airport in flight.GetAllAirports().Distinct())
             {
                 int icaoNum = IcaoConversionHelper.ConvertIcaoToInt(airport);
-                
+
                 string insertFlightEventSql =
                     $"""
                     INSERT INTO {airport} (flightIdentification, lastWeather, departure, arrival, line2d)
@@ -145,7 +145,7 @@ public class SpatialGISTManyTablesPostgreSQLDataStore : IEventDataStore, IDispos
                         line2d = cube(ARRAY[EXCLUDED.lastWeather, $5], 
                                         ARRAY[EXCLUDED.lastWeather, $6]);
                     """;
-                
+
                 var batchCmd = new NpgsqlBatchCommand(insertFlightEventSql);
                 batchCmd.Parameters.AddWithValue(flight.FlightIdentification);
                 batchCmd.Parameters.AddWithValue((int)weather.GetValueOrDefault(airport, WeatherCategory.Undefined));
@@ -157,7 +157,7 @@ public class SpatialGISTManyTablesPostgreSQLDataStore : IEventDataStore, IDispos
             }
             await batch.ExecuteNonQueryAsync().ConfigureAwait(false);
         }
-        
+
         if (!_icaoDictionary.ContainsKey(flight.FlightIdentification))
         {
             _icaoDictionary.Add(flight.FlightIdentification, new HashSet<string>());
@@ -188,7 +188,7 @@ public class SpatialGISTManyTablesPostgreSQLDataStore : IEventDataStore, IDispos
         _icaoDictionary.Remove(id);
     }
 
-    public async Task AddWeatherAsync(Weather weather)
+    public async Task AddWeatherAsync(Weather weather, DateTime recievedTime)
     {
         if (!_tableSet.Contains(weather.Airport)) return;
         var departureEpoch = ((DateTimeOffset)weather.ValidFrom).ToUnixTimeSeconds();
@@ -203,28 +203,28 @@ public class SpatialGISTManyTablesPostgreSQLDataStore : IEventDataStore, IDispos
                                 ARRAY[$3, $4])
             AND isRecalculating = FALSE;
             """;
-        
+
         await using (var updateBatch = new NpgsqlBatch(_updateConnection))
         {
-            await using (var cmd = new NpgsqlCommand(searchSql, _updateConnection) 
-                         {
-                             Parameters = {
+            await using (var cmd = new NpgsqlCommand(searchSql, _updateConnection)
+            {
+                Parameters = {
                                  new () { Value = weatherMin },
                                  new () { Value = departureEpoch },
                                  new () { Value = weatherMax },
                                  new () { Value = arrivalEpoch }
                              }
-                         })
+            })
             await using (var reader = await cmd.ExecuteReaderAsync())
             {
                 while (await reader.ReadAsync())
                 {
                     var flightId = reader.GetString(0);
-                    await _flightRecalculation.PublishRecalculationAsync(flightId);
+                    await _flightRecalculation.PublishRecalculationAsync(flightId, weather.Id, DateTime.UtcNow - recievedTime);
 
                     foreach (var airport in _icaoDictionary[flightId])
                     {
-                        string updateRecalculatingSql = 
+                        string updateRecalculatingSql =
                             $"""
                              UPDATE {airport} SET isRecalculating = TRUE
                              WHERE flightIdentification = $1 AND isRecalculating = FALSE;
@@ -269,5 +269,5 @@ public class SpatialGISTManyTablesPostgreSQLDataStore : IEventDataStore, IDispos
             _container = null;
         }
     }
-    
+
 }

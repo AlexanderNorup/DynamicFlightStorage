@@ -16,6 +16,10 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.E
 
         public required string FlightId { get; init; }
 
+        public required string TriggeredBy { get; init; }
+
+        public required double LagInMilliseconds { get; init; }
+
         public required DateTime UtcTimeStamp { get; init; }
     }
 }

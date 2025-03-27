@@ -42,7 +42,7 @@ namespace GPUAcceleratedEventDataStore
             return Task.CompletedTask;
         }
 
-        public async Task AddWeatherAsync(Weather weather)
+        public async Task AddWeatherAsync(Weather weather, DateTime recievedTime)
         {
             if (_cudaFlightSystem is null)
             {
@@ -54,7 +54,7 @@ namespace GPUAcceleratedEventDataStore
             {
                 if (_flightIdToIdentMap.TryGetValue(flight, out var ident))
                 {
-                    await _flightRecalculation.PublishRecalculationAsync(ident);
+                    await _flightRecalculation.PublishRecalculationAsync(ident, weather.Id, DateTime.UtcNow - recievedTime);
                 }
                 else
                 {
