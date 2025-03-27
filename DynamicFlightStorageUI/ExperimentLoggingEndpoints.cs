@@ -21,7 +21,9 @@ namespace DynamicFlightStorageUI
                     return Results.NotFound();
                 }
 
-                var logList = MessagePackSerializer.Deserialize<LinkedList<ConsumerDataLogger.FlightLog>>(logs.FlightData, ConsumerDataLogger.MessagePackOptions);
+                var decompressed = CompressionHelpers.Decompress(logs.FlightData);
+
+                var logList = MessagePackSerializer.Deserialize<LinkedList<ConsumerDataLogger.FlightLog>>(decompressed, ConsumerDataLogger.MessagePackOptions);
 
                 return Results.File(System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(logList)),
                     "application/json",
@@ -38,7 +40,9 @@ namespace DynamicFlightStorageUI
                     return Results.NotFound();
                 }
 
-                var logList = MessagePackSerializer.Deserialize<LinkedList<ConsumerDataLogger.WeatherLog>>(logs.WeatherData, ConsumerDataLogger.MessagePackOptions);
+                var decompressed = CompressionHelpers.Decompress(logs.WeatherData);
+
+                var logList = MessagePackSerializer.Deserialize<LinkedList<ConsumerDataLogger.WeatherLog>>(decompressed, ConsumerDataLogger.MessagePackOptions);
 
                 return Results.File(System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(logList)),
                     "application/json",
