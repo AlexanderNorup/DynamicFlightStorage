@@ -12,7 +12,7 @@ public class SingleTablePostgreSQLDataStore : IEventDataStore, IDisposable
     private readonly IWeatherService _weatherService;
     private readonly IRecalculateFlightEventPublisher _flightRecalculation;
     private readonly string _initScriptPath;
-    
+
     public SingleTablePostgreSQLDataStore(IWeatherService weatherService, IRecalculateFlightEventPublisher recalculateFlightEventPublisher)
     {
         var initScriptName = "singleTableInit.sql";
@@ -46,7 +46,7 @@ public class SingleTablePostgreSQLDataStore : IEventDataStore, IDisposable
         Console.WriteLine($"PostgresSQL ConnectionString: {_container.GetConnectionString()}");
 #endif
     }
-    
+
     public async Task ResetAsync()
     {
         if (_insertConnection is not null)
@@ -65,7 +65,7 @@ public class SingleTablePostgreSQLDataStore : IEventDataStore, IDisposable
         }
         await StartAsync();
     }
-    
+
     public async Task AddOrUpdateFlightAsync(Flight flight)
     {
         await using (var batch = new NpgsqlBatch(_insertConnection))
@@ -113,9 +113,9 @@ public class SingleTablePostgreSQLDataStore : IEventDataStore, IDisposable
         }
     }
 
-    public async Task AddWeatherAsync(Weather weather)
+    public async Task AddWeatherAsync(Weather weather, DateTime recievedTime)
     {
-        int newWeather = (int)weather.WeatherLevel ;
+        int newWeather = (int)weather.WeatherLevel;
         const string searchSql =
             """
             SELECT DISTINCT ON (flightIdentification) flightIdentification 
@@ -126,14 +126,14 @@ public class SingleTablePostgreSQLDataStore : IEventDataStore, IDisposable
             AND departure <= $3
             AND arrival >= $4;
             """;
-        const string updateRecalculatingSql = 
+        const string updateRecalculatingSql =
             """
             UPDATE flight_events SET isRecalculating = TRUE
             WHERE flightIdentification = $1 AND isRecalculating = FALSE;
             """;
         await using (var updateBatch = new NpgsqlBatch(_updateConnection))
         {
-            await using (var cmd = new NpgsqlCommand(searchSql, _updateConnection) 
+            await using (var cmd = new NpgsqlCommand(searchSql, _updateConnection)
             {
                 Parameters = {
                     new () { Value = newWeather },
@@ -147,10 +147,10 @@ public class SingleTablePostgreSQLDataStore : IEventDataStore, IDisposable
                 while (await reader.ReadAsync())
                 {
                     var flightId = reader.GetString(0);
-                    await _flightRecalculation.PublishRecalculationAsync(flightId);
+                    await _flightRecalculation.PublishRecalculationAsync(flightId, weather.Id, DateTime.UtcNow - recievedTime);
                     updateBatch.BatchCommands.Add(new NpgsqlBatchCommand(updateRecalculatingSql)
                     {
-                        Parameters = { new () { Value = flightId } }
+                        Parameters = { new() { Value = flightId } }
                     });
                 }
             }

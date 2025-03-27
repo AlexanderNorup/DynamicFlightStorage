@@ -12,7 +12,7 @@ public class SpatialPostgreSQLDatastore : IEventDataStore, IDisposable
     private readonly IWeatherService _weatherService;
     private readonly IRecalculateFlightEventPublisher _flightRecalculation;
     private readonly string _initScriptPath;
-    
+
     public SpatialPostgreSQLDatastore(IWeatherService weatherService, IRecalculateFlightEventPublisher recalculateFlightEventPublisher)
     {
         var initScriptName = "gistInit.sql";
@@ -46,7 +46,7 @@ public class SpatialPostgreSQLDatastore : IEventDataStore, IDisposable
         Console.WriteLine($"PostgresSQL ConnectionString: {_container.GetConnectionString()}");
 #endif
     }
-    
+
     public async Task ResetAsync()
     {
         if (_insertConnection is not null)
@@ -65,7 +65,7 @@ public class SpatialPostgreSQLDatastore : IEventDataStore, IDisposable
         }
         await StartAsync();
     }
-    
+
     public async Task AddOrUpdateFlightAsync(Flight flight)
     {
         await using (var batch = new NpgsqlBatch(_insertConnection))
@@ -124,7 +124,7 @@ public class SpatialPostgreSQLDatastore : IEventDataStore, IDisposable
         }
     }
 
-    public async Task AddWeatherAsync(Weather weather)
+    public async Task AddWeatherAsync(Weather weather, DateTime recievedTime)
     {
         int icaoNum = IcaoConversionHelper.ConvertIcaoToInt(weather.Airport);
         var departureEpoch = ((DateTimeOffset)weather.ValidFrom).ToUnixTimeSeconds();
@@ -139,14 +139,14 @@ public class SpatialPostgreSQLDatastore : IEventDataStore, IDisposable
                                  ARRAY[$4, $5, $3])
             AND isRecalculating = FALSE;
             """;
-        const string updateRecalculatingSql = 
+        const string updateRecalculatingSql =
             """
             UPDATE flight_events SET isRecalculating = TRUE
             WHERE flightIdentification = $1 AND isRecalculating = FALSE;
             """;
         await using (var updateBatch = new NpgsqlBatch(_updateConnection))
         {
-            await using (var cmd = new NpgsqlCommand(searchSql, _updateConnection) 
+            await using (var cmd = new NpgsqlCommand(searchSql, _updateConnection)
             {
                 Parameters = {
                     new () { Value = weatherMin },
@@ -161,10 +161,10 @@ public class SpatialPostgreSQLDatastore : IEventDataStore, IDisposable
                 while (await reader.ReadAsync())
                 {
                     var flightId = reader.GetString(0);
-                    await _flightRecalculation.PublishRecalculationAsync(flightId);
+                    await _flightRecalculation.PublishRecalculationAsync(flightId, weather.Id, DateTime.UtcNow - recievedTime);
                     updateBatch.BatchCommands.Add(new NpgsqlBatchCommand(updateRecalculatingSql)
                     {
-                        Parameters = { new () { Value = flightId } }
+                        Parameters = { new() { Value = flightId } }
                     });
                 }
             }

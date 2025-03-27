@@ -107,7 +107,7 @@ namespace OptimizedPostgreSQLDataStore
             }
         }
 
-        public async Task AddWeatherAsync(Weather weather)
+        public async Task AddWeatherAsync(Weather weather, DateTime recievedTime)
         {
             const string SearchSql =
                 """
@@ -142,7 +142,7 @@ namespace OptimizedPostgreSQLDataStore
                     while (await reader.ReadAsync())
                     {
                         var flightId = reader.GetString(0);
-                        await _flightRecalculation.PublishRecalculationAsync(flightId);
+                        await _flightRecalculation.PublishRecalculationAsync(flightId, weather.Id, DateTime.UtcNow - recievedTime);
                         updateBatch.BatchCommands.Add(new NpgsqlBatchCommand(UpdateRecalculatingSql)
                         {
                             Parameters = { new() { Value = flightId } }

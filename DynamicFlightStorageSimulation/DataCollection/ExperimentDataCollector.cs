@@ -77,7 +77,9 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
                 ExperimentId = flight.ExperimentId,
                 ClientId = flight.ClientId,
                 UtcTimeStamp = flight.RecalculatedTime,
-                FlightId = flight.FlightIdentification
+                FlightId = flight.FlightIdentification,
+                TriggeredBy = flight.TriggeredBy,
+                LagInMilliseconds = flight.LagInMilliseconds
             });
 
             // Fire and forget from this side. We don't want to halt data-collection
