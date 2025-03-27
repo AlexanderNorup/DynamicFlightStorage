@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Vært: hosting.alexandernorup.com
--- Genereringstid: 18. 03 2025 kl. 12:53:34
+-- Genereringstid: 27. 03 2025 kl. 14:08:33
 -- Serverversion: 10.5.23-MariaDB-0+deb11u1-log
 -- PHP-version: 8.3.19
 
@@ -46,6 +46,8 @@ CREATE TABLE `EventLog_Recalculation` (
   `ExperimentId` varchar(36) NOT NULL,
   `ClientId` varchar(255) NOT NULL,
   `FlightId` varchar(36) NOT NULL,
+  `TriggeredBy` varchar(40) NOT NULL,
+  `LagInMilliseconds` double NOT NULL,
   `UtcTimeStamp` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -96,7 +98,8 @@ CREATE TABLE `ExperimentClientResult` (
   `DataStoreType` varchar(255) NOT NULL,
   `LatencyTestId` int(11) NOT NULL,
   `MaxFlightConsumerLag` int(11) NOT NULL,
-  `MaxWeatherConsumerLag` int(11) NOT NULL
+  `MaxWeatherConsumerLag` int(11) NOT NULL,
+  `LagData` longblob DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
