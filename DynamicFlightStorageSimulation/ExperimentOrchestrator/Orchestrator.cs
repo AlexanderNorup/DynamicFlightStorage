@@ -1,7 +1,9 @@
 ﻿using DynamicFlightStorageDTOs;
+using DynamicFlightStorageSimulation.DataCollection;
 using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection;
 using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.Entities;
 using DynamicFlightStorageSimulation.Utilities;
+using MessagePack;
 using Microsoft.Extensions.Logging;
 using System.Data;
 using System.Diagnostics;
@@ -101,6 +103,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
         public Task? ExperimentTask { get; private set; }
         public Task? ExperimentConsumerLagTask { get; private set; }
         public ExperimentResult? CurrentExperimentResult { get; private set; }
+        public Dictionary<string, List<LagData>> ConsumerLag { get; private set; } = new();
         public Dictionary<string, (int flightLag, int weatherLag)> CurrentLag { get; private set; } = new();
 
         public OrchestratorState OrchestratorState { get; private set; } = OrchestratorState.Idle;
@@ -372,6 +375,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             ExperimentCancellationToken = new CancellationTokenSource();
             OrchestratorState = OrchestratorState.Idle;
             CurrentLag = new();
+            ConsumerLag.Clear();
             _experimentDataCollector.StopMonitoringExperiment();
             _experimentChecker.Stop();
             _flightInjector?.ResetReader();
@@ -559,6 +563,16 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     await _consumingMonitor.WaitForExchangesToBeConsumedAsync(ExperimentRunnerClientIds.ToArray(), ExperimentCancellationToken.Token);
                     CurrentExperimentResult.UTCEndTime = DateTime.UtcNow;
                     CurrentExperimentResult.ExperimentSuccess = true;
+
+                    foreach (var clientResult in CurrentExperimentResult.ClientResults)
+                    {
+                        if (ConsumerLag.TryGetValue(clientResult.ClientId, out var lagData)
+                            && lagData is not null)
+                        {
+                            clientResult.LagData = lagData.ConvertToCompressedBytes();
+                        }
+                    }
+
                     await _experimentDataCollector.AddOrUpdateExperimentResultAsync(CurrentExperimentResult);
                     await Task.Delay(TimeSpan.FromSeconds(15)).ConfigureAwait(false); // Simply to ensure we get the rest of the recalculaitons if some of them were to be in the last dataset
                     await _experimentDataCollector.FinishDataCollectionAsync(ExperimentRunnerClientIds);
@@ -603,6 +617,15 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 {
                     if (CurrentExperimentResult.ClientResults.FirstOrDefault(x => x.ClientId == clientId) is { } result)
                     {
+                        var lagData = new LagData(DateTime.UtcNow, lag.weatherLag, lag.flightLag);
+                        if (ConsumerLag.TryGetValue(result.ClientId, out var lagList))
+                        {
+                            lagList.Add(lagData);
+                        }
+                        else
+                        {
+                            ConsumerLag.Add(result.ClientId, new List<LagData> { lagData });
+                        }
                         result.MaxFlightConsumerLag = Math.Max(result.MaxFlightConsumerLag, lag.flightLag);
                         result.MaxWeatherConsumerLag = Math.Max(result.MaxWeatherConsumerLag, lag.weatherLag);
                     }

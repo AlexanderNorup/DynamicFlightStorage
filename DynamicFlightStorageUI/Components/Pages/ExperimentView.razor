@@ -1,4 +1,5 @@
-﻿@using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
+﻿@using DynamicFlightStorageSimulation.ExperimentOrchestrator
+@using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection
 @using DynamicFlightStorageSimulation.Utilities
 @using Microsoft.EntityFrameworkCore;
 @page "/experiments/{id:int}"
@@ -42,17 +43,43 @@
                 @foreach (var clientResult in result.ClientResults)
                 {
                     <div class="list-group-item mb-4">
-                        <h5 class="mb-1">Client ID: @clientResult.ClientId</h5>
+                        <h4 class="mb-1">Client ID: @clientResult.ClientId</h4>
                         <p class="mb-1"><strong>Data Store Type:</strong> <code>@clientResult.DataStoreType</code></p>
+                        <h5>Lag</h5>
                         <p class="m-0"><strong>Max Flight Consumer Lag:</strong> @clientResult.MaxFlightConsumerLag</p>
-                        <p class="mb-1"><strong>Max Weather Consumer Lag:</strong> @clientResult.MaxWeatherConsumerLag</p>
+                        <p class="m-0"><strong>Max Weather Consumer Lag:</strong> @clientResult.MaxWeatherConsumerLag</p>
+                        @if(clientResult.LagData is not null 
+                           && clientResult.LagData.TryGetLagDataFromCompressedBytes(out var lagData))
+                        {
+                            var flightLag = lagData.Select(x => (double)x.FlightLag).ToList();
+                            var weatherLag = lagData.Select(x => (double)x.WeatherLag).ToList();
+                            <p class="m-0"><strong>Lag data download link:</strong> <a target="_blank" href="@GetLagDownloadUrl(clientResult.Id)">CSV file (~@BytesToKb(clientResult.LagData.Length) kB)</a></p>
+                            <p class="m-0"><strong>Lag samples:</strong> @lagData.Count</p>
+                            <div class="row mb-1">
+                                <div class="col-6">
+                                    <p class="m-0"><strong>Flight Average Lag (ms):</strong> @flightLag.Average().ToString("0.00")</p>
+                                    <p class="m-0"><strong>Flight Median Lag (ms):</strong> @flightLag.Median()</p>
+                                    <p class="m-0"><strong>Flight StdDev Lag (ms):</strong> @flightLag.StdDev().ToString("0.00")</p>
+                                </div>
+                                <div class="col-6">
+                                    <p class="m-0"><strong>Weather Average Lag (ms):</strong> @weatherLag.Average().ToString("0.00")</p>
+                                    <p class="m-0"><strong>Weather Median Lag (ms):</strong> @weatherLag.Median()</p>
+                                    <p class="m-0"><strong>Weather StdDev Lag (ms):</strong> @weatherLag.StdDev().ToString("0.00")</p>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="mb-1 text-warning">There's no detailed lag-data available for this experiment</p>
+                        }
+                        <h5>Recalculation events</h5>
                         @if(RecalculationCount.TryGetValue(clientResult.ClientId, out var recalcData))
                         {
                             var lagInMs = recalcData.Select(x => x.LagInMilliseconds).ToList();
                             <p class="m-0"><strong>Recalculation Events:</strong> @recalcData.Count</p>
-                            <p class="m-0"><strong>Recalculation Average Lag (ms):</strong> @lagInMs.Average().ToString(".00")</p>
-                            <p class="m-0"><strong>Recalculation Median Lag (ms):</strong> @lagInMs.Median().ToString(".00")</p>
-                            <p class="mb-1"><strong>Recalculation StdDev Lag (ms):</strong> @lagInMs.StdDev().ToString(".00")</p>
+                            <p class="m-0"><strong>Recalculation Average Lag (ms):</strong> @lagInMs.Average().ToString("0.00")</p>
+                            <p class="m-0"><strong>Recalculation Median Lag (ms):</strong> @lagInMs.Median().ToString("0.00")</p>
+                            <p class="mb-1"><strong>Recalculation StdDev Lag (ms):</strong> @lagInMs.StdDev().ToString("0.00")</p>
                             <details class="border p-1">
                                 <summary>Recalculations by weather-event</summary>
                                 <p><strong>Note:</strong> This table is sorted alphabetically by the weather's uuid. This is for easier comparisons.</p>
@@ -84,9 +111,9 @@
                             <h5 class="mt-3">Latency Test Result</h5>
                             <p class="m-0"><strong>Latency Test ID:</strong> @clientResult.LatencyTest.Id</p>
                             <p class="m-0"><strong>Sample Points:</strong> @clientResult.LatencyTest.SamplePoints</p>
-                            <p class="m-0"><strong>Sample Delay:</strong> @clientResult.LatencyTest.SampleDelayMs.ToString(".00") ms.</p>
-                            <p class="m-0"><strong>Average Latency:</strong> @clientResult.LatencyTest.AverageLatencyMs.ToString(".00") ms.</p>
-                            <p class="m-0"><strong>Median Latency:</strong> @clientResult.LatencyTest.MedianLatencyMs.ToString(".00") ms.</p>
+                            <p class="m-0"><strong>Sample Delay:</strong> @clientResult.LatencyTest.SampleDelayMs.ToString("0.00") ms.</p>
+                            <p class="m-0"><strong>Average Latency:</strong> @clientResult.LatencyTest.AverageLatencyMs.ToString("0.00") ms.</p>
+                            <p class="m-0"><strong>Median Latency:</strong> @clientResult.LatencyTest.MedianLatencyMs.ToString("0.00") ms.</p>
                             <p class="mb-1"><strong>Standard Deviation Latency:</strong> @clientResult.LatencyTest.StdDeviationLatency.ToString(".00")</p>
                         }
                         @if(WeatherData.TryGetValue(clientResult.ClientId, out var weatherData))
@@ -95,7 +122,7 @@
                             <ul>
                                 @foreach (var data in weatherData)
                                 {
-                                    <li><a href="@GetWeatherDownloadUrl(data.DownloadId)">@data.Desc</a></li>
+                                    <li><a target="_blank" href="@GetWeatherDownloadUrl(data.DownloadId)">@data.Desc</a></li>
                                 }
                             </ul>
                         }
@@ -109,7 +136,7 @@
                             <ul>
                                 @foreach (var data in flightData)
                                 {
-                                    <li><a href="@GetFlightDownloadUrl(data.DownloadId)">@data.Desc</a></li>
+                                    <li><a target="_blank" href="@GetFlightDownloadUrl(data.DownloadId)">@data.Desc</a></li>
                                 }
                             </ul>
                         }
@@ -133,6 +160,7 @@ else
 @code {
     private const string FlightDownloadTemplate = "api/flightlogs/{0}";
     private const string WeatherDownloadTemplate = "api/weatherlogs/{0}";
+    private const string LagDownloadTemplate = "api/lag/{0}";
 
     private ExperimentResult? ExperimentResult { get; set; }
     private Dictionary<string, List<(int DownloadId, string ClientId, string Desc)>> WeatherData = new ();
@@ -179,9 +207,11 @@ else
     }
 
     private double BytesToMb(int bytes) => Math.Round(bytes / 1024d / 1024d, 2);
+    private double BytesToKb(int bytes) => Math.Round(bytes / 1024d, 2);
 
     private string GetFlightDownloadUrl(int id) => navManager.BaseUri + string.Format(FlightDownloadTemplate, id);
     private string GetWeatherDownloadUrl(int id) => navManager.BaseUri + string.Format(WeatherDownloadTemplate, id);
+    private string GetLagDownloadUrl(int id) => navManager.BaseUri + string.Format(LagDownloadTemplate, id);
 
     [Parameter]
     public int Id { get; set; }
