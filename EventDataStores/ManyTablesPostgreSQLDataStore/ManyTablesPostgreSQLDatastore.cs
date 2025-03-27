@@ -85,7 +85,7 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
 
                 string createTableSql =
                     $"""
-                     CREATE TABLE {airport} (
+                     CREATE TABLE "{airport}_table" (
                          flightIdentification VARCHAR(36) UNIQUE PRIMARY KEY NOT NULL,
                          isRecalculating BOOL NOT NULL DEFAULT (FALSE),
                          lastWeather INT,
@@ -100,7 +100,7 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
                 string createIndexSql1 =
                     $"""
                      CREATE INDEX {airport}_events_idx
-                     ON {airport} (lastWeather, isRecalculating, departure, arrival, flightIdentification);
+                     ON "{airport}_table" (lastWeather, isRecalculating, departure, arrival, flightIdentification);
                      """;
                 var batchCmd1 = new NpgsqlBatchCommand(createIndexSql1);
                 batch.BatchCommands.Add(batchCmd1);
@@ -108,7 +108,7 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
                 string createIndexSql2 =
                     $"""
                      CREATE INDEX {airport}_recalc_idx
-                     ON {airport} (flightIdentification, isRecalculating) WHERE isRecalculating = FALSE;
+                     ON "{airport}_table" (flightIdentification, isRecalculating) WHERE isRecalculating = FALSE;
                      """;
                 var batchCmd2 = new NpgsqlBatchCommand(createIndexSql2);
                 batch.BatchCommands.Add(batchCmd2);
@@ -126,7 +126,7 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
             {
                 string insertFlightEventSql =
                     $"""
-                    INSERT INTO {airport} (flightIdentification, lastWeather, departure, arrival)
+                    INSERT INTO "{airport}_table" (flightIdentification, lastWeather, departure, arrival)
                     VALUES (
                         $1,
                         $2,
@@ -168,7 +168,7 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
             {
                 var deleteSql =
                     $"""
-                    DELETE FROM {icao} WHERE flightIdentification = $1;
+                    DELETE FROM "{icao}_table" WHERE flightIdentification = $1;
                     """;
                 var batchCmd = new NpgsqlBatchCommand(deleteSql);
                 batchCmd.Parameters.AddWithValue(id);
@@ -186,7 +186,7 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
         string searchSql =
             $"""
             SELECT DISTINCT ON (flightIdentification) flightIdentification
-            FROM {weather.Airport}
+            FROM "{weather.Airport}_table"
             WHERE lastWeather < $1
             AND isRecalculating = FALSE
             AND departure <= $2
@@ -214,7 +214,7 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
                     {
                         string updateRecalculatingSql = 
                             $"""
-                             UPDATE {airport} SET isRecalculating = TRUE
+                             UPDATE "{airport}_table" SET isRecalculating = TRUE
                              WHERE flightIdentification = $1 AND isRecalculating = FALSE;
                              """;
                         updateBatch.BatchCommands.Add(new NpgsqlBatchCommand(updateRecalculatingSql)
