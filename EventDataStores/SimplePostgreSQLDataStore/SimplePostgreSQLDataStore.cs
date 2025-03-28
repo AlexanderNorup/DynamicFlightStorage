@@ -84,7 +84,7 @@ namespace SimplePostgreSQLDataStore
             await _dbContext.SaveChangesAsync();
         }
 
-        public async Task AddWeatherAsync(Weather weather)
+        public async Task AddWeatherAsync(Weather weather, DateTime recievedTime)
         {
             if (_dbContext is null)
             {
@@ -106,7 +106,7 @@ namespace SimplePostgreSQLDataStore
                 Console.WriteLine($"Recalculate flight: {flight.FlightIdentification}");
                 flight.IsRecalculating = true;
 
-                await _flightRecalculation.PublishRecalculationAsync(flight.FlightIdentification).ConfigureAwait(false);
+                await _flightRecalculation.PublishRecalculationAsync(flight.FlightIdentification, weather.Id, DateTime.UtcNow - recievedTime).ConfigureAwait(false);
             }
             if (affectedFlights.Count > 0)
             {

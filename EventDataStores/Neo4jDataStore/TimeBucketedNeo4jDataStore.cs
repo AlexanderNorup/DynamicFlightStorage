@@ -160,7 +160,7 @@ namespace Neo4jDataStore
             return roundedDown;
         }
 
-        public async Task AddWeatherAsync(Weather weather)
+        public async Task AddWeatherAsync(Weather weather, DateTime recievedTime)
         {
             if (_database is null)
             {
@@ -213,7 +213,7 @@ namespace Neo4jDataStore
                             continue;
                         }
 
-                        await _flightRecalculation.PublishRecalculationAsync(fetched).ConfigureAwait(false);
+                        await _flightRecalculation.PublishRecalculationAsync(fetched, weather.Id, DateTime.UtcNow - recievedTime).ConfigureAwait(false);
                         recalculatedFlights[i++] = fetched;
                     }
 

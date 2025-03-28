@@ -4,7 +4,7 @@
     {
         Task AddOrUpdateFlightAsync(Flight flight);
         Task DeleteFlightAsync(string id);
-        Task AddWeatherAsync(Weather weather);
+        Task AddWeatherAsync(Weather weather, DateTime recievedTime);
         Task StartAsync();
         Task ResetAsync();
     }

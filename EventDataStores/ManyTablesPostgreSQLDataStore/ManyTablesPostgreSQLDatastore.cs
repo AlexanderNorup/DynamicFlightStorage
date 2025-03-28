@@ -43,11 +43,11 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
         var insertConn = new NpgsqlConnection(_container.GetConnectionString());
         await insertConn.OpenAsync();
         _insertConnection = insertConn;
-        
+
         var updateConn = new NpgsqlConnection(_container.GetConnectionString());
         await updateConn.OpenAsync();
         _updateConnection = updateConn;
-        
+
         Console.WriteLine($"Started PostgresSQL database with script {Path.GetFileName(_initScriptPath)}");
 #if DEBUG
         Console.WriteLine($"PostgresSQL ConnectionString: {_container.GetConnectionString()}");
@@ -117,7 +117,7 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
 
                 _tableSet.Add(cleanAirport);
             }
-            
+
             await batch.ExecuteNonQueryAsync().ConfigureAwait(false);
         }
 
@@ -141,7 +141,7 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
                         lastWeather = EXCLUDED.lastWeather,
                         isRecalculating = FALSE;
                     """;
-                
+
                 var batchCmd = new NpgsqlBatchCommand(insertFlightEventSql);
                 batchCmd.Parameters.AddWithValue(flight.FlightIdentification);
                 batchCmd.Parameters.AddWithValue((int)weather.GetValueOrDefault(airport, WeatherCategory.Undefined));
@@ -151,7 +151,7 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
             }
             await batch.ExecuteNonQueryAsync().ConfigureAwait(false);
         }
-        
+
         if (!_icaoDictionary.ContainsKey(flight.FlightIdentification))
         {
             _icaoDictionary.Add(flight.FlightIdentification, new HashSet<string>());
@@ -182,7 +182,7 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
         _icaoDictionary.Remove(id);
     }
 
-    public async Task AddWeatherAsync(Weather weather)
+    public async Task AddWeatherAsync(Weather weather, DateTime recievedTime)
     {
         var cleanWeatherAirport = SanitizeAirport(weather.Airport);
         if (!_tableSet.Contains(cleanWeatherAirport)) return;
@@ -196,23 +196,23 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
             AND departure <= $2
             AND arrival >= $3;
             """;
-        
+
         await using (var updateBatch = new NpgsqlBatch(_updateConnection))
         {
-            await using (var cmd = new NpgsqlCommand(searchSql, _updateConnection) 
-                         {
-                             Parameters = {
+            await using (var cmd = new NpgsqlCommand(searchSql, _updateConnection)
+            {
+                Parameters = {
                                  new () { Value = newWeather },
                                  new () { Value = weather.ValidTo },
                                  new () { Value = weather.ValidFrom }
                              }
-                         })
+            })
             await using (var reader = await cmd.ExecuteReaderAsync())
             {
                 while (await reader.ReadAsync())
                 {
                     var flightId = reader.GetString(0);
-                    await _flightRecalculation.PublishRecalculationAsync(flightId);
+                    await _flightRecalculation.PublishRecalculationAsync(flightId, weather.Id, DateTime.UtcNow - recievedTime);
 
                     foreach (var airport in _icaoDictionary[flightId])
                     {
