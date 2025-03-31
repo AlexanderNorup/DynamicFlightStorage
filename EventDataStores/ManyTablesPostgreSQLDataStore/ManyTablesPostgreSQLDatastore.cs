@@ -1,10 +1,11 @@
+using System.Text.RegularExpressions;
 using DynamicFlightStorageDTOs;
 using Npgsql;
 using Testcontainers.PostgreSql;
 
 namespace ManyTablesPostgreSQLDataStore;
 
-public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
+public partial class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
 {
     private PostgreSqlContainer? _container;
     private NpgsqlConnection? _insertConnection;
@@ -15,6 +16,9 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
     // Currently these two keep track of which tables exist and which tables each flight is related to. In-memory
     private Dictionary<string, HashSet<string>> _icaoDictionary;
     private HashSet<string> _tableSet;
+    
+    [GeneratedRegex("[^a-zA-Z0-9]")]
+    private static partial Regex SanitizeAirport();
 
     public ManyTablesPostgreSQLDatastore(IWeatherService weatherService,
         IRecalculateFlightEventPublisher recalculateFlightEventPublisher)
@@ -81,11 +85,12 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
         {
             foreach (var airport in flight.GetAllAirports().Distinct())
             {
-                if (_tableSet.Contains(airport)) continue;
+                var cleanAirport = SanitizeAirport().Replace(airport, "");
+                if (_tableSet.Contains(cleanAirport)) continue;
 
                 string createTableSql =
                     $"""
-                     CREATE TABLE {airport} (
+                     CREATE TABLE "{cleanAirport}_table" (
                          flightIdentification VARCHAR(36) UNIQUE PRIMARY KEY NOT NULL,
                          isRecalculating BOOL NOT NULL DEFAULT (FALSE),
                          lastWeather INT,
@@ -99,21 +104,21 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
 
                 string createIndexSql1 =
                     $"""
-                     CREATE INDEX {airport}_events_idx
-                     ON {airport} (lastWeather, isRecalculating, departure, arrival, flightIdentification);
+                     CREATE INDEX {cleanAirport}_events_idx
+                     ON "{cleanAirport}_table" (lastWeather, isRecalculating, departure, arrival, flightIdentification);
                      """;
                 var batchCmd1 = new NpgsqlBatchCommand(createIndexSql1);
                 batch.BatchCommands.Add(batchCmd1);
 
                 string createIndexSql2 =
                     $"""
-                     CREATE INDEX {airport}_recalc_idx
-                     ON {airport} (flightIdentification, isRecalculating) WHERE isRecalculating = FALSE;
+                     CREATE INDEX {cleanAirport}_recalc_idx
+                     ON "{cleanAirport}_table" (flightIdentification, isRecalculating) WHERE isRecalculating = FALSE;
                      """;
                 var batchCmd2 = new NpgsqlBatchCommand(createIndexSql2);
                 batch.BatchCommands.Add(batchCmd2);
 
-                _tableSet.Add(airport);
+                _tableSet.Add(cleanAirport);
             }
 
             await batch.ExecuteNonQueryAsync().ConfigureAwait(false);
@@ -124,9 +129,10 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
             var weather = _weatherService.GetWeatherCategoriesForFlight(flight);
             foreach (var airport in flight.GetAllAirports().Distinct())
             {
+                var cleanAirport = SanitizeAirport().Replace(airport, "");
                 string insertFlightEventSql =
                     $"""
-                    INSERT INTO {airport} (flightIdentification, lastWeather, departure, arrival)
+                    INSERT INTO "{cleanAirport}_table" (flightIdentification, lastWeather, departure, arrival)
                     VALUES (
                         $1,
                         $2,
@@ -168,7 +174,7 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
             {
                 var deleteSql =
                     $"""
-                    DELETE FROM {icao} WHERE flightIdentification = $1;
+                    DELETE FROM "{icao}_table" WHERE flightIdentification = $1;
                     """;
                 var batchCmd = new NpgsqlBatchCommand(deleteSql);
                 batchCmd.Parameters.AddWithValue(id);
@@ -181,12 +187,13 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
 
     public async Task AddWeatherAsync(Weather weather, DateTime recievedTime)
     {
-        if (!_tableSet.Contains(weather.Airport)) return;
-        int newWeather = (int)weather.WeatherLevel;
+        var cleanWeatherAirport = SanitizeAirport().Replace(weather.Airport, "");
+        if (!_tableSet.Contains(cleanWeatherAirport)) return;
+        int newWeather = (int)weather.WeatherLevel ;
         string searchSql =
             $"""
             SELECT DISTINCT ON (flightIdentification) flightIdentification
-            FROM {weather.Airport}
+            FROM "{cleanWeatherAirport}_table"
             WHERE lastWeather < $1
             AND isRecalculating = FALSE
             AND departure <= $2
@@ -212,9 +219,10 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
 
                     foreach (var airport in _icaoDictionary[flightId])
                     {
-                        string updateRecalculatingSql =
+                        var cleanAirport = SanitizeAirport().Replace(airport, "");
+                        string updateRecalculatingSql = 
                             $"""
-                             UPDATE {airport} SET isRecalculating = TRUE
+                             UPDATE "{cleanAirport}_table" SET isRecalculating = TRUE
                              WHERE flightIdentification = $1 AND isRecalculating = FALSE;
                              """;
                         updateBatch.BatchCommands.Add(new NpgsqlBatchCommand(updateRecalculatingSql)
@@ -257,4 +265,5 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
             _container = null;
         }
     }
+    
 }
