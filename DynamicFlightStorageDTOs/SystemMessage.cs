@@ -32,6 +32,7 @@ namespace DynamicFlightStorageDTOs
             AbortExperiment = 6,
             AbortSuccess = 7,
             ConsumerExperimentAbort = 8,
+            ExperimentPreloadDone = 9,
         }
 
         public override string ToString()

@@ -156,6 +156,16 @@ namespace DynamicFlightStorageSimulation
                     _isCancelled = false;
                     await ResetStateAsync(message).ConfigureAwait(false);
                     break;
+                case SystemMessage.SystemMessageType.ExperimentPreloadDone:
+                    _consumerLogger.IsPreloadDone = true;
+                    await _simulationEventBus.PublishSystemMessage(new SystemMessage()
+                    {
+                        MessageType = SystemMessage.SystemMessageType.NewExperimentReady,
+                        Message = message.Message,
+                        Source = _simulationEventBus.ClientId,
+                        Targets = [message.Source],
+                    }).ConfigureAwait(false);
+                    break;
                 case SystemMessage.SystemMessageType.ExperimentComplete:
                     await _consumerLogger.PersistDataAsync(_simulationEventBus.CurrentExperimentId, ClientId).ConfigureAwait(false);
                     _consumerLogger.ResetLogger();

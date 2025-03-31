@@ -20,12 +20,14 @@ namespace DynamicFlightStorageSimulation.DataCollection
         }
 
         public bool IsLoggingEnabled { get; set; } = false;
+        public bool IsPreloadDone { get; set; } = false;
+        public bool ShouldLog => IsLoggingEnabled && IsPreloadDone;
 
         private LinkedList<FlightLog> _flightLog = new();
         private LinkedList<WeatherLog> _weatherLog = new();
         public void LogFlightData(FlightEvent flight)
         {
-            if (IsLoggingEnabled)
+            if (ShouldLog)
             {
                 _flightLog.AddLast(new FlightLog(DateTime.UtcNow, flight.TimeStamp, flight.Flight));
             }
@@ -33,7 +35,7 @@ namespace DynamicFlightStorageSimulation.DataCollection
 
         public void LogWeatherData(WeatherEvent weather)
         {
-            if (IsLoggingEnabled)
+            if (ShouldLog)
             {
                 _weatherLog.AddLast(new WeatherLog(DateTime.UtcNow, weather.TimeStamp, weather.Weather));
             }
@@ -104,6 +106,7 @@ namespace DynamicFlightStorageSimulation.DataCollection
 
         public void ResetLogger()
         {
+            IsPreloadDone = false;
             _flightLog.Clear();
             _weatherLog.Clear();
         }
