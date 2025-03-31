@@ -66,9 +66,10 @@ public class WeatherInjector
             await _eventBus.PublishWeatherAsync(weatherBatch, experimentId).ConfigureAwait(false);
             if (++weatherCount % 10_000 == 0)
             {
-                logger?.LogDebug("Published {Count}/{Total} weather batches (until {Until}).",
+                logger?.LogDebug("Published {Count}/{Total} ({Percentage}%) weather batches (until {Until}).",
                     weatherCount,
                     weatherBatches.Count,
+                    Math.Round(weatherCount / (double)weatherBatches.Count * 100d, 2),
                     date);
             }
         }
