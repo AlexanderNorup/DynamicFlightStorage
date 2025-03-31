@@ -115,7 +115,7 @@ public class FlightInjector
             if (flightList.Count % 10_000 == 0)
             {
                 logger?.LogDebug("Loaded {Count}/{Total} ({Percentage}%) flights from disk.",
-                    flightList.Count, (double)files.Length, Math.Round(flightList.Count / files.Length * 100d, 2));
+                    flightList.Count, (double)files.Length, Math.Round(flightList.Count / (double)files.Length * 100d, 2));
             }
         }
 
