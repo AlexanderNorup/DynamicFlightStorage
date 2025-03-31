@@ -1,6 +1,7 @@
 ﻿using DynamicFlightStorageDTOs;
 using System.Text.Json;
 using System.CommandLine;
+using MessagePack;
 
 namespace FlightGenerator
 {
@@ -18,6 +19,14 @@ namespace FlightGenerator
                 "Path to the folder where the flights will be saved");
 
             rootCommand.AddOption(outputOption);
+
+            var compressFlightsCommand = new Command("compress", "Compress Flights so they're easier to load and deserialize");
+            var compressInputArgument = new Argument<string>("path", "Path to folder containing the files to compress");
+            var compressOutputArgument = new Argument<string>("output", "Path to where the output .bin file");
+            compressFlightsCommand.AddArgument(compressInputArgument);
+            compressFlightsCommand.AddArgument(compressOutputArgument);
+            compressFlightsCommand.SetHandler(CompressFlights, compressInputArgument, compressOutputArgument);
+            rootCommand.AddCommand(compressFlightsCommand);
 
             rootCommand.SetHandler(LaunchGeneration, outputOption);
 
@@ -99,6 +108,38 @@ namespace FlightGenerator
         static string GetFileName(Flight flight)
         {
             return $"flight{flight.DatePlanned:yyyyMMddTHHmmssff}";
+        }
+
+        public static readonly MessagePackSerializerOptions MessagePackOptions = MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4BlockArray);
+        static void CompressFlights(string inputPath, string outputPath)
+        {
+            if (!Directory.Exists(inputPath))
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"The path {inputPath} does not exist");
+                Console.ResetColor();
+                return;
+            }
+            var files = Directory.GetFiles(inputPath, "*.json");
+            Console.WriteLine("Found {0} files to compress", files.Length);
+            var flights = new List<Flight>();
+            foreach (var file in files)
+            {
+                flights.Add(JsonSerializer.Deserialize<Flight>(File.ReadAllText(file)) ?? throw new InvalidOperationException($"Could not deserialize {file}"));
+                if (flights.Count % 10_000 == 0)
+                {
+                    Console.WriteLine($"Deserialized {flights.Count}/{files.Length} ({flights.Count / (double)files.Length * 100d:.00}%) flights");
+                }
+            }
+
+            Console.WriteLine("Loaded {0} flights", files.Length);
+            var compressedData = MessagePackSerializer.Serialize(flights, MessagePackOptions);
+            Console.WriteLine("Serialized the flights using message-pack", files.Length);
+
+            File.WriteAllBytes(outputPath, compressedData);
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"Compressed {files.Length} files to {outputPath} => {Path.GetFullPath(outputPath)}");
+            Console.ResetColor();
         }
     }
 }
