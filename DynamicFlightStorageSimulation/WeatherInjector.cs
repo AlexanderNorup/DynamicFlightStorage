@@ -146,7 +146,10 @@ public class WeatherInjector
             Console.WriteLine($"Out of {type} files.");
             return new();
         }
-        return new Queue<Weather>(WeatherCreator.ReadWeatherJson(File.ReadAllText(fileQueue.Dequeue())));
+
+        List<Weather> nextWeather = WeatherCreator.ReadWeatherJson(File.ReadAllText(fileQueue.Dequeue()));
+        nextWeather.Sort((x, y) => DateTime.Compare(x.DateIssued, y.DateIssued));
+        return new Queue<Weather>(nextWeather);
     }
 
     public Queue<string> GetMetarFiles()
