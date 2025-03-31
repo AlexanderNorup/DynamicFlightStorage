@@ -93,45 +93,65 @@ def create_base_layer():
     min_forecast, max_forecast, mean_forecast, median_forecast, std_forecast = 0, 510, 44, 52, 33 # minutes
     min_length, max_length, mean_length, median_length, std_length = 1, 33, 15.5, 12, 8 # hours
 
+    tafs = {}
+
     for hour in range(0, 24):
-        tafs = []
         date_start = file_start_date + timedelta(hours=hour)
         for i in range(round(get_random_value(mean_prhr, median_prhr, min_prhr, max_prhr, std_prhr))):
             icao = random.choice(airports)
             date_issued = date_start - timedelta(minutes=round(get_random_value(mean_forecast, median_forecast, min_forecast, max_forecast, std_forecast)))
             date_end = date_start + timedelta(hours=round(get_random_value(mean_length, median_length, min_length, max_length, std_length)))
 
-            tafs.append(get_taf(icao, date_start, date_end, date_issued, True))
-        with open(f'/home/sebastian/Desktop/thesis/DynamicFlightStorage/scripts/fake_data_generation/taf/taf{date_start.strftime("%Y-%m-%dT%H:%M:%SZ")}.json', 'w') as outfile:
-            json.dump(tafs, outfile, separators=(',', ':'))
+            rounded_date_issued_key = date_issued.replace(minute=0, second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+            if rounded_date_issued_key not in tafs:
+                tafs[rounded_date_issued_key] = []
+            tafs[rounded_date_issued_key].append(get_taf(icao, date_start, date_end, date_issued, False))
 
-
-def create_6h_spikes():
-    min_prhr, max_prhr, mean_prhr, median_prhr, std_prhr = 13173, 17816, 16186.5, 15840.5, 1977.78
-    min_forecast, max_forecast, mean_forecast, median_forecast, std_forecast = 0, 510, 60, 60, 40 # minutes
-
-
-    for hour in range(0, 24, 6):
-        tafs = []
-        date_start = file_start_date + timedelta(hours=hour)
-        for i in range(round(get_random_value(mean_prhr, median_prhr, min_prhr, max_prhr, std_prhr))):
-            icao = random.choice(airports)
-            date_issued = date_start - timedelta(minutes=round(get_random_value(mean_forecast, median_forecast, min_forecast, max_forecast, std_forecast)))
-            date_end = date_start + timedelta(hours=random.choices([24,30], weights=[39829/(39829+10669), 10669/(39829+10669)])[0])
-
-            tafs.append(get_taf(icao, date_start, date_end, date_issued, False))
-        file_path = f'/home/sebastian/Desktop/thesis/DynamicFlightStorage/scripts/fake_data_generation/taf/taf{date_start.strftime("%Y-%m-%dT%H:%M:%SZ")}.json'
+    for rounded_date_issued_key, taf_list in tafs.items():
+        file_path = f'/home/sebastian/Desktop/thesis/DynamicFlightStorage/scripts/fake_data_generation/taf/taf{rounded_date_issued_key}.json'
         try:
             with open(file_path, 'r') as infile:
                 existing_tafs = json.load(infile)
         except FileNotFoundError:
             existing_tafs = []
 
-        existing_tafs.extend(tafs)
+        existing_tafs.extend(taf_list)
 
         with open(file_path, 'w') as outfile:
             json.dump(existing_tafs, outfile, separators=(',', ':'))
 
+
+def create_6h_spikes():
+    min_prhr, max_prhr, mean_prhr, median_prhr, std_prhr = 13173, 17816, 16186.5, 15840.5, 1977.78
+    min_forecast, max_forecast, mean_forecast, median_forecast, std_forecast = 0, 510, 60, 60, 40 # minutes
+
+    tafs = {}
+
+    for hour in range(0, 24, 6):
+        date_start = file_start_date + timedelta(hours=hour)
+        for i in range(round(get_random_value(mean_prhr, median_prhr, min_prhr, max_prhr, std_prhr))):
+            icao = random.choice(airports)
+            date_issued = date_start - timedelta(minutes=round(get_random_value(mean_forecast, median_forecast, min_forecast, max_forecast, std_forecast)))
+            date_end = date_start + timedelta(hours=random.choices([24,30], weights=[39829/(39829+10669), 10669/(39829+10669)])[0])
+
+            rounded_date_issued_key = date_issued.replace(minute=0, second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+            if rounded_date_issued_key not in tafs:
+                tafs[rounded_date_issued_key] = []
+            tafs[rounded_date_issued_key].append(get_taf(icao, date_start, date_end, date_issued, False))
+
+    
+    for rounded_date_issued_key, taf_list in tafs.items():
+        file_path = f'/home/sebastian/Desktop/thesis/DynamicFlightStorage/scripts/fake_data_generation/taf/taf{rounded_date_issued_key}.json'
+        try:
+            with open(file_path, 'r') as infile:
+                existing_tafs = json.load(infile)
+        except FileNotFoundError:
+            existing_tafs = []
+
+        existing_tafs.extend(taf_list)
+
+        with open(file_path, 'w') as outfile:
+            json.dump(existing_tafs, outfile, separators=(',', ':'))
 
 def get_random_value(mean, median, min, max, std):
     a,b = (min - mean) / std, (max - mean) / std
