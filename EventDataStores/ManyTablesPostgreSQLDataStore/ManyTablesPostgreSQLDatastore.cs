@@ -5,7 +5,7 @@ using Testcontainers.PostgreSql;
 
 namespace ManyTablesPostgreSQLDataStore;
 
-public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
+public partial class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
 {
     private PostgreSqlContainer? _container;
     private NpgsqlConnection? _insertConnection;
@@ -16,6 +16,9 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
     // Currently these two keep track of which tables exist and which tables each flight is related to. In-memory
     private Dictionary<string, HashSet<string>> _icaoDictionary;
     private HashSet<string> _tableSet;
+    
+    [GeneratedRegex("[^a-zA-Z0-9]")]
+    private static partial Regex SanitizeAirport();
 
     public ManyTablesPostgreSQLDatastore(IWeatherService weatherService,
         IRecalculateFlightEventPublisher recalculateFlightEventPublisher)
@@ -82,7 +85,7 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
         {
             foreach (var airport in flight.GetAllAirports().Distinct())
             {
-                var cleanAirport = SanitizeAirport(airport);
+                var cleanAirport = SanitizeAirport().Replace(airport, "");
                 if (_tableSet.Contains(cleanAirport)) continue;
 
                 string createTableSql =
@@ -126,7 +129,7 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
             var weather = _weatherService.GetWeatherCategoriesForFlight(flight);
             foreach (var airport in flight.GetAllAirports().Distinct())
             {
-                var cleanAirport = SanitizeAirport(airport);
+                var cleanAirport = SanitizeAirport().Replace(airport, "");
                 string insertFlightEventSql =
                     $"""
                     INSERT INTO "{cleanAirport}_table" (flightIdentification, lastWeather, departure, arrival)
@@ -184,7 +187,7 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
 
     public async Task AddWeatherAsync(Weather weather, DateTime recievedTime)
     {
-        var cleanWeatherAirport = SanitizeAirport(weather.Airport);
+        var cleanWeatherAirport = SanitizeAirport().Replace(weather.Airport, "");
         if (!_tableSet.Contains(cleanWeatherAirport)) return;
         int newWeather = (int)weather.WeatherLevel ;
         string searchSql =
@@ -216,7 +219,7 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
 
                     foreach (var airport in _icaoDictionary[flightId])
                     {
-                        var cleanAirport = SanitizeAirport(airport);
+                        var cleanAirport = SanitizeAirport().Replace(airport, "");
                         string updateRecalculatingSql = 
                             $"""
                              UPDATE "{cleanAirport}_table" SET isRecalculating = TRUE
@@ -262,9 +265,5 @@ public class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposable
             _container = null;
         }
     }
-
-    private string SanitizeAirport(string icao)
-    {
-        return Regex.Replace(icao, "[^a-zA-Z0-9]", "");
-    }
+    
 }
