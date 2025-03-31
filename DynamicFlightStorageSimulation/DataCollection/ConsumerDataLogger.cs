@@ -97,6 +97,7 @@ namespace DynamicFlightStorageSimulation.DataCollection
             try
             {
                 await dbContext.SaveChangesAsync().ConfigureAwait(false);
+                _logger.LogInformation("Successfully uploaded data to database for experiment {ExperimentId} and client {ClientId}", experimentId, clientId);
             }
             catch (Exception ex)
             {
