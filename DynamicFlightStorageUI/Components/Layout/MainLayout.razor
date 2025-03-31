@@ -1,5 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @inject IHostApplicationLifetime lifetime
+@inject IExperimentNotifier experimentNotifier
 @inject IJSRuntime jsRuntime
 
 <div class="page">
@@ -10,7 +11,7 @@
     <main>
         <div class="top-row px-4">
             <span>UTC Now: @currentTime</span>
-            <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank">About</a>
+            <button @onclick="ToggleNotifications" class="btn btn-outline-primary ms-2">@(notificationButtonStatus ? "Disable" : "Enable") Notifications</button>
             <button @onclick="StopApplication" class="btn btn-outline-danger ms-2">Restart</button>
         </div>
 
@@ -29,12 +30,14 @@
 
 
 @code {
+    private bool notificationButtonStatus;
     private string currentTime = DateTime.UtcNow.ToString("HH:mm tt");
 
     private System.Timers.Timer? secondsTimer;
 
     protected override void OnInitialized()
     {
+        notificationButtonStatus = experimentNotifier.IsNotificationEnabled;
         //one second interval
         secondsTimer = new System.Timers.Timer(1000);
         secondsTimer.Enabled = true;
@@ -45,9 +48,11 @@
     private void UpdateTime()
     {
         var newTime = DateTime.UtcNow.ToString("HH:mm tt");
-        if(newTime != currentTime)
+        var newStatus = experimentNotifier.IsNotificationEnabled;
+        if(newTime != currentTime || newStatus != notificationButtonStatus)
         {
             currentTime = newTime;
+            notificationButtonStatus = experimentNotifier.IsNotificationEnabled;
             InvokeAsync(StateHasChanged);
         }
     }
@@ -58,6 +63,13 @@
         {
             lifetime.StopApplication();
         }
+    }
+
+    private void ToggleNotifications()
+    {
+        experimentNotifier.SetNotificationEnabled(!experimentNotifier.IsNotificationEnabled);
+        notificationButtonStatus = experimentNotifier.IsNotificationEnabled;
+        StateHasChanged();
     }
 
     public void Dispose()

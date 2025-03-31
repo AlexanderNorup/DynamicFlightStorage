@@ -24,6 +24,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
         private ConsumingMonitor _consumingMonitor;
         private DataSetManager _dataSetManager;
         private ExperimentDataCollector _experimentDataCollector;
+        private IExperimentNotifier _experimentNotifier;
         private EventLogger<Orchestrator> _logger;
         private System.Timers.Timer _experimentChecker;
         private SemaphoreSlim _experimentControllerSemaphore = new SemaphoreSlim(1, 1);
@@ -31,13 +32,20 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
         private WeatherInjector? _weatherInjector;
         private FlightInjector? _flightInjector;
 
-        public Orchestrator(SimulationEventBus eventBus, LatencyTester latencyTester, ConsumingMonitor consumingMonitor, DataSetManager dataSetManager, ExperimentDataCollector experimentDataCollector, ILogger<Orchestrator> logger)
+        public Orchestrator(SimulationEventBus eventBus,
+                            LatencyTester latencyTester,
+                            ConsumingMonitor consumingMonitor,
+                            DataSetManager dataSetManager,
+                            ExperimentDataCollector experimentDataCollector,
+                            IExperimentNotifier experimentNotifier,
+                            ILogger<Orchestrator> logger)
         {
             _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
             _latencyTester = latencyTester ?? throw new ArgumentNullException(nameof(latencyTester));
             _consumingMonitor = consumingMonitor ?? throw new ArgumentNullException(nameof(consumingMonitor));
             _dataSetManager = dataSetManager ?? throw new ArgumentNullException(nameof(dataSetManager));
             _experimentDataCollector = experimentDataCollector ?? throw new ArgumentNullException(nameof(experimentDataCollector));
+            _experimentNotifier = experimentNotifier ?? throw new ArgumentNullException(nameof(experimentNotifier));
             _experimentDataCollector.OnRecalculationAsync += RecalculationMessageRecieved;
             _logger = new EventLogger<Orchestrator>(logger);
             _experimentChecker = new System.Timers.Timer(1000);
@@ -228,11 +236,13 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 await _consumingMonitor.WaitForExchangesToBeConsumedAsync(ExperimentRunnerClientIds.ToArray(), ccToken.Token);
 
                 _logger.LogInformation("Preload done");
+                await _experimentNotifier.SendNotification("Preload done", $"Preload for experiment {CurrentExperiment.Id} is done.");
                 OrchestratorState = OrchestratorState.PreloadDone;
             }
             catch (Exception e)
             {
                 _logger.LogError(e, "Error during preload");
+                await _experimentNotifier.SendNotification("Experiment Error", $"Preload of experiment {CurrentExperiment?.Id} threw an exception of type {e.GetType().FullName} while starting: {e.Message}");
                 ResetExperimentState();
             }
             finally
@@ -324,6 +334,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
             catch (Exception e)
             {
                 _logger.LogError(e, "Error during experiment start");
+                await _experimentNotifier.SendNotification("Experiment Error", $"Experiment {CurrentExperiment?.Id} threw an exception of type {e.GetType().FullName} while starting: {e.Message}");
                 ResetExperimentState();
             }
             finally
@@ -355,6 +366,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                         result.UTCEndTime = DateTime.UtcNow;
                         result.ExperimentSuccess = false;
                     }
+                    _experimentNotifier.SendNotification("Experiment Error", $"Experiment {CurrentExperiment?.Id} threw an exception {ExperimentTask.Exception?.GetType().FullName}: {ExperimentTask.Exception?.Message}").GetAwaiter().GetResult();
                     ResetExperimentState();
                     return false;
                 }
@@ -426,6 +438,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 _logger.LogWarning("Experiment aborted successfully!");
                 ResetExperimentState();
                 _abortSemaphore.Release();
+                await _experimentNotifier.SendNotification("Experiment Aborted", $"Experiment {CurrentExperiment.Id} was aborted.");
             }
         }
 
@@ -461,6 +474,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 {
                     OrchestratorState = OrchestratorState.Aborting;
                     _logger.LogError("Recieved abort message from consumer: {Message}", systemMessage.Message);
+                    await _experimentNotifier.SendNotification("Experiment Aborted", $"Experiment {CurrentExperiment?.Id} was aborted by consumer {systemMessage.Source} with message: {systemMessage.Message}");
                     OnExperimentStateChanged?.Invoke();
 
                     if (!ExperimentCancellationToken.IsCancellationRequested)
@@ -577,6 +591,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     await Task.Delay(TimeSpan.FromSeconds(15)).ConfigureAwait(false); // Simply to ensure we get the rest of the recalculaitons if some of them were to be in the last dataset
                     await _experimentDataCollector.FinishDataCollectionAsync(ExperimentRunnerClientIds);
                     _logger.LogInformation("Experiment {Id} ended successfully.", CurrentExperiment.Id);
+                    await _experimentNotifier.SendNotification("Experiment Done", $"Experiment {CurrentExperiment.Id} is done.");
                     ResetExperimentState();
                     return;
                 }

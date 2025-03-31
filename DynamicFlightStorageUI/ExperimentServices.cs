@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection;
 using Microsoft.EntityFrameworkCore;
 using DynamicFlightStorageSimulation.DataCollection;
+using DynamicFlightStorageDTOs;
 
 namespace DynamicFlightStorageUI
 {
@@ -13,7 +14,8 @@ namespace DynamicFlightStorageUI
         {
             builder.Services.AddOptions<EventBusConfig>()
                 .Bind(builder.Configuration.GetSection("EventBusConfig"))
-                .ValidateDataAnnotations();
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
 
             builder.Services.AddSingleton((s) =>
             {
@@ -55,6 +57,20 @@ namespace DynamicFlightStorageUI
                 }
                 return new DataSetManager(dataPath, eventBus);
             });
+
+            builder.Services.AddOptions<PushoverOptions>()
+                .Bind(builder.Configuration.GetSection("PushoverOptions"))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            builder.Services.AddHttpClient("pushover", (s, client) =>
+            {
+                var options = s.GetRequiredService<IOptions<PushoverOptions>>().Value;
+                client.BaseAddress = new Uri(options.Endpoint);
+                client.Timeout = TimeSpan.FromSeconds(5);
+            });
+
+            builder.Services.AddSingleton<IExperimentNotifier, PushoverExperimentNotifier>();
 
             builder.Services.AddSingleton<Orchestrator>();
         }
