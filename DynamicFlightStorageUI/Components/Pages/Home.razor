@@ -106,12 +106,22 @@
             <hr />
             <h3>Logs:</h3>
             <ul id="logList" class="logContainer list-unstyled"></ul>
-            @if (orchestrator.CurrentExperimentResult is { } results)
+            @if(showExperimentResult){
+                @if (orchestrator.CurrentExperimentResult is { } results)
+                {
+                    <p>
+                        Current Experiment results:<br />
+                        <pre>@(JsonSerializer.Serialize(results, new JsonSerializerOptions() { WriteIndented = true, ReferenceHandler = ReferenceHandler.Preserve }))</pre>
+                    </p>
+                }
+                else
+                {
+                    <p>No experiment result data yet</p>
+                }
+            }
+            else
             {
-                <p>
-                    Current Experiment results:<br />
-                    <pre>@(JsonSerializer.Serialize(results, new JsonSerializerOptions() { WriteIndented = true, ReferenceHandler = ReferenceHandler.Preserve }))</pre>
-                </p>
+                <p><button @onclick="() => showExperimentResult = true" class="btn btn-secondary">Show experiment result (might be slow)</button></p>
             }
         </div>
 
@@ -170,6 +180,7 @@
     private SimulationConsumer? consumer;
     private LatencyTester? latencyTester;
     private string? latencyTestResult;
+    private bool showExperimentResult;
 
     private string CurrentExperimentDecription { get; set; } = string.Empty;
 
