@@ -1,5 +1,7 @@
 
 using DynamicFlightStorageDTOs;
+using DynamicFlightStorageSimulation.DataCollection;
+using MessagePack;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
@@ -95,6 +97,18 @@ public class FlightInjector
         {
             logger?.LogCritical($"The flight path {directoryPath} is not a directory!");
         }
+
+        var binPath = Path.Combine(directoryPath, "flights.bin");
+        if (File.Exists(binPath))
+        {
+            logger?.LogDebug("Found compressed flights, decompressing...");
+            var compressedData = File.ReadAllBytes(binPath);
+            logger?.LogDebug("Read {Bytes} bytes of compressed flights from disk.", compressedData.Length);
+            var flights = MessagePackSerializer.Deserialize<List<Flight>>(compressedData, ConsumerDataLogger.MessagePackOptions);
+            logger?.LogDebug($"Decompressed {flights.Count} flights.");
+            return flights;
+        }
+
         string[] files = Directory.GetFiles(directoryPath, "*.json");
         logger?.LogDebug($"Found {files.Length} flights to load.");
 

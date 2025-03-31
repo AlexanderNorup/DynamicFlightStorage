@@ -42,6 +42,10 @@
 
                 <p>Experiment time: <code>@(orchestrator.CurrentSimulationTime)</code> (TimeScale: @timeScaleText)</p>
                 <p>Experiment time left: @(currEx.SimulatedEndTime - simTime)
+                    @if (currEx.TimeScale > 0)
+                    {
+                        <span> (@((currEx.SimulatedEndTime - simTime) / currEx.TimeScale) real time)</span>
+                    })
                     <div class="progress" role="progressbar">
                         <div
                         class="progress-bar progress-bar-striped @barColor @(!experimentDone ? "progress-bar-animated" : "")" 
