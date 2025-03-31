@@ -235,7 +235,24 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 await minimumWaitPreloadWaitTime; // Wait for the minium time of 10 seconds before checking if everything is consumed
                 await _consumingMonitor.WaitForExchangesToBeConsumedAsync(ExperimentRunnerClientIds.ToArray(), ccToken.Token);
 
-                _logger.LogInformation("Preload done");
+                _logger.LogInformation("Signaling to consumers that preload is done.");
+
+                var preloadDoneResult = await SendSystemMessageAndWaitForResponseAsync(new SystemMessage()
+                {
+                    Message = CurrentExperiment.Id,
+                    MessageType = SystemMessageType.ExperimentPreloadDone,
+                    Source = _eventBus.ClientId,
+                    Targets = ExperimentRunnerClientIds,
+                }, SystemMessageType.NewExperimentReady, TimeSpan.FromSeconds(10))
+                    .ConfigureAwait(false);
+
+                if (!preloadDoneResult.success)
+                {
+                    throw new InvalidOperationException("One or more experiment runners did not respond in time.\n" +
+                        $"Missing response(s) from {string.Join(",", ExperimentRunnerClientIds.Except(result.responses.Select(x => x.Source)))}");
+                }
+
+                _logger.LogInformation("All consumers have acknowledged. Preload is done.");
                 await _experimentNotifier.SendNotification("Preload done", $"Preload for experiment {CurrentExperiment.Id} is done.");
                 OrchestratorState = OrchestratorState.PreloadDone;
             }
