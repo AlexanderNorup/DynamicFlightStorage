@@ -47,6 +47,36 @@ namespace DynamicFlightStorageSimulation
             {
                 return;
             }
+
+            if (weatherEvent.Weather is null)
+            {
+                if (weatherEvent.FullWeatherServiceData is null)
+                {
+                    _logger?.LogWarning("Received a WeatherEvent with no weather data and no compressed data");
+                    return;
+                }
+
+                if (_weatherService.Weather.Count > 0)
+                {
+                    var e = new InvalidOperationException("Received a WeatherEvent with no weather data and compressed data, but the weatherservice already contains data.");
+                    await HandleDataStoreException(e, nameof(OnWeatherRecieved)).ConfigureAwait(false);
+                    return;
+                }
+
+                if (_consumerLogger.IsPreloadDone)
+                {
+                    var e = new InvalidOperationException("Received a WeatherEvent with no weather data and compressed data after preload is done");
+                    await HandleDataStoreException(e, nameof(OnWeatherRecieved)).ConfigureAwait(false);
+                    return;
+                }
+
+                _weatherService.Weather = weatherEvent.FullWeatherServiceData;
+                _logger?.LogInformation("Loaded weather for {Count} airports from compressed weather event",
+                    weatherEvent.FullWeatherServiceData.Count);
+                cleanState = false;
+                return;
+            }
+
             _consumerLogger.LogWeatherData(weatherEvent);
             if (cleanState)
             {

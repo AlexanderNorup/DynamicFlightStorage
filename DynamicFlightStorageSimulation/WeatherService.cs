@@ -4,7 +4,20 @@ namespace DynamicFlightStorageSimulation
 {
     public class WeatherService : IWeatherService
     {
-        private readonly Dictionary<string, List<Weather>> _weather = new();
+        private Dictionary<string, List<Weather>> _weather = new();
+        public Dictionary<string, List<Weather>> Weather
+        {
+            get
+            {
+                return _weather;
+            }
+            set
+            {
+                ArgumentNullException.ThrowIfNull(value, nameof(Weather));
+                _weather = value;
+            }
+        }
+
         public Weather GetWeather(string airport, DateTime dateTime)
         {
             var backupWeather = new Weather
