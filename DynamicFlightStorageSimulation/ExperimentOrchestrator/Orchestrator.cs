@@ -207,7 +207,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 var minimumWaitPreloadWaitTime = Task.Delay(TimeSpan.FromMilliseconds(MinimumWaitTimeForConsumptionMs), ccToken.Token);
 
                 _weatherInjector.SkipWeatherUntil(CurrentExperiment.SimulatedPreloadStartTime, ccToken.Token);
-                await _weatherInjector.PublishWeatherUntil(CurrentExperiment.SimulatedPreloadEndTime, CurrentExperiment.Id, _logger, ccToken.Token).ConfigureAwait(false);
+                await _weatherInjector.PublishWeatherUntil(CurrentExperiment.SimulatedPreloadEndTime, CurrentExperiment.Id, true, _logger, ccToken.Token).ConfigureAwait(false);
 
                 _logger.LogInformation("Finished preloading weather. Took {Time}. Waiting to be consumed...", st.Elapsed);
                 await minimumWaitPreloadWaitTime; // Wait for the minium time of 10 seconds before checking if everything is consumed
@@ -622,7 +622,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                 OnExperimentStateChanged?.Invoke();
 
                 // Inject weather and flights up to CurrentSimulationTime
-                var weatherTask = _weatherInjector.PublishWeatherUntil(CurrentSimulationTime.Value, CurrentExperiment.Id, _logger, ExperimentCancellationToken.Token);
+                var weatherTask = _weatherInjector.PublishWeatherUntil(CurrentSimulationTime.Value, CurrentExperiment.Id, false, _logger, ExperimentCancellationToken.Token);
 
                 if (!CurrentExperiment.PreloadAllFlights)
                 {

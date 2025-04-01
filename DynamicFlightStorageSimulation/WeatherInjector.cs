@@ -1,4 +1,6 @@
 using DynamicFlightStorageDTOs;
+using DynamicFlightStorageSimulation.DataCollection;
+using MessagePack;
 using Microsoft.Extensions.Logging;
 
 namespace DynamicFlightStorageSimulation;
@@ -46,30 +48,53 @@ public class WeatherInjector
         }
     }
 
-    public async Task PublishWeatherUntil(DateTime date, string experimentId, ILogger? logger = null, CancellationToken cancellationToken = default)
+    public async Task PublishWeatherUntil(DateTime date, string experimentId, bool sendAsSinglePackage = false, ILogger? logger = null, CancellationToken cancellationToken = default)
     {
-        var weatherBatches = GetWeatherUntil(date, cancellationToken).ToList();
+        var weatherEvents = GetWeatherUntil(date, cancellationToken).ToList();
 
-        if (weatherBatches.Count == 0)
+        if (weatherEvents.Count == 0)
         {
             //logger?.LogDebug("No weather data to publish (until {Until}).", date);
             return;
         }
 
-        logger?.LogDebug("Publishing {Count} weather batches (until {Until}).",
-            weatherBatches.Count,
+        if (sendAsSinglePackage)
+        {
+            logger?.LogDebug("Building weather service for {Count} weather batches (until {Until}).",
+                weatherEvents.Count,
+                date);
+            var weatherService = new WeatherService();
+            foreach (var weatherEvent in weatherEvents)
+            {
+                if (cancellationToken.IsCancellationRequested) break;
+
+                weatherService.AddWeather(weatherEvent);
+
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var allWeather = weatherService.Weather;
+            await _eventBus.PublishWeatherServiceAsync(allWeather, experimentId).ConfigureAwait(false);
+            return;
+        }
+
+
+        logger?.LogDebug("Publishing {Count} weather events (until {Until}).",
+            weatherEvents.Count,
             date);
         int weatherCount = 0;
-        foreach (var weatherBatch in weatherBatches)
+
+        foreach (var weatherEvent in weatherEvents)
         {
             if (cancellationToken.IsCancellationRequested) break;
-            await _eventBus.PublishWeatherAsync(weatherBatch, experimentId).ConfigureAwait(false);
+            await _eventBus.PublishWeatherAsync(weatherEvent, experimentId).ConfigureAwait(false);
             if (++weatherCount % 10_000 == 0)
             {
-                logger?.LogDebug("Published {Count}/{Total} ({Percentage}%) weather batches (until {Until}).",
+                logger?.LogDebug("Published {Count}/{Total} ({Percentage}%) weather events (until {Until}).",
                     weatherCount,
-                    weatherBatches.Count,
-                    Math.Round(weatherCount / (double)weatherBatches.Count * 100d, 2),
+                    weatherEvents.Count,
+                    Math.Round(weatherCount / (double)weatherEvents.Count * 100d, 2),
                     date);
             }
         }

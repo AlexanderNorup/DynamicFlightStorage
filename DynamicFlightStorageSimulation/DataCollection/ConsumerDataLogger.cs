@@ -35,7 +35,7 @@ namespace DynamicFlightStorageSimulation.DataCollection
 
         public void LogWeatherData(WeatherEvent weather)
         {
-            if (ShouldLog)
+            if (ShouldLog && weather.Weather is not null)
             {
                 _weatherLog.AddLast(new WeatherLog(DateTime.UtcNow, weather.TimeStamp, weather.Weather));
             }
