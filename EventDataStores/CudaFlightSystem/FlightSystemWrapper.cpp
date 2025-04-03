@@ -87,21 +87,23 @@ bool AddFlights(void* flightSystem, int* ids, int* positions, int* durations, in
 		int positionCounter = 0;
 
 		// Convert flat float array into flights
+		std::vector<std::vector<Airport>> all_airports(flightCount);
 		for (int i = 0; i < flightCount; i++) {
 			flights[i].position.x = positions[positionCounter++];
 
-			std::vector<Airport> yz;
+			// Use persistent storage
+			all_airports[i].clear();
 			while (positionCounter < positionCount && positions[positionCounter] != SPECIAL_SIGNAL_NUMBER) {
-				yz.push_back({ positions[positionCounter++], positions[positionCounter++] });
+				all_airports[i].push_back({ positions[positionCounter++], positions[positionCounter++] });
 			}
 
-			flights[i].position.airport = yz.data();
-			flights[i].position.airportLength = yz.size();
+			flights[i].position.airport = all_airports[i].data();
+			flights[i].position.airportLength = all_airports[i].size();
 
 			flights[i].flightDuration = durations[i];
 			flights[i].id = ids[i];
 #if SHOULD_LOG
-			std::cout << "Adding Flight #" << i << " ID: " << flights[i].id << " Position: " << flights[i].position.x << ", " << yz << " Duration: " << flights[i].flightDuration << std::endl;
+			std::cout << "Adding Flight #" << i << " ID: " << flights[i].id << " Position: " << flights[i].position.x << ", " << all_airports[i] << " Duration: " << flights[i].flightDuration << std::endl;
 #endif
 		}
 
@@ -141,20 +143,22 @@ bool UpdateFlights(void* flightSystem, int* ids, int* newPositions, int* newDura
 		int positionCounter = 0;
 
 		// Convert flat float array into Vec3 positions
+		std::vector<std::vector<Airport>> all_airports(updateCount);
 		for (int i = 0; i < updateCount; i++) {
 			positions[i].x = newPositions[positionCounter++];
 
-			std::vector<Airport> yz;
+			// Use persistent storage
+			all_airports[i].clear();
 			while (positionCounter < positionCount && newPositions[positionCounter] != SPECIAL_SIGNAL_NUMBER) {
-				yz.push_back({ newPositions[positionCounter++], newPositions[positionCounter++] });
+				all_airports[i].push_back({ newPositions[positionCounter++], newPositions[positionCounter++] });
 			}
 
-			positions[i].airport = yz.data();
-			positions[i].airportLength = yz.size();
+			positions[i].airport = all_airports[i].data();
+			positions[i].airportLength = all_airports[i].size();
 
 			durations[i] = newDurations[i];
 #if SHOULD_LOG
-			std::cout << "Updating Flight #" << i << " ID: " << ids[i] << " Position: " << positions[i].x << ", " << yz << " Duration: " << durations[i] << std::endl;
+			std::cout << "Updating Flight #" << i << " ID: " << ids[i] << " Position: " << positions[i].x << ", " << all_airports[i] << " Duration: " << durations[i] << std::endl;
 #endif
 		}
 
