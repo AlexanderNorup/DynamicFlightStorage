@@ -19,11 +19,16 @@ namespace Neo4jDataStore
 
         public async Task StartAsync()
         {
-            _container = new Neo4jBuilder()
+            var builder = new Neo4jBuilder();
 #if DEBUG
-                .WithExposedPort(7474)
+            builder = builder.WithExposedPort(7474);
 #endif
-                .Build();
+            if (Environment.GetEnvironmentVariable("ENABLE_TEMPFS") is not null)
+            {
+                builder = builder.WithTmpfsMount("/data");
+            }
+
+            _container = builder.Build();
             await _container.StartAsync();
 
             var driver = GraphDatabase.Driver(_container.GetConnectionString());

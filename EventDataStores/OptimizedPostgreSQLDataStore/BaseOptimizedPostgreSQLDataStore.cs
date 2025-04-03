@@ -25,7 +25,12 @@ namespace OptimizedPostgreSQLDataStore
 
         public async Task StartAsync()
         {
-            _container = new PostgreSqlBuilder().Build();
+            var builder = new PostgreSqlBuilder();
+            if (Environment.GetEnvironmentVariable("ENABLE_TEMPFS") is not null)
+            {
+                builder = builder.WithTmpfsMount("/var/lib/postgresql/data");
+            }
+            _container = builder.Build();
             await _container.StartAsync();
 
             var initScript = await File.ReadAllTextAsync(_initScriptPath);

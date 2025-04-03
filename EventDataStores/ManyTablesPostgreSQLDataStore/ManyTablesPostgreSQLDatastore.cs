@@ -16,7 +16,7 @@ public partial class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposabl
     // Currently these two keep track of which tables exist and which tables each flight is related to. In-memory
     private Dictionary<string, HashSet<string>> _icaoDictionary;
     private HashSet<string> _tableSet;
-    
+
     [GeneratedRegex("[^a-zA-Z0-9]")]
     private static partial Regex SanitizeAirport();
 
@@ -37,7 +37,12 @@ public partial class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposabl
 
     public async Task StartAsync()
     {
-        _container = new PostgreSqlBuilder().Build();
+        var builder = new PostgreSqlBuilder();
+        if (Environment.GetEnvironmentVariable("ENABLE_TEMPFS") is not null)
+        {
+            builder = builder.WithTmpfsMount("/var/lib/postgresql/data");
+        }
+        _container = builder.Build();
         await _container.StartAsync();
 
         var initScript = await File.ReadAllTextAsync(_initScriptPath);
@@ -189,7 +194,7 @@ public partial class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposabl
     {
         var cleanWeatherAirport = SanitizeAirport().Replace(weather.Airport, "");
         if (!_tableSet.Contains(cleanWeatherAirport)) return;
-        int newWeather = (int)weather.WeatherLevel ;
+        int newWeather = (int)weather.WeatherLevel;
         string searchSql =
             $"""
             SELECT DISTINCT ON (flightIdentification) flightIdentification
@@ -220,7 +225,7 @@ public partial class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposabl
                     foreach (var airport in _icaoDictionary[flightId])
                     {
                         var cleanAirport = SanitizeAirport().Replace(airport, "");
-                        string updateRecalculatingSql = 
+                        string updateRecalculatingSql =
                             $"""
                              UPDATE "{cleanAirport}_table" SET isRecalculating = TRUE
                              WHERE flightIdentification = $1 AND isRecalculating = FALSE;
@@ -265,5 +270,5 @@ public partial class ManyTablesPostgreSQLDatastore : IEventDataStore, IDisposabl
             _container = null;
         }
     }
-    
+
 }
