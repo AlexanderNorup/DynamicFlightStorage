@@ -27,8 +27,11 @@ cuda_add_library(cuda_flight_system SHARED
     ${SRCS}
 )
 
+cuda_add_executable(cuda_flight_system_ex ${SRCS})
+
 # Include directories
 include_directories(${CUDA_INCLUDE_DIRS})
 
 # Link libraries
 target_link_libraries(cuda_flight_system ${CUDA_LIBRARIES})
+target_link_libraries(cuda_flight_system_ex ${CUDA_LIBRARIES})
