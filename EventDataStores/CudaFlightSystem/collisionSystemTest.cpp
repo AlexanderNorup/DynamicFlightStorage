@@ -105,6 +105,10 @@ void testCollisionSystem() {
 	position = { -11, 0, 0 };
 	testCase("From outside, stops inside", &flight, &position, true, &flightsystem);
 
+	position = { -15, 0, 0 };
+	flight.flightDuration = 5;
+	testCase("From outside, stops excatly on start", &flight, &position, true, &flightsystem);
+
 	// Test cases with multiple airport-z-values
 	flight.position.x = 0;
 
