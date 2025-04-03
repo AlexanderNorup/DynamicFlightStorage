@@ -592,6 +592,24 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     // Run as fast as possible
                     CurrentSimulationTime = CurrentSimulationTime.Value.Add(TimeSpan.FromMinutes(1));
                 }
+                
+                OnExperimentStateChanged?.Invoke();
+
+                // Inject weather and flights up to CurrentSimulationTime or SimulatedEndTime
+                CurrentSimulationTime = CurrentSimulationTime < CurrentExperiment.SimulatedEndTime ? CurrentSimulationTime : CurrentExperiment.SimulatedEndTime;
+                
+                var weatherTask = _weatherInjector.PublishWeatherUntil(CurrentSimulationTime.Value, CurrentExperiment.Id, false, _logger, ExperimentCancellationToken.Token);
+
+                if (!CurrentExperiment.PreloadAllFlights)
+                {
+                    var flightTask = _flightInjector.PublishFlightsUntil(CurrentSimulationTime.Value, CurrentExperiment.Id, _logger, ExperimentCancellationToken.Token);
+                    // Will inject flights and weather concurrently
+                    await Task.WhenAll(weatherTask, flightTask).ConfigureAwait(false);
+                }
+                else
+                {
+                    await weatherTask.ConfigureAwait(false);
+                }
 
                 if (CurrentSimulationTime >= CurrentExperiment.SimulatedEndTime)
                 {
@@ -617,22 +635,6 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
                     await _experimentNotifier.SendNotification("Experiment Done", $"Experiment {CurrentExperiment.Id} is done.");
                     ResetExperimentState();
                     return;
-                }
-
-                OnExperimentStateChanged?.Invoke();
-
-                // Inject weather and flights up to CurrentSimulationTime
-                var weatherTask = _weatherInjector.PublishWeatherUntil(CurrentSimulationTime.Value, CurrentExperiment.Id, false, _logger, ExperimentCancellationToken.Token);
-
-                if (!CurrentExperiment.PreloadAllFlights)
-                {
-                    var flightTask = _flightInjector.PublishFlightsUntil(CurrentSimulationTime.Value, CurrentExperiment.Id, _logger, ExperimentCancellationToken.Token);
-                    // Will inject flights and weather concurrently
-                    await Task.WhenAll(weatherTask, flightTask).ConfigureAwait(false);
-                }
-                else
-                {
-                    await weatherTask.ConfigureAwait(false);
                 }
 
                 if (ExperimentLoopIntervalMs > 0 && CurrentExperiment.TimeScale > 0)

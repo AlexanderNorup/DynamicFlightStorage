@@ -41,11 +41,11 @@
                 double experimentProgress = Math.Round((simTime - currEx.SimulatedStartTime) / (currEx.SimulatedEndTime - currEx.SimulatedStartTime) * 100d, 2);
 
                 <p>Experiment time: <code>@(orchestrator.CurrentSimulationTime)</code> (TimeScale: @timeScaleText)</p>
-                <p>Experiment time left: @(currEx.SimulatedEndTime - simTime)
+                <p>Experiment time left: @((currEx.SimulatedEndTime - simTime).ToString(@"hh\:mm\:ss"))
                     @if (currEx.TimeScale > 0)
                     {
-                        <span> (@((currEx.SimulatedEndTime - simTime) / currEx.TimeScale) real time)</span>
-                    })
+                        <span> (@(((currEx.SimulatedEndTime - simTime) / currEx.TimeScale).ToString(@"hh\:mm\:ss")) real time)</span>
+                    }
                     <div class="progress" role="progressbar">
                         <div
                         class="progress-bar progress-bar-striped @barColor @(!experimentDone ? "progress-bar-animated" : "")" 
