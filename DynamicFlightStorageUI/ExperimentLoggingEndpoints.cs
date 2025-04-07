@@ -3,6 +3,7 @@ using DynamicFlightStorageSimulation.ExperimentOrchestrator;
 using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection;
 using MessagePack;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -143,6 +144,68 @@ namespace DynamicFlightStorageUI
                     "text/csv",
                     $"recalculations_{experimentId}_{clientId}.csv");
             }).WithName("recalculations_download");
+
+            app.MapGet("/api/experiment/{experimentId}/{clientId}", async (DataCollectionContext context, HttpContext httpContext, LinkGenerator linkGenerator, string experimentId, string clientId) =>
+            {
+                var experimentData = await context.ExperimentClientResults
+                    .OrderBy(x => x.Id)
+                    .Include(x => x.ExperimentResult)
+                        .ThenInclude(x => x!.Experiment)
+                    .Include(x => x.LatencyTest)
+                    .Where(x => x.ExperimentResult!.ExperimentId == experimentId && x.ClientId == clientId)
+                    .Select(x => new
+                    {
+                        x.ExperimentResult!.ExperimentId,
+                        x.ExperimentResult.ExperimentRunDescription,
+                        x.ExperimentResult.ExperimentSuccess,
+                        x.ExperimentResult.UTCStartTime,
+                        x.ExperimentResult.UTCEndTime,
+                        ClientResultId = x.Id,
+                        x.ClientId,
+                        x.DataStoreType,
+                        x.MaxWeatherConsumerLag,
+                        x.MaxFlightConsumerLag,
+                        x.ExperimentResult.Experiment,
+                        x.LatencyTest
+                    })
+                    .FirstOrDefaultAsync().ConfigureAwait(false);
+
+                if (experimentData is null)
+                {
+                    return Results.NotFound("Experiment Result not found");
+                }
+
+                var flightEventLog = await context.FlightEventLogs
+                    .Where(x => x.ExperimentId == experimentId && x.ClientId == clientId)
+                    .Select(x => new { x.Id })
+                    .FirstOrDefaultAsync();
+
+                var weatherEventLog = await context.WeatherEventLogs
+                    .Where(x => x.ExperimentId == experimentId && x.ClientId == clientId)
+                    .Select(x => new { x.Id })
+                    .FirstOrDefaultAsync();
+
+                var response = new
+                {
+                    ExperimentData = experimentData,
+                    Links = new
+                    {
+                        FlightLogs = flightEventLog is not null ? linkGenerator.GetPathByName(httpContext, "flightlog_download", new { id = flightEventLog.Id }) : null,
+                        WeatherLogs = weatherEventLog is not null ? linkGenerator.GetPathByName(httpContext, "weatherlog_download", new { id = weatherEventLog.Id }) : null,
+                        LagLogs = linkGenerator.GetPathByName(httpContext, "laglog_download", new { id = experimentData.ClientResultId }),
+                        RecalculationLogs = linkGenerator.GetPathByName(httpContext, "recalculations_download", new { experimentId, clientId })
+                    }
+                };
+
+                if (httpContext.Request.Query.ContainsKey("dl"))
+                {
+                    return Results.File(System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(response)),
+                        "application/json",
+                        $"flightlogs_{experimentData.ExperimentId}_{experimentData.ClientId}.json");
+                }
+
+                return Results.Ok(response);
+            }).WithName("experiment_download");
         }
     }
 }
