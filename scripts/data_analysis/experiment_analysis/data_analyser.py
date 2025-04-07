@@ -124,6 +124,7 @@ def make_collective_analysis(recalcFrames, lagFrames, output_dir, output_file=No
     max_weather_lag = list(map(max, getColumns(lagFrames, "WeatherLag")))
     max_flight_lag = list(map(max, getColumns(lagFrames, "FlightLag")))
     plot_maker.make_max_lag_chart(max_weather_lag, max_flight_lag, lagFrames.keys(), output_dir, output_file)
+    plot_maker.make_max_lag_chart_weather(max_weather_lag, lagFrames.keys(), output_dir, output_file)
     
 if __name__ == "__main__":
     analyze_data(os.listdir(data_dir))

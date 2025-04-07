@@ -74,4 +74,29 @@ def make_max_lag_chart(maxWeatherLag, maxFlightLag, nameArray, outputPath, chart
     
     print(f"Wrote {lag_path}")
 
+def make_max_lag_chart_weather(maxWeatherLag, nameArray, outputPath, chartName=None):
+    fig, ax = plt.subplots()
+    x = np.arange(len(nameArray))  # the label locations
+    width = .5  # the width of the bars
+
+    bar = ax.bar(x, maxWeatherLag, width=width, label="Weather")
+    ax.bar_label(bar, padding=3)
+
+    ax.legend(loc='upper left', ncols=2)
+    ax.set_title("Maximum Consumer lag")
+    ax.set_ylabel("max # of weather events waiting")
+    ax.set_xticks(x, labels=breakArrayName(nameArray))
+    ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
+    
+    fileName = "max_consumer_lag_weather.pdf"
+    if not chartName == None:
+        fileName = chartName + "_max_consumerlag_weather.pdf"
+    lag_path = os.path.join(outputPath, fileName)
+
+    fig.autofmt_xdate() # Automatically rotates label so it can be read with multiple boxplots in same chart
+    fig.savefig(lag_path)
+    plt.close()
+    
+    print(f"Wrote {lag_path}")
+
 
