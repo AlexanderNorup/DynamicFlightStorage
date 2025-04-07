@@ -8,6 +8,16 @@ import matplotlib.pyplot as plt
 
 data_dir=os.path.join(os.path.dirname(__file__),"experiment_data")
 
+# Use this dictionary if we want to make charts of special groupings
+# Simply specify the name of your grouping as the dictionary-key and let the value be a list of names referring to experiments
+custom_groupings={
+    "Cool Ones": [
+        "Scaling 50K with GPUAccelerated",
+        "Scaling 50K with TimeBucketedNeo4j",
+        "Scaling 100K with ManyTablesPostgres",
+    ]
+}
+
 def analyze_data(experiments):
     print(f"Found {len(experiments)} experiments to analyze")
     experimentType_datastore_map = dict()
@@ -91,26 +101,20 @@ def analyze_data(experiments):
         os.makedirs(os.path.join(summary_analysis_path, "experiments"))
         os.makedirs(os.path.join(summary_analysis_path, "data-stores"))
 
+    global custom_groupings
+
     # Start by making graphs grouped by data-store and experiment_type
-    for filter_map in [datastore_experiment_map, experimentType_datastore_map]:
+    for filter_map in [datastore_experiment_map, experimentType_datastore_map, custom_groupings]:
         for filter_item in filter_map:
             experiment_names = filter_map[filter_item]
 
-            # Recalculation boxplot
+            # Make filters
             recalcs_for_filter = dict(filter(lambda x: x[0] in experiment_names, recalculationFrames.items()))
-
-            # plot_maker.make_recalculation_boxplot(getColumns(recalcs_for_filter, "LagMs"), recalcs_for_filter.keys(), summary_analysis_path, filter_item + "_recalc.pdf")
-
-            # Max Lag
             lag_for_filter = dict(filter(lambda x: x[0] in experiment_names, lagFrames.items()))
-            # max_weather_lag = list(map(max, getColumns(lag_for_filter, "WeatherLag")))
-            # max_flight_lag = list(map(max, getColumns(lag_for_filter, "FlightLag")))
-            # plot_maker.make_max_lag_chart(max_weather_lag, max_flight_lag, lag_for_filter.keys(), summary_analysis_path, filter_item + "_maxlag.pdf")
-
+            
             make_collective_analysis(recalcs_for_filter, lag_for_filter, summary_analysis_path, filter_item)
 
     # Make collective recalculaiton boxplot
-    #plot_maker.make_recalculation_boxplot(getColumns(recalculationFrames, "LagMs"), recalculationFrames.keys(), summary_analysis_path)
     make_collective_analysis(recalculationFrames, lagFrames, summary_analysis_path)
     
 def getColumns(frameDictionary, property):
@@ -128,3 +132,4 @@ def make_collective_analysis(recalcFrames, lagFrames, output_dir, output_file=No
     
 if __name__ == "__main__":
     analyze_data(os.listdir(data_dir))
+    print("\n\n == DONE ==")
