@@ -1,1 +1,2 @@
 EventDataStores/CudaFlightSystem/docker_entrypoint.sh text eol=lf
+experiment_server_setup.sh text eol=lf
