@@ -26,6 +26,7 @@ def analyze_data(experiments):
     flightFrames = dict()
     recalculationFrames = dict()
     lagFrames = dict()
+    consumptionFrames = dict()
     for experiment in experiments:
         dataset_path = os.path.join(data_dir, experiment)
         if not os.path.exists(dataset_path):
@@ -73,12 +74,16 @@ def analyze_data(experiments):
         weatherDf["ReceivedTimestamp"] = weatherDf["ReceivedTimestamp"].apply(adjuster.get_adjusted_time)
         flightDf["ReceivedTimestamp"] = flightDf["ReceivedTimestamp"].apply(adjuster.get_adjusted_time)
         recalculationDf["LagMs"] = recalculationDf["LagMs"].apply(adjuster.get_adjusted_lag)
+        
+        # Calculate consumption rates
+        weatherConsumptionRate = weatherDf.groupby(pd.Grouper(key="ReceivedTimestamp",freq='s'))["WeatherId"].count()
 
         # Save the adjusted frames so they can be used later
         weatherFrames[experiment_name] = weatherDf
         flightFrames[experiment_name] = flightDf
         recalculationFrames[experiment_name] = recalculationDf
         lagFrames[experiment_name] = lagDf
+        consumptionFrames[experiment_name] = weatherConsumptionRate
 
         analysis_path = os.path.join(dataset_path, "analysis")
         if not os.path.exists(analysis_path):
@@ -91,6 +96,10 @@ def analyze_data(experiments):
         #Lag data
         lagDf[["WeatherLag", "FlightLag"]].describe().to_csv(os.path.join(analysis_path, "lag_summary.csv"))
         plot_maker.make_lag_chart(lagDf["Timestamp"], lagDf["WeatherLag"], lagDf["FlightLag"], experiment_name, analysis_path)
+
+        # Make consumption chart
+        weatherConsumptionRate.describe().to_csv(os.path.join(analysis_path, "weather_consumption.csv"))
+        plot_maker.make_consumption_chart(weatherConsumptionRate.index, weatherConsumptionRate, experiment_name, analysis_path)
  
 
     # INDIVIDUAL ANALYSIS DONE
