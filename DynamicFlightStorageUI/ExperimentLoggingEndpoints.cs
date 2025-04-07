@@ -3,6 +3,7 @@ using DynamicFlightStorageSimulation.ExperimentOrchestrator;
 using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection;
 using MessagePack;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 
@@ -26,10 +27,23 @@ namespace DynamicFlightStorageUI
                 var decompressed = CompressionHelpers.Decompress(logs.FlightData);
 
                 var logList = MessagePackSerializer.Deserialize<LinkedList<ConsumerDataLogger.FlightLog>>(decompressed, ConsumerDataLogger.MessagePackOptions);
+                if (httpContext.Request.Query.ContainsKey("json"))
+                {
+                    return Results.File(System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(logList)),
+                        "application/json",
+                        $"flightlogs_{logs.ExperimentId}_{logs.ClientId}.json");
+                }
 
-                return Results.File(System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(logList)),
-                    "application/json",
-                    $"flightlogs_{logs.ExperimentId}_{logs.ClientId}.json");
+                StringBuilder csvBuilder = new StringBuilder();
+                csvBuilder.AppendLine("FlightId,SentTimestamp,ReceivedTimestamp");
+                foreach (var line in logList)
+                {
+                    csvBuilder.AppendLine($"{line.Flight.FlightIdentification},{line.SentTimestamp:o},{line.ReceivedTimestamp:o}");
+                }
+
+                return Results.File(System.Text.Encoding.UTF8.GetBytes(csvBuilder.ToString()),
+                    "text/csv",
+                    $"flightlogs_{logs.ExperimentId}_{logs.ClientId}.csv");
             }).WithName("flightlog_download");
 
             app.MapGet("/api/weatherlogs/{id:int}", async (DataCollectionContext context, HttpContext httpContext, int id) =>
@@ -46,9 +60,23 @@ namespace DynamicFlightStorageUI
 
                 var logList = MessagePackSerializer.Deserialize<LinkedList<ConsumerDataLogger.WeatherLog>>(decompressed, ConsumerDataLogger.MessagePackOptions);
 
-                return Results.File(System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(logList)),
-                    "application/json",
-                    $"weatherlogs_{logs.ExperimentId}_{logs.ClientId}.json");
+                if (httpContext.Request.Query.ContainsKey("json"))
+                {
+                    return Results.File(System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(logList)),
+                        "application/json",
+                        $"weatherlogs_{logs.ExperimentId}_{logs.ClientId}.json");
+                }
+
+                StringBuilder csvBuilder = new StringBuilder();
+                csvBuilder.AppendLine("WeatherId,SentTimestamp,ReceivedTimestamp");
+                foreach (var line in logList)
+                {
+                    csvBuilder.AppendLine($"{line.Weather.Id},{line.SentTimestamp:o},{line.ReceivedTimestamp:o}");
+                }
+
+                return Results.File(System.Text.Encoding.UTF8.GetBytes(csvBuilder.ToString()),
+                    "text/csv",
+                    $"weatherlogs_{logs.ExperimentId}_{logs.ClientId}.csv");
             }).WithName("weatherlog_download");
 
             app.MapGet("/api/lag/{id:int}", async (DataCollectionContext context, HttpContext httpContext, int id) =>
@@ -78,13 +106,43 @@ namespace DynamicFlightStorageUI
                 csvBuilder.AppendLine("Timestamp,WeatherLag,FlightLag");
                 foreach (var line in lagData)
                 {
-                    csvBuilder.AppendLine($"{line.Timestamp},{line.WeatherLag},{line.FlightLag}");
+                    csvBuilder.AppendLine($"{line.Timestamp:o},{line.WeatherLag},{line.FlightLag}");
                 }
 
                 return Results.File(System.Text.Encoding.UTF8.GetBytes(csvBuilder.ToString()),
                     "text/csv",
                     $"laglogs_{logs.Id}_{logs.ClientId}.csv");
             }).WithName("laglog_download");
+
+            app.MapGet("/api/recalculations/{experimentId}/{clientId}", async (DataCollectionContext context, HttpContext httpContext, string experimentId, string clientId) =>
+            {
+                var logs = await context.RecalculationEventLogs
+                    .OrderBy(x => x.Id)
+                    .Where(x => x.ExperimentId == experimentId && x.ClientId == clientId)
+                    .Select(x => new { x.FlightId, x.TriggeredBy, x.LagInMilliseconds, x.UtcTimeStamp })
+                    .ToListAsync().ConfigureAwait(false);
+
+                if (logs is null)
+                {
+                    return Results.NotFound("Recalculation events not found result not found");
+                }
+
+                if (logs.Count is 0)
+                {
+                    return Results.NotFound("This experimentid/clientid combination did not return any recalculationevents");
+                }
+
+                StringBuilder csvBuilder = new StringBuilder();
+                csvBuilder.AppendLine("FlightId,TriggeredBy,LagMs,UtcTimeStamp");
+                foreach (var line in logs)
+                {
+                    csvBuilder.AppendLine($"{line.FlightId},{line.TriggeredBy},{line.LagInMilliseconds.ToString(CultureInfo.InvariantCulture)},{line.UtcTimeStamp:o}");
+                }
+
+                return Results.File(System.Text.Encoding.UTF8.GetBytes(csvBuilder.ToString()),
+                    "text/csv",
+                    $"recalculations_{experimentId}_{clientId}.csv");
+            }).WithName("recalculations_download");
         }
     }
 }
