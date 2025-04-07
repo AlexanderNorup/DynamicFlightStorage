@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.Entities
 {
@@ -14,6 +15,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection.E
         [NotMapped]
         public required string DataStoreType { get; set; }
         [NotMapped]
+        [JsonIgnore]
         public bool Success { get; set; }
         public int SamplePoints { get; set; }
         public int SampleDelayMs { get; set; }
