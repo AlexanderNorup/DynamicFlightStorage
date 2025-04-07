@@ -137,7 +137,7 @@ namespace DynamicFlightStorageUI
                 csvBuilder.AppendLine("FlightId,TriggeredBy,LagMs,UtcTimeStamp");
                 foreach (var line in logs)
                 {
-                    csvBuilder.AppendLine($"{line.FlightId},{line.TriggeredBy},{line.LagInMilliseconds.ToString(CultureInfo.InvariantCulture)},{line.UtcTimeStamp:o}");
+                    csvBuilder.AppendLine($"{line.FlightId},{line.TriggeredBy},{line.LagInMilliseconds.ToString(CultureInfo.InvariantCulture)},{DateTime.SpecifyKind(line.UtcTimeStamp,DateTimeKind.Utc):o}");
                 }
 
                 return Results.File(System.Text.Encoding.UTF8.GetBytes(csvBuilder.ToString()),
