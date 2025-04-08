@@ -17,8 +17,9 @@ def breakArrayName(nameArray):
 def make_recalculation_boxplot(dataArray, nameArray, outputPath, chartName=None):
     fig, ax = plt.subplots()
     ax.boxplot(dataArray)
-    ax.set_xticklabels(breakArrayName(nameArray))
-    #ax.tick_params(axis='x', which='major', pad=-5)
+    ax.set_xticklabels(breakArrayName(nameArray), fontsize=8)
+    ax.tick_params(axis='x', which='major', pad=-3)
+    fig.subplots_adjust(bottom=0.65)
     ax.set_title("Recalculation lag")
     ax.set_ylabel("Time to respond (ms)")
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
@@ -36,8 +37,9 @@ def make_recalculation_boxplot(dataArray, nameArray, outputPath, chartName=None)
 def make_weather_lag_boxplot(dataArray, nameArray, outputPath, chartName=None):
     fig, ax = plt.subplots()
     ax.boxplot(dataArray)
-    ax.set_xticklabels(breakArrayName(nameArray))
-    #ax.tick_params(axis='x', which='major', pad=-5)
+    ax.set_xticklabels(breakArrayName(nameArray), fontsize=8)
+    ax.tick_params(axis='x', which='major', pad=-3)
+    fig.subplots_adjust(bottom=0.65)
     ax.set_title("Weather lag")
     ax.set_ylabel("# of weather events waiting")
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
@@ -119,8 +121,9 @@ def make_overlapping_consumption_chart(times, weatherConsumptions, names, output
 def make_consumption_boxplot(dataArray, nameArray, outputPath, chartName=None):
     fig, ax = plt.subplots()
     ax.boxplot(dataArray)
-    ax.set_xticklabels(breakArrayName(nameArray))
-    #ax.tick_params(axis='x', which='major', pad=-5)
+    ax.set_xticklabels(breakArrayName(nameArray), fontsize=8)
+    ax.tick_params(axis='x', which='major', pad=-3)
+    fig.subplots_adjust(bottom=0.65)
     ax.set_title("Weather consumption rate")
     ax.set_ylabel("# of weather events waiting")
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
@@ -148,7 +151,9 @@ def make_max_lag_chart(maxWeatherLag, maxFlightLag, nameArray, outputPath, chart
     ax.legend(loc='upper left', ncols=2)
     ax.set_title("Maximum Consumer lag")
     ax.set_ylabel("max # of messages waiting")
-    ax.set_xticks(x + width/2, labels=breakArrayName(nameArray))
+    ax.set_xticks(x + width/2, labels=breakArrayName(nameArray), fontsize=8)
+    ax.tick_params(axis='x', which='major', pad=-3)
+    fig.subplots_adjust(bottom=0.65)
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
     
     fileName = "max_consumer_lag.pdf"
@@ -173,7 +178,9 @@ def make_max_lag_chart_weather(maxWeatherLag, nameArray, outputPath, chartName=N
     ax.legend(loc='upper left', ncols=2)
     ax.set_title("Maximum Consumer lag")
     ax.set_ylabel("max # of weather events waiting")
-    ax.set_xticks(x, labels=breakArrayName(nameArray))
+    ax.tick_params(axis='x', which='major', pad=-3)
+    ax.set_xticks(x, labels=breakArrayName(nameArray), fontsize=8)
+    fig.subplots_adjust(bottom=0.65)
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
     
     fileName = "max_consumer_lag_weather.pdf"
@@ -198,12 +205,14 @@ def make_completion_time_bar(completionTimes, nameArray, expectedFinishTime, out
 
     ax.set_title("Experiment time")
     ax.set_ylabel("total time to run experiment in seconds")
-    ax.set_xticks(x, labels=breakArrayName(nameArray))
+    ax.tick_params(axis='x', which='major', pad=-3)
+    ax.set_xticks(x, labels=breakArrayName(nameArray), fontsize=8)
+    fig.subplots_adjust(bottom=0.65)
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
     if not expectedFinishTime == None:
         ax.plot([-0.5, len(nameArray) - 0.5], [expectedFinishTime,expectedFinishTime], color='green', linestyle='dashed', linewidth=2, label=f"Optimal finish time ({round(expectedFinishTime)} s.)")
         ax.legend()
-        
+
     fileName = "time.pdf"
     if not chartName == None:
         fileName = chartName + "_time.pdf"
