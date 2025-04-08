@@ -7,6 +7,6 @@
 - [x] Consumption rate compared by groups
 - [x] Do something about the x-axis (time) on line-charts (maybe change to [time-unit] after start)
 - [x] Time to complete experiment
-- [ ] Auto downloader for all experiments 
+- [x] Auto downloader for all experiments 
 - [ ] Write a README.md for this folder maybe?
 - [ ] Probably more...

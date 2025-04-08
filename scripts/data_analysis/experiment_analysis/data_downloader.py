@@ -6,6 +6,11 @@ import sys
 
 download_dir=os.path.join(os.path.dirname(__file__),"experiment_data")
 auth_username="speciale"
+all_experiments_api="https://dynamicflightstorage.app.alexandernorup.com/api/experiment/"
+
+def getbaseurl(url):
+    parsed_url = urlparse(url)
+    return f"{parsed_url.scheme}://{parsed_url.hostname}"
 
 def download_experiment_data(url, auth):
     request = requests.get(url, auth=auth)
@@ -28,11 +33,9 @@ def download_experiment_data(url, auth):
 
     # Download the rest of the data
     links = metadata["links"]
-    parsed_url = urlparse(url)
-    base_url = f"{parsed_url.scheme}://{parsed_url.hostname}"
+    base_url = getbaseurl(url)
 
     def tryDownloadLink(path, filename):
-        global auth
         download_url = base_url + path
         print(f"\nDownloading from {download_url}")
         response = requests.get(download_url, auth=auth)
@@ -57,7 +60,7 @@ def download_experiment_data(url, auth):
     print(f"Download completed => {experimentFolder}")
 
 
-if __name__ == "__main__":
+def main():
     auth_password=""
     if "password" in os.environ:
         auth_password = os.environ["password"]
@@ -69,10 +72,32 @@ if __name__ == "__main__":
     url = ""
     if len(sys.argv) > 1:
         url = sys.argv[1]
-    else:
-        url = input("Please enter the URL to download the data from: ")
 
-    if url.strip() == "":
-        raise Exception("URL cannot be blank")
+    if url.strip() != "":
+        download_experiment_data(url, auth)
+        return
+
+    print("Since no URL was specified, downloading all experiments")
+
+    baseurl = getbaseurl(all_experiments_api)
+    request = requests.get(all_experiments_api, auth=auth)
     
-    download_experiment_data(url, auth)
+    if request.status_code != 200:
+        print(f"Invalid password or url. Server replied with status {request.status_code}:\n\n{request.text}\n\n---\n")
+        raise Exception("Failed to download experiment list")
+    
+    experimentList = request.json()
+    print(f"Found {len(experimentList)} experiments to fetch")
+    links = list(map(lambda x: baseurl + x['link'], experimentList))
+
+    for link in links:
+        download_experiment_data(link, auth)
+
+
+
+
+if __name__ == "__main__":
+    main()
+    
+    
+    
