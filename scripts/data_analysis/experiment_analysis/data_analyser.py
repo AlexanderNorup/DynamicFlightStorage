@@ -96,6 +96,7 @@ def analyze_data(experiments):
         #Lag data
         lagDf[["WeatherLag", "FlightLag"]].describe().to_csv(os.path.join(analysis_path, "lag_summary.csv"))
         plot_maker.make_lag_chart(lagDf["Timestamp"], lagDf["WeatherLag"], lagDf["FlightLag"], experiment_name, analysis_path)
+        plot_maker.make_weather_lag_boxplot([lagDf["WeatherLag"]], [experiment_name], analysis_path)
 
         # Make consumption chart
         weatherConsumptionRate.describe().to_csv(os.path.join(analysis_path, "weather_consumption.csv"))
@@ -123,7 +124,7 @@ def analyze_data(experiments):
             
             make_collective_analysis(recalcs_for_filter, lag_for_filter, summary_analysis_path, filter_item)
 
-    # Make collective recalculaiton boxplot
+    # Make collective analysis for ALL frames
     make_collective_analysis(recalculationFrames, lagFrames, summary_analysis_path)
     
 def getColumns(frameDictionary, property):
@@ -138,6 +139,8 @@ def make_collective_analysis(recalcFrames, lagFrames, output_dir, output_file=No
     max_flight_lag = list(map(max, getColumns(lagFrames, "FlightLag")))
     plot_maker.make_max_lag_chart(max_weather_lag, max_flight_lag, lagFrames.keys(), output_dir, output_file)
     plot_maker.make_max_lag_chart_weather(max_weather_lag, lagFrames.keys(), output_dir, output_file)
+    plot_maker.make_weather_lag_boxplot(getColumns(lagFrames, "WeatherLag"), recalcFrames.keys(), output_dir, output_file)
+
     
 if __name__ == "__main__":
     analyze_data(os.listdir(data_dir))
