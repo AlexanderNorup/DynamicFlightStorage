@@ -77,7 +77,7 @@ def analyze_data(experiments):
         #Start by finding time-drift
         baseTime = weatherDf["SentTimestamp"][0]
         consumerTime = weatherDf["ReceivedTimestamp"][0]
-        latency = experiment_data['latencyTest']['medianLatencyMs']
+        latency = experiment_data['latencyTest']['medianLatencyMs'] / 2 # Divide by 2 because latency round-trip
         adjuster = TimedriftAdjuster(baseTime, consumerTime, latency)
         print(f"Detected lag of {adjuster.time_drift.total_seconds():.2f} seconds")
 
