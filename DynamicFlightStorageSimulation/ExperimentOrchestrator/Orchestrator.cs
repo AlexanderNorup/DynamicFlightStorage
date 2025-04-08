@@ -561,7 +561,7 @@ namespace DynamicFlightStorageSimulation.ExperimentOrchestrator
 
             await Task.Delay(TimeToRecalculateMs, ExperimentCancellationToken.Token).ConfigureAwait(false);
 
-            _logger.LogDebug("Sending flight {FlightId} back after recalculation", flight.FlightIdentification);
+            //_logger.LogDebug("Sending flight {FlightId} back after recalculation", flight.FlightIdentification);
             await _eventBus.PublishFlightAsync(flight, experimentId).ConfigureAwait(false);
         }
 
