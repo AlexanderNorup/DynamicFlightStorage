@@ -54,15 +54,14 @@ def make_weather_lag_boxplot(dataArray, nameArray, outputPath, chartName=None):
 
 def make_lag_chart(time,weatherLag, flightLag, name, outputPath, chartName=None):
     fig, ax = plt.subplots()
-    locator = mdates.AutoDateLocator(minticks=7, maxticks=10)
-    formatter = mdates.ConciseDateFormatter(locator)
-    ax.xaxis.set_major_locator(locator)
+    formatter = ticker.FuncFormatter(timedelta_formatter)
     ax.xaxis.set_major_formatter(formatter)
     ax.plot(time, weatherLag, label="weather")
     ax.plot(time, flightLag, label="flight")
     ax.legend(["Weather", "Flights"])
     ax.set_title(f"Consumer lag for {name}")
     ax.set_ylabel("# of messages waiting")
+    ax.set_xlabel("Time after experiment start")
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
     
     fileName = "consumer_lag.pdf"

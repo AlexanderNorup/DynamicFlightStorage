@@ -84,6 +84,9 @@ def analyze_data(experiments):
         # flightDf["ReceivedSecondsAfterStart"] = flightDf["ReceivedTimestamp"].apply(lambda x: (x - startTime))
         recalculationDf["LagMs"] = recalculationDf["LagMs"].apply(adjuster.get_adjusted_lag)
         
+        startTime = lagDf["Timestamp"][0]
+        lagDf["TimestampSecondsAfterStart"] = lagDf["Timestamp"].apply(lambda x: (x - startTime))
+
         # Calculate consumption rates
         weatherConsumptionRate = weatherDf.groupby(pd.Grouper(key="ReceivedSecondsAfterStart",freq='s'))["WeatherId"].count()
 
@@ -104,7 +107,7 @@ def analyze_data(experiments):
 
         #Lag data
         lagDf[["WeatherLag", "FlightLag"]].describe().to_csv(os.path.join(analysis_path, "lag_summary.csv"))
-        plot_maker.make_lag_chart(lagDf["Timestamp"], lagDf["WeatherLag"], lagDf["FlightLag"], experiment_name, analysis_path)
+        plot_maker.make_lag_chart(lagDf["TimestampSecondsAfterStart"], lagDf["WeatherLag"], lagDf["FlightLag"], experiment_name, analysis_path)
         plot_maker.make_weather_lag_boxplot([lagDf["WeatherLag"]], [experiment_name], analysis_path)
 
         # Make consumption chart
