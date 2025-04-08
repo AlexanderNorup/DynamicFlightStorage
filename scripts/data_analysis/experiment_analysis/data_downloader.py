@@ -21,8 +21,12 @@ def download_experiment_data(url, auth):
 
     metadata = request.json()
     experimentData = metadata["experimentData"]
-
+    
     print(f"Successfully found experiment \"{experimentData['experimentRunDescription']}\"")
+
+    if experimentData['utcEndTime'] == None or not experimentData['experimentSuccess']:
+        print("This experiment is either failed or not done yet. Refusing to work on this one...")
+        return
 
     experimentFolder = os.path.join(download_dir,experimentData['experimentRunDescription'])
     if not os.path.exists(experimentFolder):
