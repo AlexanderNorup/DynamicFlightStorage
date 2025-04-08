@@ -137,7 +137,7 @@ namespace DynamicFlightStorageUI
                 csvBuilder.AppendLine("FlightId,TriggeredBy,LagMs,UtcTimeStamp");
                 foreach (var line in logs)
                 {
-                    csvBuilder.AppendLine($"{line.FlightId},{line.TriggeredBy},{line.LagInMilliseconds.ToString(CultureInfo.InvariantCulture)},{DateTime.SpecifyKind(line.UtcTimeStamp,DateTimeKind.Utc):o}");
+                    csvBuilder.AppendLine($"{line.FlightId},{line.TriggeredBy},{line.LagInMilliseconds.ToString(CultureInfo.InvariantCulture)},{DateTime.SpecifyKind(line.UtcTimeStamp, DateTimeKind.Utc):o}");
                 }
 
                 return Results.File(System.Text.Encoding.UTF8.GetBytes(csvBuilder.ToString()),
@@ -206,6 +206,32 @@ namespace DynamicFlightStorageUI
 
                 return Results.Ok(response);
             }).WithName("experiment_download");
+
+            app.MapGet("/api/experiment/", async (DataCollectionContext context, HttpContext httpContext, LinkGenerator linkGenerator) =>
+            {
+                var experiments = await context.ExperimentClientResults
+                    .Include(x => x.ExperimentResult)
+                        .ThenInclude(x => x.Experiment)
+                    .Where(x => x.ExperimentResult!.Experiment.DataSetName != "default")
+                    .Select(x => new { 
+                        x.ClientId, 
+                        x.ExperimentResult!.ExperimentId,
+                        x.ExperimentResult.ExperimentRunDescription,
+                        x.DataStoreType,
+                    })
+                    .ToListAsync().ConfigureAwait(false);
+
+                var response = experiments.Select(x => new
+                {
+                    x.ClientId,
+                    x.ExperimentId,
+                    x.ExperimentRunDescription,
+                    x.DataStoreType,
+                    Link = linkGenerator.GetPathByName("experiment_download", new { experimentId = x.ExperimentId, clientId = x.ClientId })
+                }).ToList();
+
+                return Results.Ok(response);
+            }).WithName("experiment_list");
         }
     }
 }
