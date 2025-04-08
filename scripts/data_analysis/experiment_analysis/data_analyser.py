@@ -31,6 +31,13 @@ def analyze_data(experiments):
     lagFrames = dict()
     consumptionFrames = dict()
     experiment_runtime = dict()
+
+    summary_analysis_path = os.path.join(os.path.dirname(__file__), "analysis_summary")
+    if not os.path.exists(summary_analysis_path):
+        os.makedirs(summary_analysis_path)
+        os.makedirs(os.path.join(summary_analysis_path, "experiments"))
+        os.makedirs(os.path.join(summary_analysis_path, "data-stores"))
+
     for experiment in experiments:
         dataset_path = os.path.join(data_dir, experiment)
         if not os.path.exists(dataset_path):
@@ -97,9 +104,20 @@ def analyze_data(experiments):
         recalculationFrames[experiment_name] = recalculationDf
         lagFrames[experiment_name] = lagDf
         consumptionFrames[experiment_name] = weatherConsumptionRate
-        experiment_runtime[experiment_name] = (datetime.fromisoformat(experiment_data['utcEndTime']) - datetime.fromisoformat(experiment_data['utcStartTime'])).total_seconds()
+        experimentTime = (datetime.fromisoformat(experiment_data['utcEndTime']) - datetime.fromisoformat(experiment_data['utcStartTime'])).total_seconds()
+        expectedTime = (datetime.fromisoformat(experiment_data['experiment']['simulatedEndTime']) - datetime.fromisoformat(experiment_data['experiment']['simulatedStartTime'])).total_seconds()
+        timeScale = int(experiment_data['experiment']['timeScale'])
+        if timeScale > 0:
+            expectedTime = expectedTime / timeScale
+        else:
+            expectedTime = 0
 
-        analysis_path = os.path.join(dataset_path, "analysis")
+        expectedTime += 15 # The orchestrator always waits 15 seconds after an experiment before concluding it's done.
+                           # This is due to delays with how RabbitMQ reports the consumer-lag.
+        experiment_runtime[experiment_name] = (experimentTime, expectedTime)
+
+
+        analysis_path = os.path.join(summary_analysis_path, "single_experiments", experiment_name)
         if not os.path.exists(analysis_path):
             os.makedirs(analysis_path)
 
@@ -118,12 +136,6 @@ def analyze_data(experiments):
  
 
     # INDIVIDUAL ANALYSIS DONE
-
-    summary_analysis_path = os.path.join(os.path.dirname(__file__), "analysis_summary")
-    if not os.path.exists(summary_analysis_path):
-        os.makedirs(summary_analysis_path)
-        os.makedirs(os.path.join(summary_analysis_path, "experiments"))
-        os.makedirs(os.path.join(summary_analysis_path, "data-stores"))
 
     global custom_groupings
 
@@ -167,7 +179,14 @@ def make_collective_analysis(recalcFrames, lagFrames, consumptionFrames, runtime
     plot_maker.make_consumption_boxplot(list(consumptionFrames.values()), list(consumptionFrames.keys()), output_dir, output_file)
 
     # Runtime
-    plot_maker.make_completion_time_bar(runtimeFrames.values(), runtimeFrames.keys(), output_dir, output_file)
+    experimentTimes = getColumns(runtimeFrames, 0)
+    experimentExpectedTimes = getColumns(runtimeFrames, 1)
+    expectedTime = None
+    if len(set(experimentExpectedTimes)) == 1:
+        # Only set expected time if all the experiments we're comparing have the same expected time
+        expectedTime = experimentExpectedTimes[0]
+
+    plot_maker.make_completion_time_bar(experimentTimes, runtimeFrames.keys(), expectedTime, output_dir, output_file)
 
     
 if __name__ == "__main__":

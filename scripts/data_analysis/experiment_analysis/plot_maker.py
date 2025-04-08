@@ -188,19 +188,22 @@ def make_max_lag_chart_weather(maxWeatherLag, nameArray, outputPath, chartName=N
     print(f"Wrote {lag_path}")
 
 
-def make_completion_time_bar(completionTimes, nameArray, outputPath, chartName=None):
+def make_completion_time_bar(completionTimes, nameArray, expectedFinishTime, outputPath, chartName=None):
     fig, ax = plt.subplots()
     x = np.arange(len(nameArray))  # the label locations
     width = .5  # the width of the bars
 
-    bar = ax.bar(x, completionTimes, width=width, label="Time to complete")
+    bar = ax.bar(x, completionTimes, width=width)
     ax.bar_label(bar, padding=3, fmt=lambda x: f"{round(x)} s.")
 
     ax.set_title("Experiment time")
     ax.set_ylabel("total time to run experiment in seconds")
     ax.set_xticks(x, labels=breakArrayName(nameArray))
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
-    
+    if not expectedFinishTime == None:
+        ax.plot([-0.5, len(nameArray) - 0.5], [expectedFinishTime,expectedFinishTime], color='green', linestyle='dashed', linewidth=2, label=f"Optimal finish time ({round(expectedFinishTime)} s.)")
+        ax.legend()
+        
     fileName = "time.pdf"
     if not chartName == None:
         fileName = chartName + "_time.pdf"
