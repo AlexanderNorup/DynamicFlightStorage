@@ -72,11 +72,17 @@ def analyze_data(experiments):
 
         # Fix the ReceivedTimestamp by applying time-drift adjustment
         weatherDf["ReceivedTimestamp"] = weatherDf["ReceivedTimestamp"].apply(adjuster.get_adjusted_time)
+        startTime = weatherDf["ReceivedTimestamp"][0]
+        weatherDf["ReceivedSecondsAfterStart"] = weatherDf["ReceivedTimestamp"].apply(lambda x: (x - startTime))
         flightDf["ReceivedTimestamp"] = flightDf["ReceivedTimestamp"].apply(adjuster.get_adjusted_time)
+
+        # Commented out because most datasets contains no recieved flights
+        # startTime = flightDf["ReceivedTimestamp"][0]
+        # flightDf["ReceivedSecondsAfterStart"] = flightDf["ReceivedTimestamp"].apply(lambda x: (x - startTime))
         recalculationDf["LagMs"] = recalculationDf["LagMs"].apply(adjuster.get_adjusted_lag)
         
         # Calculate consumption rates
-        weatherConsumptionRate = weatherDf.groupby(pd.Grouper(key="ReceivedTimestamp",freq='s'))["WeatherId"].count()
+        weatherConsumptionRate = weatherDf.groupby(pd.Grouper(key="ReceivedSecondsAfterStart",freq='s'))["WeatherId"].count()
 
         # Save the adjusted frames so they can be used later
         weatherFrames[experiment_name] = weatherDf

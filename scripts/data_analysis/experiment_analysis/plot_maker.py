@@ -1,7 +1,15 @@
+import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import numpy as np
+from datetime import timedelta
 import os
+
+# Allows for pretty-priting a timedelata as x-values
+def timedelta_formatter(x, pos=None):
+    ms = x / 1e6
+    td = timedelta(milliseconds=ms)
+    return str(td)
 
 def breakArrayName(nameArray):
     return list(map(lambda x: x.replace("with ", "with\n"), nameArray))
@@ -66,17 +74,15 @@ def make_lag_chart(time,weatherLag, flightLag, name, outputPath, chartName=None)
     plt.close()
     print(f"Wrote {lag_path}")
 
-
 def make_consumption_chart(time, weatherConsumption, name, outputPath, chartName=None):
     fig, ax = plt.subplots()
-    locator = mdates.AutoDateLocator(minticks=7, maxticks=10)
-    formatter = mdates.ConciseDateFormatter(locator)
-    ax.xaxis.set_major_locator(locator)
+    formatter = ticker.FuncFormatter(timedelta_formatter)
     ax.xaxis.set_major_formatter(formatter)
     ax.plot(time, weatherConsumption, label="Weather")
     ax.legend()
     ax.set_title(f"Consumption rate for {name}")
     ax.set_ylabel("# of weather events per second")
+    ax.set_xlabel("Time after experiment start")
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
     
     fileName = "consumption_rate.pdf"
@@ -91,15 +97,14 @@ def make_consumption_chart(time, weatherConsumption, name, outputPath, chartName
     
 def make_overlapping_consumption_chart(times, weatherConsumptions, names, outputPath, chartName=None):
     fig, ax = plt.subplots()
-    locator = mdates.AutoDateLocator(minticks=7, maxticks=10)
-    formatter = mdates.ConciseDateFormatter(locator)
-    ax.xaxis.set_major_locator(locator)
+    formatter = ticker.FuncFormatter(timedelta_formatter)
     ax.xaxis.set_major_formatter(formatter)
     for i in range(len(times)):
         ax.plot(times[i], weatherConsumptions[i], label=names[i])
     ax.legend()
     ax.set_title(f"Weather Consumption rate")
     ax.set_ylabel("# of weather events per second")
+    ax.set_xlabel("Time after experiment start")
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
     
     fileName = "consumption_rates.pdf"
