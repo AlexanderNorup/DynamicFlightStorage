@@ -3,6 +3,7 @@ from datetime import datetime
 from timedrift_adjuster import TimedriftAdjuster
 import plot_maker
 import json
+import re
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -10,12 +11,14 @@ data_dir=os.path.join(os.path.dirname(__file__),"experiment_data")
 
 # Use this dictionary if we want to make charts of special groupings
 # Simply specify the name of your grouping as the dictionary-key and let the value be a list of names referring to experiments
+# The value can also be a single string, in which case it will be treated as a regex
 custom_groupings={
     "Cool Ones": [
         "Scaling 50K with GPUAccelerated",
         "Scaling 50K with TimeBucketedNeo4j",
         "Scaling 100K with ManyTablesPostgres",
-    ]
+    ],
+    "AccuracyUnderLoadWithoutGPU": "^Accuracy under load((?!GPUAccelerated).)+$"
 }
 
 def analyze_data(experiments):
@@ -124,10 +127,14 @@ def analyze_data(experiments):
         for filter_item in filter_map:
             experiment_names = filter_map[filter_item]
 
+            filtering_lambda = lambda x: x[0] in experiment_names
+            if isinstance(experiment_names, str):
+                filtering_lambda = lambda x: len(re.findall(experiment_names, x[0])) > 0
+
             # Make filters
-            recalcs_for_filter = dict(filter(lambda x: x[0] in experiment_names, recalculationFrames.items()))
-            lag_for_filter = dict(filter(lambda x: x[0] in experiment_names, lagFrames.items()))
-            consumption_for_filter = dict(filter(lambda x: x[0] in experiment_names, consumptionFrames.items()))
+            recalcs_for_filter = dict(filter(filtering_lambda, recalculationFrames.items()))
+            lag_for_filter = dict(filter(filtering_lambda, lagFrames.items()))
+            consumption_for_filter = dict(filter(filtering_lambda, consumptionFrames.items()))
             
             make_collective_analysis(recalcs_for_filter, lag_for_filter, consumption_for_filter, summary_analysis_path, filter_item)
 
