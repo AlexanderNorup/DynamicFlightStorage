@@ -121,16 +121,17 @@ def analyze_data(experiments):
             # Make filters
             recalcs_for_filter = dict(filter(lambda x: x[0] in experiment_names, recalculationFrames.items()))
             lag_for_filter = dict(filter(lambda x: x[0] in experiment_names, lagFrames.items()))
+            consumption_for_filter = dict(filter(lambda x: x[0] in experiment_names, consumptionFrames.items()))
             
-            make_collective_analysis(recalcs_for_filter, lag_for_filter, summary_analysis_path, filter_item)
+            make_collective_analysis(recalcs_for_filter, lag_for_filter, consumption_for_filter, summary_analysis_path, filter_item)
 
     # Make collective analysis for ALL frames
-    make_collective_analysis(recalculationFrames, lagFrames, summary_analysis_path)
+    make_collective_analysis(recalculationFrames, lagFrames, consumptionFrames, summary_analysis_path)
     
 def getColumns(frameDictionary, property):
     return list(map(lambda x: x[property],frameDictionary.values()))
 
-def make_collective_analysis(recalcFrames, lagFrames, output_dir, output_file=None):
+def make_collective_analysis(recalcFrames, lagFrames, consumptionFrames, output_dir, output_file=None):
     #Recalculation
     plot_maker.make_recalculation_boxplot(getColumns(recalcFrames, "LagMs"), recalcFrames.keys(), output_dir, output_file)
 
@@ -140,6 +141,10 @@ def make_collective_analysis(recalcFrames, lagFrames, output_dir, output_file=No
     plot_maker.make_max_lag_chart(max_weather_lag, max_flight_lag, lagFrames.keys(), output_dir, output_file)
     plot_maker.make_max_lag_chart_weather(max_weather_lag, lagFrames.keys(), output_dir, output_file)
     plot_maker.make_weather_lag_boxplot(getColumns(lagFrames, "WeatherLag"), recalcFrames.keys(), output_dir, output_file)
+
+    # Consumption rate
+    consumptionIndicies = list(map(lambda x: x.index, consumptionFrames.values()))
+    plot_maker.make_overlapping_consumption_chart(consumptionIndicies, list(consumptionFrames.values()), list(consumptionFrames.keys()), output_dir, output_file)
 
     
 if __name__ == "__main__":

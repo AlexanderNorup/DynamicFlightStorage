@@ -88,6 +88,29 @@ def make_consumption_chart(time, weatherConsumption, name, outputPath, chartName
     plt.close()
     print(f"Wrote {lag_path}")
 
+    
+def make_overlapping_consumption_chart(times, weatherConsumptions, names, outputPath, chartName=None):
+    fig, ax = plt.subplots()
+    locator = mdates.AutoDateLocator(minticks=7, maxticks=10)
+    formatter = mdates.ConciseDateFormatter(locator)
+    ax.xaxis.set_major_locator(locator)
+    ax.xaxis.set_major_formatter(formatter)
+    for i in range(len(times)):
+        ax.plot(times[i], weatherConsumptions[i], label=names[i])
+    ax.legend()
+    ax.set_title(f"Weather Consumption rate")
+    ax.set_ylabel("# of weather events per second")
+    ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
+    
+    fileName = "consumption_rates.pdf"
+    if not chartName == None:
+        fileName = chartName + "_consumption_rates.pdf"
+    lag_path = os.path.join(outputPath, fileName)
+    fig.autofmt_xdate() # Automatically rotates label so it can be read with multiple boxplots in same chart
+    fig.savefig(lag_path)
+    plt.close()
+    print(f"Wrote {lag_path}")
+
 def make_max_lag_chart(maxWeatherLag, maxFlightLag, nameArray, outputPath, chartName=None):
     fig, ax = plt.subplots()
     x = np.arange(len(nameArray))  # the label locations
