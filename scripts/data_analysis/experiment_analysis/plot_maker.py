@@ -188,3 +188,26 @@ def make_max_lag_chart_weather(maxWeatherLag, nameArray, outputPath, chartName=N
     print(f"Wrote {lag_path}")
 
 
+def make_completion_time_bar(completionTimes, nameArray, outputPath, chartName=None):
+    fig, ax = plt.subplots()
+    x = np.arange(len(nameArray))  # the label locations
+    width = .5  # the width of the bars
+
+    bar = ax.bar(x, completionTimes, width=width, label="Time to complete")
+    ax.bar_label(bar, padding=3, fmt=lambda x: f"{round(x)} s.")
+
+    ax.set_title("Experiment time")
+    ax.set_ylabel("total time to run experiment in seconds")
+    ax.set_xticks(x, labels=breakArrayName(nameArray))
+    ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
+    
+    fileName = "time.pdf"
+    if not chartName == None:
+        fileName = chartName + "_time.pdf"
+    lag_path = os.path.join(outputPath, fileName)
+
+    fig.autofmt_xdate() # Automatically rotates label so it can be read with multiple boxplots in same chart
+    fig.savefig(lag_path)
+    plt.close()
+    
+    print(f"Wrote {lag_path}")

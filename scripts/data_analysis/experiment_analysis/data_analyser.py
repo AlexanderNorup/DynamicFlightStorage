@@ -30,6 +30,7 @@ def analyze_data(experiments):
     recalculationFrames = dict()
     lagFrames = dict()
     consumptionFrames = dict()
+    experiment_runtime = dict()
     for experiment in experiments:
         dataset_path = os.path.join(data_dir, experiment)
         if not os.path.exists(dataset_path):
@@ -96,6 +97,7 @@ def analyze_data(experiments):
         recalculationFrames[experiment_name] = recalculationDf
         lagFrames[experiment_name] = lagDf
         consumptionFrames[experiment_name] = weatherConsumptionRate
+        experiment_runtime[experiment_name] = (datetime.fromisoformat(experiment_data['utcEndTime']) - datetime.fromisoformat(experiment_data['utcStartTime'])).total_seconds()
 
         analysis_path = os.path.join(dataset_path, "analysis")
         if not os.path.exists(analysis_path):
@@ -138,16 +140,17 @@ def analyze_data(experiments):
             recalcs_for_filter = dict(filter(filtering_lambda, recalculationFrames.items()))
             lag_for_filter = dict(filter(filtering_lambda, lagFrames.items()))
             consumption_for_filter = dict(filter(filtering_lambda, consumptionFrames.items()))
+            runtime_for_filter = dict(filter(filtering_lambda, experiment_runtime.items()))
             
-            make_collective_analysis(recalcs_for_filter, lag_for_filter, consumption_for_filter, summary_analysis_path, filter_item)
+            make_collective_analysis(recalcs_for_filter, lag_for_filter, consumption_for_filter, runtime_for_filter, summary_analysis_path, filter_item)
 
     # Make collective analysis for ALL frames
-    make_collective_analysis(recalculationFrames, lagFrames, consumptionFrames, summary_analysis_path)
+    make_collective_analysis(recalculationFrames, lagFrames, consumptionFrames, experiment_runtime, summary_analysis_path)
     
 def getColumns(frameDictionary, property):
     return list(map(lambda x: x[property],frameDictionary.values()))
 
-def make_collective_analysis(recalcFrames, lagFrames, consumptionFrames, output_dir, output_file=None):
+def make_collective_analysis(recalcFrames, lagFrames, consumptionFrames, runtimeFrames, output_dir, output_file=None):
     #Recalculation
     plot_maker.make_recalculation_boxplot(getColumns(recalcFrames, "LagMs"), recalcFrames.keys(), output_dir, output_file)
 
@@ -162,6 +165,9 @@ def make_collective_analysis(recalcFrames, lagFrames, consumptionFrames, output_
     consumptionIndicies = list(map(lambda x: x.index, consumptionFrames.values()))
     plot_maker.make_overlapping_consumption_chart(consumptionIndicies, list(consumptionFrames.values()), list(consumptionFrames.keys()), output_dir, output_file)
     plot_maker.make_consumption_boxplot(list(consumptionFrames.values()), list(consumptionFrames.keys()), output_dir, output_file)
+
+    # Runtime
+    plot_maker.make_completion_time_bar(runtimeFrames.values(), runtimeFrames.keys(), output_dir, output_file)
 
     
 if __name__ == "__main__":
