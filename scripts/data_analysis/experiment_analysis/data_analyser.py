@@ -145,6 +145,7 @@ def make_collective_analysis(recalcFrames, lagFrames, consumptionFrames, output_
     # Consumption rate
     consumptionIndicies = list(map(lambda x: x.index, consumptionFrames.values()))
     plot_maker.make_overlapping_consumption_chart(consumptionIndicies, list(consumptionFrames.values()), list(consumptionFrames.keys()), output_dir, output_file)
+    plot_maker.make_consumption_boxplot(list(consumptionFrames.values()), list(consumptionFrames.keys()), output_dir, output_file)
 
     
 if __name__ == "__main__":
