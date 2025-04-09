@@ -1,11 +1,12 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from timedrift_adjuster import TimedriftAdjuster
 import plot_maker
 import json
 import re
 import pandas as pd
 import matplotlib.pyplot as plt
+import time
 
 data_dir=os.path.join(os.path.dirname(__file__),"experiment_data")
 
@@ -85,6 +86,8 @@ def analyze_data(experiments):
         weatherDf["ReceivedTimestamp"] = weatherDf["ReceivedTimestamp"].apply(adjuster.get_adjusted_time)
         startTime = weatherDf["ReceivedTimestamp"][0]
         weatherDf["ReceivedSecondsAfterStart"] = weatherDf["ReceivedTimestamp"].apply(lambda x: (x - startTime))
+        startTime = weatherDf["SentTimestamp"][0]
+        weatherDf["SentSecondsAfterStart"] = weatherDf["SentTimestamp"].apply(lambda x: (x - startTime))
         flightDf["ReceivedTimestamp"] = flightDf["ReceivedTimestamp"].apply(adjuster.get_adjusted_time)
 
         # Commented out because most datasets contains no recieved flights
@@ -127,12 +130,14 @@ def analyze_data(experiments):
 
         #Lag data
         lagDf[["WeatherLag", "FlightLag"]].describe().to_csv(os.path.join(analysis_path, "lag_summary.csv"))
-        plot_maker.make_lag_chart(lagDf["TimestampSecondsAfterStart"], lagDf["WeatherLag"], lagDf["FlightLag"], experiment_name, analysis_path)
+        last_data_point = weatherDf["SentSecondsAfterStart"].iat[-1].total_seconds()
+        plot_maker.make_lag_chart(lagDf["TimestampSecondsAfterStart"], lagDf["WeatherLag"], lagDf["FlightLag"], experiment_name, last_data_point, analysis_path)
         plot_maker.make_weather_lag_boxplot([lagDf["WeatherLag"]], [experiment_name], analysis_path)
 
         # Make consumption chart
         weatherConsumptionRate.describe().to_csv(os.path.join(analysis_path, "weather_consumption.csv"))
-        plot_maker.make_consumption_chart(weatherConsumptionRate.index, weatherConsumptionRate, experiment_name, analysis_path)
+        plot_maker.make_consumption_chart(weatherConsumptionRate.index, weatherConsumptionRate,  experiment_name, analysis_path)
+
  
 
     # INDIVIDUAL ANALYSIS DONE
@@ -190,5 +195,8 @@ def make_collective_analysis(recalcFrames, lagFrames, consumptionFrames, runtime
 
     
 if __name__ == "__main__":
+    start = time.time()
     analyze_data(os.listdir(data_dir))
-    print("\n\n == DONE ==")
+    end = time.time()
+    duration = timedelta(seconds=(end - start)) 
+    print(f"\n\n == DONE in {duration} ==")

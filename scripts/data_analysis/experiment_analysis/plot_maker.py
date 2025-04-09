@@ -54,18 +54,25 @@ def make_weather_lag_boxplot(dataArray, nameArray, outputPath, chartName=None):
     plt.close()
     print(f"Wrote {lag_path}")
 
-def make_lag_chart(time,weatherLag, flightLag, name, outputPath, chartName=None):
+def make_lag_chart(time,weatherLag, flightLag, name, finishTime, outputPath, chartName=None):
     fig, ax = plt.subplots()
     formatter = ticker.FuncFormatter(timedelta_formatter)
     ax.xaxis.set_major_formatter(formatter)
-    ax.plot(time, weatherLag, label="weather")
-    ax.plot(time, flightLag, label="flight")
-    ax.legend(["Weather", "Flights"])
+    ax.plot(time, weatherLag, label="Weather")
+    ax.plot(time, flightLag, label="Flight")
     ax.set_title(f"Consumer lag for {name}")
     ax.set_ylabel("# of messages waiting")
     ax.set_xlabel("Time after experiment start")
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
     
+    if not finishTime == None:
+        yticks = ax.get_yticks()
+        scale = yticks[2] / 5
+        finishTimeNs = finishTime * 1e9
+        ax.plot([finishTimeNs, finishTimeNs], [-scale,max(max(weatherLag),max(flightLag)) + scale], color='green', linestyle='dashed', linewidth=2, label=f"Publish stop")
+    
+    ax.legend()
+
     fileName = "consumer_lag.pdf"
     if not chartName == None:
         fileName = chartName + "_consumerlag.pdf"
@@ -85,7 +92,7 @@ def make_consumption_chart(time, weatherConsumption, name, outputPath, chartName
     ax.set_ylabel("# of weather events per second")
     ax.set_xlabel("Time after experiment start")
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
-    
+
     fileName = "consumption_rate.pdf"
     if not chartName == None:
         fileName = chartName + "_consumption_rate.pdf"
