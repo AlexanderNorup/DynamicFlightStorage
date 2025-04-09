@@ -124,8 +124,8 @@ def make_consumption_boxplot(dataArray, nameArray, outputPath, chartName=None):
     ax.set_xticklabels(breakArrayName(nameArray), fontsize=8)
     ax.tick_params(axis='x', which='major', pad=-3)
     fig.subplots_adjust(bottom=0.65)
-    ax.set_title("Weather consumption rate")
-    ax.set_ylabel("# of weather events waiting")
+    ax.set_title("Weather Consumption rate")
+    ax.set_ylabel("# of weather events per second")
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
 
     fileName = "consumption_rates_box.pdf"
