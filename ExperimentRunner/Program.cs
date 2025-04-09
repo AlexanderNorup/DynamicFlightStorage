@@ -4,6 +4,7 @@ using DynamicFlightStorageSimulation.ExperimentOrchestrator.DataCollection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Neo4jDataStore;
 using System.CommandLine;
 using System.ComponentModel.DataAnnotations;
 
@@ -61,6 +62,11 @@ namespace ExperimentRunner
 
             logger.LogInformation("Event data store of type {Type} ready", eventDataStore.GetType().FullName);
             using var consumer = new SimulationConsumer(simulationEventBus, weatherService, consumerDataLogger, eventDataStore, factory.CreateLogger<SimulationConsumer>());
+
+            if (eventDataStore is TimeBucketedNeo4jDataStore timeBucketDataStore)
+            {
+                consumer.EventDataStoreNameOverride = $"{eventDataStore.GetType().FullName}({timeBucketDataStore.TimeBucketSize.TotalMinutes:.}min)";
+            }
 
             await consumer.StartAsync().ConfigureAwait(false);
             logger.LogInformation("Simulation consumer started");

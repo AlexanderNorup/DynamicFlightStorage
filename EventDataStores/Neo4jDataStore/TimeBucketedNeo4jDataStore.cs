@@ -7,7 +7,7 @@ namespace Neo4jDataStore
 {
     public class TimeBucketedNeo4jDataStore : IEventDataStore, IDisposable
     {
-        public static readonly TimeSpan TimeBucketSize = TimeSpan.FromDays(1);
+        public readonly TimeSpan TimeBucketSize = TimeSpan.FromHours(1);
 
         private Neo4jContainer? _container;
         private IDriver? _database;
@@ -18,6 +18,15 @@ namespace Neo4jDataStore
         {
             _weatherService = weatherService ?? throw new ArgumentNullException(nameof(weatherService));
             _flightRecalculation = recalculateFlightEventPublisher ?? throw new ArgumentNullException(nameof(recalculateFlightEventPublisher));
+
+            if (Environment.GetEnvironmentVariable("TIMEBUCKET_SIZE_MIN") is { } requestedTimeBucketSize
+                && int.TryParse(requestedTimeBucketSize, out int timeBucketSizeMin)
+                && timeBucketSizeMin > 0)
+            {
+                TimeBucketSize = TimeSpan.FromMinutes(timeBucketSizeMin);
+            }
+
+            Console.WriteLine($"Initialized {GetType().FullName} with time-bucket size: {TimeBucketSize}");
         }
 
         public async Task StartAsync()
@@ -158,7 +167,7 @@ namespace Neo4jDataStore
             await tx.RunAsync(query.ToString(), parameters).ConfigureAwait(false);
         }
 
-        private static DateTime GetTimeSlot(DateTime dateTime)
+        private DateTime GetTimeSlot(DateTime dateTime)
         {
             var ticksLeftOver = dateTime.Ticks % TimeBucketSize.Ticks;
             var roundedDown = dateTime.Subtract(TimeSpan.FromTicks(ticksLeftOver));

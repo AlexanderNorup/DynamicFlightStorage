@@ -30,7 +30,8 @@ namespace DynamicFlightStorageSimulation
         }
 
         public string ClientId => _simulationEventBus.ClientId;
-        public string EventDataStoreName => _eventDataStore.GetType()?.FullName ?? "Unknown event-datastore";
+        public string? EventDataStoreNameOverride { get; set; } = null;
+        public string EventDataStoreName => EventDataStoreNameOverride ?? _eventDataStore.GetType()?.FullName ?? "Unknown event-datastore";
 
         public async Task StartAsync()
         {
