@@ -1,6 +1,6 @@
 #!/bin/bash
 
-download_url=https://github.com/AlexanderNorup/DynamicFlightStorage/releases/download/v1/experimentrunner.tar
+download_url=https://github.com/AlexanderNorup/DynamicFlightStorage/releases/download/v1.1/experimentrunner.tar
 username=$(whoami)
 ssh_key="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIP5h3CtfrIA6fMsjKRPdmSlVICAaqF46sBImEcPbKpMZ semon20@student.sdu.dk"
 
