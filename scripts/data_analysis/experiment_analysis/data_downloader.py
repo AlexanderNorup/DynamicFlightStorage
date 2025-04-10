@@ -8,11 +8,15 @@ download_dir=os.path.join(os.path.dirname(__file__),"experiment_data")
 auth_username="speciale"
 all_experiments_api="https://dynamicflightstorage.app.alexandernorup.com/api/experiment/"
 
+force_redownload=False
+
+
 def getbaseurl(url):
     parsed_url = urlparse(url)
     return f"{parsed_url.scheme}://{parsed_url.hostname}"
 
 def download_experiment_data(url, auth):
+    global force_redownload
     request = requests.get(url, auth=auth)
 
     if request.status_code != 200:
@@ -31,6 +35,11 @@ def download_experiment_data(url, auth):
     experimentFolder = os.path.join(download_dir,experimentData['experimentRunDescription'])
     if not os.path.exists(experimentFolder):
         os.makedirs(experimentFolder)
+    elif not force_redownload:
+        # Path already exists and we don't force redownload.
+        print(f"Experiment {experimentData['experimentRunDescription']} already exists locally. Skipping for now because force_redownload is set to False")
+        return
+    
     metadataFile = os.path.join(experimentFolder,"metadata.json")
     with open(metadataFile, "w") as f:
         f.write(request.text)
