@@ -32,6 +32,7 @@ def analyze_data(experiments):
     recalculationFrames = dict()
     lagFrames = dict()
     consumptionFrames = dict()
+    flightConsumptionFrames = dict()
     experiment_runtime = dict()
 
     summary_analysis_path = os.path.join(os.path.dirname(__file__), "analysis_summary")
@@ -92,8 +93,9 @@ def analyze_data(experiments):
         flightDf["ReceivedTimestamp"] = flightDf["ReceivedTimestamp"].apply(adjuster.get_adjusted_time)
 
         # Commented out because most datasets contains no recieved flights
-        # startTime = flightDf["ReceivedTimestamp"][0]
-        # flightDf["ReceivedSecondsAfterStart"] = flightDf["ReceivedTimestamp"].apply(lambda x: (x - startTime))
+        if len(flightDf["ReceivedTimestamp"]) > 0:
+            startTime = flightDf["ReceivedTimestamp"][0]
+            flightDf["ReceivedSecondsAfterStart"] = flightDf["ReceivedTimestamp"].apply(lambda x: (x - startTime))
         recalculationDf["LagMs"] = recalculationDf["LagMs"].apply(adjuster.get_adjusted_lag)
         
         startTime = lagDf["Timestamp"][0]
@@ -101,6 +103,11 @@ def analyze_data(experiments):
 
         # Calculate consumption rates
         weatherConsumptionRate = weatherDf.groupby(pd.Grouper(key="ReceivedSecondsAfterStart",freq='s'))["WeatherId"].count()
+        flightConsumptionRate = None
+        fIndex = None
+        if "ReceivedSecondsAfterStart" in flightDf:
+            flightConsumptionRate = flightDf.groupby(pd.Grouper(key="ReceivedSecondsAfterStart",freq='s'))["FlightId"].count()
+            fIndex = flightConsumptionRate.index
 
         # Save the adjusted frames so they can be used later
         weatherFrames[experiment_name] = weatherDf
@@ -108,6 +115,7 @@ def analyze_data(experiments):
         recalculationFrames[experiment_name] = recalculationDf
         lagFrames[experiment_name] = lagDf
         consumptionFrames[experiment_name] = weatherConsumptionRate
+        flightConsumptionFrames[experiment_name] = flightConsumptionRate
         experimentTime = (datetime.fromisoformat(experiment_data['utcEndTime']) - datetime.fromisoformat(experiment_data['utcStartTime'])).total_seconds()
         expectedTime = (datetime.fromisoformat(experiment_data['experiment']['simulatedEndTime']) - datetime.fromisoformat(experiment_data['experiment']['simulatedStartTime'])).total_seconds()
         timeScale = int(experiment_data['experiment']['timeScale'])
@@ -137,9 +145,9 @@ def analyze_data(experiments):
 
         # Make consumption chart
         weatherConsumptionRate.describe().to_csv(os.path.join(analysis_path, "weather_consumption.csv"))
-        plot_maker.make_consumption_chart(weatherConsumptionRate.index, weatherConsumptionRate,  experiment_name, analysis_path)
-
- 
+        if not flightConsumptionRate is None:
+            flightConsumptionRate.describe().to_csv(os.path.join(analysis_path, "flight_consumption.csv"))
+        plot_maker.make_consumption_chart(weatherConsumptionRate.index, weatherConsumptionRate, fIndex, flightConsumptionRate,  experiment_name, analysis_path)
 
     # INDIVIDUAL ANALYSIS DONE
 
@@ -160,6 +168,7 @@ def analyze_data(experiments):
             recalcs_for_filter = dict(filter(filtering_lambda, recalculationFrames.items()))
             lag_for_filter = dict(filter(filtering_lambda, lagFrames.items()))
             consumption_for_filter = dict(filter(filtering_lambda, consumptionFrames.items()))
+            flight_consumption_for_filter = dict(filter(filtering_lambda, flightConsumptionFrames.items()))
             runtime_for_filter = dict(filter(filtering_lambda, experiment_runtime.items()))
             
             make_collective_analysis(recalcs_for_filter, lag_for_filter, consumption_for_filter, runtime_for_filter, summary_analysis_path, filter_item)
@@ -170,14 +179,14 @@ def analyze_data(experiments):
                     if not experiment_names[i] in recalcs_for_filter:
                         print(f"Filtering for {experiment_names[i]} does not match any seen experiment. Is this an error?")
                         continue
-
+                    flights_na = flight_consumption_for_filter[experiment_names[i]] is None
                     latex_data_stores.append([
                         experiment_names[i], # name
                         recalcs_for_filter[experiment_names[i]]["LagMs"].median(), #recalc
                         lag_for_filter[experiment_names[i]]["WeatherLag"].median(),#weather_lag
-                        lag_for_filter[experiment_names[i]]["FlightLag"].median(),#flight_lag
+                        "N/A" if flights_na else lag_for_filter[experiment_names[i]]["FlightLag"].median(),#flight_lag
                         consumption_for_filter[experiment_names[i]].median(),#weather_rate
-                        "not yet",#flight_rate
+                        "N/A" if flights_na else flight_consumption_for_filter[experiment_names[i]].median(),#flight_rate
                     ])
                     
                 latex_writer.add_experiment(os.path.basename(filter_item), latex_data_stores)

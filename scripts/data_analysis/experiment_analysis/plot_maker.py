@@ -82,14 +82,16 @@ def make_lag_chart(time,weatherLag, flightLag, name, finishTime, outputPath, cha
     plt.close()
     print(f"Wrote {lag_path}")
 
-def make_consumption_chart(time, weatherConsumption, name, outputPath, chartName=None):
+def make_consumption_chart(time, weatherConsumption, f_time, flightConsumption, name, outputPath, chartName=None):
     fig, ax = plt.subplots()
     formatter = ticker.FuncFormatter(timedelta_formatter)
     ax.xaxis.set_major_formatter(formatter)
     ax.plot(time, weatherConsumption, label="Weather")
+    if not flightConsumption is None:
+        ax.plot(f_time, flightConsumption, label="Flight")
     ax.legend()
     ax.set_title(f"Consumption rate for {name}")
-    ax.set_ylabel("# of weather events per second")
+    ax.set_ylabel("# of events per second")
     ax.set_xlabel("Time after experiment start")
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
 
@@ -101,7 +103,6 @@ def make_consumption_chart(time, weatherConsumption, name, outputPath, chartName
     fig.savefig(lag_path)
     plt.close()
     print(f"Wrote {lag_path}")
-
     
 def make_overlapping_consumption_chart(times, weatherConsumptions, names, outputPath, chartName=None):
     fig, ax = plt.subplots()
