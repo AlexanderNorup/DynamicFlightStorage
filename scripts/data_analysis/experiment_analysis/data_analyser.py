@@ -102,6 +102,8 @@ def analyze_data(experiments):
         lagDf["TimestampSecondsAfterStart"] = lagDf["Timestamp"].apply(lambda x: (x - startTime))
 
         # Calculate consumption rates
+        # TODO: These counts also create rates for when we don't get anything. We should filter away 0?
+
         weatherConsumptionRate = weatherDf.groupby(pd.Grouper(key="ReceivedSecondsAfterStart",freq='s'))["WeatherId"].count()
         flightConsumptionRate = None
         fIndex = None
