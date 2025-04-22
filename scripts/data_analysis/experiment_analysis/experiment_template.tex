@@ -1,0 +1,22 @@
+
+\section{$experiment_name}
+\label{results:$experiment_simple_name}
+
+\begin{table}[h!]
+\begin{tblr}{
+colspec={|X[2,r]|X[1,l]|X[1,l]|X[1,l]|X[1,l]|X[1,l]|},
+row{1} = {font=\bfseries\sffamily,f},
+}
+\hline
+
+Data-store  & Recalc. Lag [ms] & Weather Lag [\#] & Flight Lag [\#] & Weather rate [/s] & Flight rate [/s] \\ \hline
+$table_tex
+
+\end{tblr}
+\caption{$experiment_name results}
+\label{tab-results:$experiment_simple_name}
+\end{table}
+
+\resultgraphs{$experiment_name}
+
+\clearpage
