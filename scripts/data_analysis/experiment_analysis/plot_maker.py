@@ -12,7 +12,7 @@ def timedelta_formatter(x, pos=None):
     return str(td)
 
 def breakArrayName(nameArray):
-    return list(map(lambda x: x.replace("with ", "with\n"), nameArray))
+    return list(map(lambda x: x.replace("with ", "with\n").replace(" (", "\n("), nameArray))
 
 def make_recalculation_boxplot(dataArray, nameArray, outputPath, chartName=None):
     fig, ax = plt.subplots()
@@ -139,6 +139,27 @@ def make_consumption_boxplot(dataArray, nameArray, outputPath, chartName=None):
     fileName = "consumption_rates_box.pdf"
     if not chartName == None:
         fileName = chartName + "_consumption_rates_box.pdf"
+    lag_path = os.path.join(outputPath, fileName)
+    
+    fig.autofmt_xdate() # Automatically rotates label so it can be read with multiple boxplots in same chart
+    fig.savefig(lag_path)
+    plt.close()
+    print(f"Wrote {lag_path}")
+
+
+def make_flight_consumption_boxplot(dataArray, nameArray, outputPath, chartName=None):
+    fig, ax = plt.subplots()
+    ax.boxplot(dataArray)
+    ax.set_xticklabels(breakArrayName(nameArray), fontsize=8)
+    ax.tick_params(axis='x', which='major', pad=-3)
+    fig.subplots_adjust(bottom=0.65)
+    ax.set_title("Flight Consumption rate")
+    ax.set_ylabel("# of flight events per second")
+    ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
+
+    fileName = "flight_consumption_rates_box.pdf"
+    if not chartName == None:
+        fileName = chartName + "_flight_consumption_rates_box.pdf"
     lag_path = os.path.join(outputPath, fileName)
     
     fig.autofmt_xdate() # Automatically rotates label so it can be read with multiple boxplots in same chart

@@ -171,7 +171,7 @@ def analyze_data(experiments):
             flight_consumption_for_filter = dict(filter(filtering_lambda, flightConsumptionFrames.items()))
             runtime_for_filter = dict(filter(filtering_lambda, experiment_runtime.items()))
             
-            make_collective_analysis(recalcs_for_filter, lag_for_filter, consumption_for_filter, runtime_for_filter, summary_analysis_path, filter_item)
+            make_collective_analysis(recalcs_for_filter, lag_for_filter, consumption_for_filter, flight_consumption_for_filter, runtime_for_filter, summary_analysis_path, filter_item)
             
             if not isinstance(experiment_names, str):
                 latex_data_stores = []
@@ -195,12 +195,12 @@ def analyze_data(experiments):
         latex_count += 1
 
     # Make collective analysis for ALL frames
-    make_collective_analysis(recalculationFrames, lagFrames, consumptionFrames, experiment_runtime, summary_analysis_path)
+    make_collective_analysis(recalculationFrames, lagFrames, consumptionFrames, flightConsumptionFrames, experiment_runtime, summary_analysis_path)
     
 def getColumns(frameDictionary, property):
     return list(map(lambda x: x[property],frameDictionary.values()))
 
-def make_collective_analysis(recalcFrames, lagFrames, consumptionFrames, runtimeFrames, output_dir, output_file=None):
+def make_collective_analysis(recalcFrames, lagFrames, consumptionFrames, flightConsumptionFrames, runtimeFrames, output_dir, output_file=None):
     #Recalculation
     plot_maker.make_recalculation_boxplot(getColumns(recalcFrames, "LagMs"), recalcFrames.keys(), output_dir, output_file)
 
@@ -215,6 +215,13 @@ def make_collective_analysis(recalcFrames, lagFrames, consumptionFrames, runtime
     consumptionIndicies = list(map(lambda x: x.index, consumptionFrames.values()))
     plot_maker.make_overlapping_consumption_chart(consumptionIndicies, list(consumptionFrames.values()), list(consumptionFrames.keys()), output_dir, output_file)
     plot_maker.make_consumption_boxplot(list(consumptionFrames.values()), list(consumptionFrames.keys()), output_dir, output_file)
+    
+    filtered_consumption_flights = dict()
+    for key, val in flightConsumptionFrames.items():
+        if not val is None:
+            filtered_consumption_flights[key] = val
+    if len(filtered_consumption_flights) > 0:
+        plot_maker.make_flight_consumption_boxplot(list(filtered_consumption_flights.values()), list(filtered_consumption_flights.keys()), output_dir, output_file)
 
     # Runtime
     experimentTimes = getColumns(runtimeFrames, 0)
