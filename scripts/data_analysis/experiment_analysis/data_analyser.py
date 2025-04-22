@@ -1,6 +1,7 @@
 import os
 from datetime import datetime, timedelta
 from timedrift_adjuster import TimedriftAdjuster
+from latex_writer import LatexWriter
 import plot_maker
 import json
 import re
@@ -145,7 +146,9 @@ def analyze_data(experiments):
     global custom_groupings
 
     # Start by making graphs grouped by data-store and experiment_type
+    latex_count = 0
     for filter_map in [datastore_experiment_map, experimentType_datastore_map, custom_groupings]:
+        latex_writer = LatexWriter()
         for filter_item in filter_map:
             experiment_names = filter_map[filter_item]
 
@@ -160,6 +163,27 @@ def analyze_data(experiments):
             runtime_for_filter = dict(filter(filtering_lambda, experiment_runtime.items()))
             
             make_collective_analysis(recalcs_for_filter, lag_for_filter, consumption_for_filter, runtime_for_filter, summary_analysis_path, filter_item)
+            
+            if not isinstance(experiment_names, str):
+                latex_data_stores = []
+                for i in range(len(experiment_names)):
+                    if not experiment_names[i] in recalcs_for_filter:
+                        print(f"Filtering for {experiment_names[i]} does not match any seen experiment. Is this an error?")
+                        continue
+
+                    latex_data_stores.append([
+                        experiment_names[i], # name
+                        recalcs_for_filter[experiment_names[i]]["LagMs"].median(), #recalc
+                        lag_for_filter[experiment_names[i]]["WeatherLag"].median(),#weather_lag
+                        lag_for_filter[experiment_names[i]]["FlightLag"].median(),#flight_lag
+                        consumption_for_filter[experiment_names[i]].median(),#weather_rate
+                        "not yet",#flight_rate
+                    ])
+                    
+                latex_writer.add_experiment(os.path.basename(filter_item), latex_data_stores)
+        
+        latex_writer.write_file(os.path.join(summary_analysis_path, f"report_{latex_count}.tex"))
+        latex_count += 1
 
     # Make collective analysis for ALL frames
     make_collective_analysis(recalculationFrames, lagFrames, consumptionFrames, experiment_runtime, summary_analysis_path)

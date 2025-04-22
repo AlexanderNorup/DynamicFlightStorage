@@ -106,9 +106,6 @@ def main():
     for link in links:
         download_experiment_data(link, auth)
 
-
-
-
 if __name__ == "__main__":
     main()
     
