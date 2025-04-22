@@ -1,10 +1,18 @@
 ﻿using DynamicFlightStorageDTOs;
-
+using MessagePack;
+using System.Collections.Concurrent;
 
 namespace GPUAcceleratedEventDataStore
 {
     public class CUDAEventDataStore : IEventDataStore, IDisposable
     {
+        public static readonly MessagePackSerializerOptions MessagePackOptions = MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4BlockArray);
+        public static readonly string PersistPath = Path.Combine(AppContext.BaseDirectory, "CudaDataStorePersist", "CudaFlights.bin");
+        private static readonly TimeSpan PersistInterval = TimeSpan.FromSeconds(5);
+        private SemaphoreSlim _persistSemaphore;
+        private System.Timers.Timer _persistTimer;
+        private ConcurrentBag<Flight> _persistBag;
+
         private bool disposedValue;
         private CudaFlightSystem? _cudaFlightSystem;
         private readonly IWeatherService _weatherService;
@@ -17,6 +25,13 @@ namespace GPUAcceleratedEventDataStore
         {
             _weatherService = weatherService ?? throw new ArgumentNullException(nameof(weatherService));
             _flightRecalculation = recalculateFlightEventPublisher ?? throw new ArgumentNullException(nameof(recalculateFlightEventPublisher));
+
+            _persistBag = new ConcurrentBag<Flight>();
+            _persistSemaphore = new SemaphoreSlim(1, 1);
+            _persistTimer = new System.Timers.Timer();
+            _persistTimer.Elapsed += async (o, s) => await PersistToDisk().ConfigureAwait(false);
+            _persistTimer.AutoReset = true;
+            _persistTimer.Interval = PersistInterval.TotalMilliseconds;
         }
 
         public Task AddOrUpdateFlightAsync(Flight flight)
@@ -36,7 +51,7 @@ namespace GPUAcceleratedEventDataStore
             else
             {
                 // Does not exist already
-                int newId = CreateNewFlightId(flight.FlightIdentification);
+                int newId = CreateNewFlightId(flight);
                 _cudaFlightSystem.AddFlights(new GPUFlight(flight, newId, weather));
             }
             return Task.CompletedTask;
@@ -50,15 +65,15 @@ namespace GPUAcceleratedEventDataStore
             }
 
             int[] affectedFlights = _cudaFlightSystem.FindFlightsAffectedByWeather(weather);
-            foreach (var flight in affectedFlights)
+            foreach (var flightId in affectedFlights)
             {
-                if (_flightIdToIdentMap.TryGetValue(flight, out var ident))
+                if (_flightIdToIdentMap.TryGetValue(flightId, out var ident))
                 {
                     await _flightRecalculation.PublishRecalculationAsync(ident, weather.Id, DateTime.UtcNow - recievedTime);
                 }
                 else
                 {
-                    Console.WriteLine($"Trying to recalculate flight with id {flight}, but a corrosponding flight identification was not found");
+                    Console.WriteLine($"Trying to recalculate flight with id {flightId}, but a corrosponding flight identification was not found");
                 }
             }
         }
@@ -81,10 +96,12 @@ namespace GPUAcceleratedEventDataStore
 
         public Task ResetAsync()
         {
+            _persistTimer.Stop();
             if (_cudaFlightSystem is not null)
             {
                 _cudaFlightSystem.Dispose();
             }
+            _persistBag.Clear();
             _flightIdentToIdMap.Clear();
             _flightIdToIdentMap.Clear();
             _nextFlightId = 0;
@@ -95,16 +112,60 @@ namespace GPUAcceleratedEventDataStore
         {
             _cudaFlightSystem = new CudaFlightSystem();
             _cudaFlightSystem.Initialize();
+            // Purposfully chose not to load the persisted data for the experiments.
+            //await LoadFromPersistedData().ConfigureAwait(false);
+            _persistTimer.Start();
             return Task.CompletedTask;
         }
 
-        private int CreateNewFlightId(string flightIdentification)
+        private int CreateNewFlightId(Flight flight)
         {
             int id = _nextFlightId++;
-            _flightIdToIdentMap.Add(id, flightIdentification);
-            _flightIdentToIdMap.Add(flightIdentification, id);
+            _flightIdToIdentMap.Add(id, flight.FlightIdentification);
+            _flightIdentToIdMap.Add(flight.FlightIdentification, id);
+            _persistBag.Add(flight);
 
             return id;
+        }
+
+        private async Task PersistToDisk()
+        {
+            if (_persistBag.IsEmpty)
+            {
+                return;
+            }
+
+            await _persistSemaphore.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                var flights = _persistBag.ToArray();
+                Directory.CreateDirectory(Path.GetDirectoryName(PersistPath)!);
+                using var f = File.Open(PersistPath, FileMode.Create); // Will override the current file
+                await MessagePackSerializer.SerializeAsync<Flight[]>(f, flights, MessagePackOptions).ConfigureAwait(false);
+            }
+            finally
+            {
+                _persistSemaphore.Release();
+            }
+        }
+
+        private async Task LoadFromPersistedData()
+        {
+            if (!File.Exists(PersistPath))
+            {
+                // File does not exist. Nothing to restore
+                Console.WriteLine($"{GetType().Name} loaded no flights. The flight system starts empty.");
+                return;
+            }
+            using var f = File.Open(PersistPath, FileMode.Open);
+            var flights = await MessagePackSerializer.DeserializeAsync<Flight[]>(f, MessagePackOptions).ConfigureAwait(false);
+            foreach (var flight in flights)
+            {
+                // This could be even faster if we called the C++ directly here with the entire array
+                // But this is fine for the experiments where we don't use this
+                await AddOrUpdateFlightAsync(flight).ConfigureAwait(false);
+            }
+            Console.WriteLine($"{GetType().Name} loaded {flights.Length} flights persisted on disk at {PersistPath}");
         }
 
         protected virtual void Dispose(bool disposing)
@@ -115,6 +176,11 @@ namespace GPUAcceleratedEventDataStore
                 {
                     _cudaFlightSystem.Dispose();
                 }
+                _persistSemaphore.Dispose();
+                _persistTimer.Dispose();
+                _persistBag.Clear();
+                _flightIdentToIdMap.Clear();
+                _flightIdToIdentMap.Clear();
 
                 disposedValue = true;
             }
