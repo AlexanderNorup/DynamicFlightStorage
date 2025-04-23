@@ -11,6 +11,9 @@ import time
 
 data_dir=os.path.join(os.path.dirname(__file__),"experiment_data")
 
+# Set to TRUE for faster collective analysis
+skip_individual_analysis = False
+
 # Use this dictionary if we want to make charts of special groupings
 # Simply specify the name of your grouping as the dictionary-key and let the value be a list of names referring to experiments
 # The value can also be a single string, in which case it will be treated as a regex
@@ -23,10 +26,31 @@ custom_groupings={
     "AccuracyUnderLoadWithoutGPU": "^Accuracy under load((?!GPUAccelerated).)+$"
 }
 
+# Names in here must match excatly
+sorting_order = [
+    "Realistic Case",
+    "Scaling 50K",
+    "Scaling 100K",
+    "Scaling 260k",
+    "Scaling 1M",
+    "Scaling 50K w. a. flights",
+    "Worst-Case",
+    "Accuracy under load",
+    "Stress-test with recalc",
+]
+
+def custom_experiment_sorting_order(name):
+    try:
+        return sorting_order.index(os.path.basename(name))
+    except:
+        return 9999999 
+
+
 def fix_name(name):
     return name.replace("Baseline", "Scaling 50K").replace(" (30258)", "").replace("while adding flights", "w. a. flights").replace("  ", " ")
 
 def analyze_data(experiments):
+    global skip_individual_analysis
     print(f"Found {len(experiments)} experiments to analyze")
     experimentType_datastore_map = dict()
     datastore_experiment_map = dict()
@@ -120,6 +144,11 @@ def analyze_data(experiments):
         lagFrames[experiment_name] = lagDf
         consumptionFrames[experiment_name] = weatherConsumptionRate
         flightConsumptionFrames[experiment_name] = flightConsumptionRate
+
+        # INDIVIDUAL ANALYSIS START
+        if skip_individual_analysis:
+            continue
+
         experimentTime = (datetime.fromisoformat(experiment_data['utcEndTime']) - datetime.fromisoformat(experiment_data['utcStartTime'])).total_seconds()
         expectedTime = (datetime.fromisoformat(experiment_data['experiment']['simulatedEndTime']) - datetime.fromisoformat(experiment_data['experiment']['simulatedStartTime'])).total_seconds()
         timeScale = int(experiment_data['experiment']['timeScale'])
@@ -131,7 +160,6 @@ def analyze_data(experiments):
         expectedTime += 15 # The orchestrator always waits 15 seconds after an experiment before concluding it's done.
                            # This is due to delays with how RabbitMQ reports the consumer-lag.
         experiment_runtime[experiment_name] = (experimentTime, expectedTime)
-
 
         analysis_path = os.path.join(summary_analysis_path, "single_experiments", experiment_name)
         if not os.path.exists(analysis_path):
@@ -162,7 +190,11 @@ def analyze_data(experiments):
     latex_count = 0
     for filter_map in [datastore_experiment_map, experimentType_datastore_map, custom_groupings]:
         latex_writer = LatexWriter()
-        for filter_item in filter_map:
+
+        filter_keys = list(filter_map.keys())
+        filter_keys = sorted(filter_keys, key=custom_experiment_sorting_order)
+
+        for filter_item in filter_keys:
             experiment_names = filter_map[filter_item]
 
             filtering_lambda = lambda x: x[0] in experiment_names
