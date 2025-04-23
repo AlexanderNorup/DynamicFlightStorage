@@ -102,7 +102,6 @@ def analyze_data(experiments):
         lagDf["TimestampSecondsAfterStart"] = lagDf["Timestamp"].apply(lambda x: (x - startTime))
 
         # Calculate consumption rates
-        # TODO: These counts also create rates for when we don't get anything. We should filter away 0?
 
         weatherConsumptionRate = weatherDf.groupby(pd.Grouper(key="ReceivedSecondsAfterStart",freq='s'))["WeatherId"].count()
         flightConsumptionRate = None
@@ -138,7 +137,7 @@ def analyze_data(experiments):
         # Recalculation data
         recalculationDf["LagMs"].describe().to_csv(os.path.join(analysis_path, "recalculation_summary.csv"))
         plot_maker.make_recalculation_boxplot([recalculationDf["LagMs"]], [experiment_name], analysis_path)
-
+        
         #Lag data
         lagDf[["WeatherLag", "FlightLag"]].describe().to_csv(os.path.join(analysis_path, "lag_summary.csv"))
         last_data_point = weatherDf["SentSecondsAfterStart"].iat[-1].total_seconds()
@@ -146,9 +145,10 @@ def analyze_data(experiments):
         plot_maker.make_weather_lag_boxplot([lagDf["WeatherLag"]], [experiment_name], analysis_path)
 
         # Make consumption chart
-        weatherConsumptionRate.describe().to_csv(os.path.join(analysis_path, "weather_consumption.csv"))
+        pd.DataFrame(removeZeroEntries(weatherConsumptionRate)).describe().to_csv(os.path.join(analysis_path, "weather_consumption.csv"))
         if not flightConsumptionRate is None:
-            flightConsumptionRate.describe().to_csv(os.path.join(analysis_path, "flight_consumption.csv"))
+            pd.DataFrame(removeZeroEntries(flightConsumptionRate)).describe().to_csv(os.path.join(analysis_path, "flight_consumption.csv"))
+        
         plot_maker.make_consumption_chart(weatherConsumptionRate.index, weatherConsumptionRate, fIndex, flightConsumptionRate,  experiment_name, analysis_path)
 
     # INDIVIDUAL ANALYSIS DONE
@@ -202,6 +202,9 @@ def analyze_data(experiments):
 def getColumns(frameDictionary, property):
     return list(map(lambda x: x[property],frameDictionary.values()))
 
+def removeZeroEntries(frame):
+    return list(filter(lambda x: x > 0, list(frame)))
+
 def make_collective_analysis(recalcFrames, lagFrames, consumptionFrames, flightConsumptionFrames, runtimeFrames, output_dir, output_file=None):
     #Recalculation
     plot_maker.make_recalculation_boxplot(getColumns(recalcFrames, "LagMs"), recalcFrames.keys(), output_dir, output_file)
@@ -216,12 +219,16 @@ def make_collective_analysis(recalcFrames, lagFrames, consumptionFrames, flightC
     # Consumption rate
     consumptionIndicies = list(map(lambda x: x.index, consumptionFrames.values()))
     plot_maker.make_overlapping_consumption_chart(consumptionIndicies, list(consumptionFrames.values()), list(consumptionFrames.keys()), output_dir, output_file)
-    plot_maker.make_consumption_boxplot(list(consumptionFrames.values()), list(consumptionFrames.keys()), output_dir, output_file)
+    
+    filtered_consumption_weather = dict()
+    for key, val in consumptionFrames.items():
+        filtered_consumption_weather[key] = removeZeroEntries(val)
+    plot_maker.make_consumption_boxplot(list(filtered_consumption_weather.values()), list(filtered_consumption_weather.keys()), output_dir, output_file)
     
     filtered_consumption_flights = dict()
     for key, val in flightConsumptionFrames.items():
         if not val is None:
-            filtered_consumption_flights[key] = val
+            filtered_consumption_flights[key] = removeZeroEntries(val)
     if len(filtered_consumption_flights) > 0:
         plot_maker.make_flight_consumption_boxplot(list(filtered_consumption_flights.values()), list(filtered_consumption_flights.keys()), output_dir, output_file)
 

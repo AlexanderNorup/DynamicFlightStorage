@@ -140,7 +140,7 @@ def make_consumption_boxplot(dataArray, nameArray, outputPath, chartName=None):
     if not chartName == None:
         fileName = chartName + "_consumption_rates_box.pdf"
     lag_path = os.path.join(outputPath, fileName)
-    
+
     fig.autofmt_xdate() # Automatically rotates label so it can be read with multiple boxplots in same chart
     fig.savefig(lag_path)
     plt.close()
