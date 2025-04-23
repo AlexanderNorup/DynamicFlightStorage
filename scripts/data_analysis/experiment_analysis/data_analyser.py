@@ -23,6 +23,9 @@ custom_groupings={
     "AccuracyUnderLoadWithoutGPU": "^Accuracy under load((?!GPUAccelerated).)+$"
 }
 
+def fix_name(name):
+    return name.replace("Baseline", "Scaling 50K").replace(" (30258)", "").replace("while adding flights", "w. a. flights").replace("  ", " ")
+
 def analyze_data(experiments):
     print(f"Found {len(experiments)} experiments to analyze")
     experimentType_datastore_map = dict()
@@ -51,7 +54,7 @@ def analyze_data(experiments):
             experiment_data = json.load(f)['experimentData']
         
         experiment_name = experiment_data['experimentRunDescription']
-        experiment_name = experiment_name.replace("Baseline", "Scaling 50K")
+        experiment_name = fix_name(experiment_name)
 
         print(f"\n\nAnalyzing {experiment_name} with client-id: {experiment_data['clientId']}")
 
@@ -64,7 +67,7 @@ def analyze_data(experiments):
 
         experiment_type_name = experiment_data['experiment']['name']
 
-        experiment_type_name = experiment_type_name.replace("Baseline", "Scaling 50K")
+        experiment_type_name = fix_name(experiment_type_name)
 
         experiment_type_name_key = os.path.join("experiments", experiment_type_name)
         if experiment_type_name_key in experimentType_datastore_map:
@@ -182,13 +185,14 @@ def analyze_data(experiments):
                         print(f"Filtering for {experiment_names[i]} does not match any seen experiment. Is this an error?")
                         continue
                     flights_na = flight_consumption_for_filter[experiment_names[i]] is None
+                    
                     latex_data_stores.append([
                         experiment_names[i], # name
                         recalcs_for_filter[experiment_names[i]]["LagMs"].median(), #recalc
                         lag_for_filter[experiment_names[i]]["WeatherLag"].median(),#weather_lag
                         "N/A" if flights_na else lag_for_filter[experiment_names[i]]["FlightLag"].median(),#flight_lag
-                        consumption_for_filter[experiment_names[i]].median(),#weather_rate
-                        "N/A" if flights_na else flight_consumption_for_filter[experiment_names[i]].median(),#flight_rate
+                        float(pd.DataFrame(removeZeroEntries(consumption_for_filter[experiment_names[i]])).median()),#weather_rate
+                        "N/A" if flights_na else float(pd.DataFrame(removeZeroEntries(flight_consumption_for_filter[experiment_names[i]])).median()),#flight_rate
                     ])
                     
                 latex_writer.add_experiment(os.path.basename(filter_item), latex_data_stores)

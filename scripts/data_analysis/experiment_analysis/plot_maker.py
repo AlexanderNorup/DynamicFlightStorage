@@ -5,6 +5,10 @@ import numpy as np
 from datetime import timedelta
 import os
 
+plt.rcParams["figure.subplot.left"] = 0.15
+plt.rcParams["figure.subplot.right"] = 0.98
+DefaultBottom = 0.2
+
 # Allows for pretty-priting a timedelata as x-values
 def timedelta_formatter(x, pos=None):
     ms = x / 1e6
@@ -12,7 +16,7 @@ def timedelta_formatter(x, pos=None):
     return str(td)
 
 def breakArrayName(nameArray):
-    return list(map(lambda x: x.replace("with ", "with\n").replace(" (", "\n("), nameArray))
+    return list(map(lambda x: x.replace("with ", "\n").replace(" (", "\n("), nameArray))
 
 def make_recalculation_boxplot(dataArray, nameArray, outputPath, chartName=None):
     fig, ax = plt.subplots()
@@ -29,7 +33,8 @@ def make_recalculation_boxplot(dataArray, nameArray, outputPath, chartName=None)
         fileName = chartName + "_recalc.pdf"
     lag_path = os.path.join(outputPath, fileName)
     
-    fig.autofmt_xdate() # Automatically rotates label so it can be read with multiple boxplots in same chart
+    fig.autofmt_xdate(bottom=DefaultBottom) # Automatically rotates label so it can be read with multiple boxplots in same chart
+
     fig.savefig(lag_path)
     plt.close()
     print(f"Wrote {lag_path}")
@@ -49,7 +54,7 @@ def make_weather_lag_boxplot(dataArray, nameArray, outputPath, chartName=None):
         fileName = chartName + "_weather_lag_box.pdf"
     lag_path = os.path.join(outputPath, fileName)
     
-    fig.autofmt_xdate() # Automatically rotates label so it can be read with multiple boxplots in same chart
+    fig.autofmt_xdate(bottom=DefaultBottom) # Automatically rotates label so it can be read with multiple boxplots in same chart
     fig.savefig(lag_path)
     plt.close()
     print(f"Wrote {lag_path}")
@@ -77,7 +82,7 @@ def make_lag_chart(time,weatherLag, flightLag, name, finishTime, outputPath, cha
     if not chartName == None:
         fileName = chartName + "_consumerlag.pdf"
     lag_path = os.path.join(outputPath, fileName)
-    fig.autofmt_xdate() # Automatically rotates label so it can be read with multiple boxplots in same chart
+    fig.autofmt_xdate(bottom=DefaultBottom) # Automatically rotates label so it can be read with multiple boxplots in same chart
     fig.savefig(lag_path)
     plt.close()
     print(f"Wrote {lag_path}")
@@ -99,7 +104,7 @@ def make_consumption_chart(time, weatherConsumption, f_time, flightConsumption, 
     if not chartName == None:
         fileName = chartName + "_consumption_rate.pdf"
     lag_path = os.path.join(outputPath, fileName)
-    fig.autofmt_xdate() # Automatically rotates label so it can be read with multiple boxplots in same chart
+    fig.autofmt_xdate(bottom=DefaultBottom) # Automatically rotates label so it can be read with multiple boxplots in same chart
     fig.savefig(lag_path)
     plt.close()
     print(f"Wrote {lag_path}")
@@ -120,7 +125,7 @@ def make_overlapping_consumption_chart(times, weatherConsumptions, names, output
     if not chartName == None:
         fileName = chartName + "_consumption_rates.pdf"
     lag_path = os.path.join(outputPath, fileName)
-    fig.autofmt_xdate() # Automatically rotates label so it can be read with multiple boxplots in same chart
+    fig.autofmt_xdate(bottom=DefaultBottom) # Automatically rotates label so it can be read with multiple boxplots in same chart
     fig.savefig(lag_path)
     plt.close()
     print(f"Wrote {lag_path}")
@@ -133,7 +138,7 @@ def make_consumption_boxplot(dataArray, nameArray, outputPath, chartName=None):
     ax.tick_params(axis='x', which='major', pad=-3)
     fig.subplots_adjust(bottom=0.65)
     ax.set_title("Weather Consumption rate")
-    ax.set_ylabel("# of weather events per second")
+    ax.set_ylabel("# of weather events consumed per second")
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
 
     fileName = "consumption_rates_box.pdf"
@@ -141,7 +146,12 @@ def make_consumption_boxplot(dataArray, nameArray, outputPath, chartName=None):
         fileName = chartName + "_consumption_rates_box.pdf"
     lag_path = os.path.join(outputPath, fileName)
 
-    fig.autofmt_xdate() # Automatically rotates label so it can be read with multiple boxplots in same chart
+    fig.text(1,1.02, "0-values when no weather\nwas injected removed", fontsize=9,
+            horizontalalignment='right',
+            verticalalignment='bottom',
+            transform=ax.transAxes)
+
+    fig.autofmt_xdate(bottom=DefaultBottom) # Automatically rotates label so it can be read with multiple boxplots in same chart
     fig.savefig(lag_path)
     plt.close()
     print(f"Wrote {lag_path}")
@@ -154,7 +164,7 @@ def make_flight_consumption_boxplot(dataArray, nameArray, outputPath, chartName=
     ax.tick_params(axis='x', which='major', pad=-3)
     fig.subplots_adjust(bottom=0.65)
     ax.set_title("Flight Consumption rate")
-    ax.set_ylabel("# of flight events per second")
+    ax.set_ylabel("# of flight events consumed per second")
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
 
     fileName = "flight_consumption_rates_box.pdf"
@@ -162,7 +172,12 @@ def make_flight_consumption_boxplot(dataArray, nameArray, outputPath, chartName=
         fileName = chartName + "_flight_consumption_rates_box.pdf"
     lag_path = os.path.join(outputPath, fileName)
     
-    fig.autofmt_xdate() # Automatically rotates label so it can be read with multiple boxplots in same chart
+    fig.text(1,1.02, "0-values when no flights\nwere injected removed", fontsize=9,
+            horizontalalignment='right',
+            verticalalignment='bottom',
+            transform=ax.transAxes)
+
+    fig.autofmt_xdate(bottom=DefaultBottom) # Automatically rotates label so it can be read with multiple boxplots in same chart
     fig.savefig(lag_path)
     plt.close()
     print(f"Wrote {lag_path}")
@@ -190,7 +205,7 @@ def make_max_lag_chart(maxWeatherLag, maxFlightLag, nameArray, outputPath, chart
         fileName = chartName + "_max_consumerlag.pdf"
     lag_path = os.path.join(outputPath, fileName)
 
-    fig.autofmt_xdate() # Automatically rotates label so it can be read with multiple boxplots in same chart
+    fig.autofmt_xdate(bottom=DefaultBottom) # Automatically rotates label so it can be read with multiple boxplots in same chart
     fig.savefig(lag_path)
     plt.close()
     
@@ -217,7 +232,7 @@ def make_max_lag_chart_weather(maxWeatherLag, nameArray, outputPath, chartName=N
         fileName = chartName + "_max_consumerlag_weather.pdf"
     lag_path = os.path.join(outputPath, fileName)
 
-    fig.autofmt_xdate() # Automatically rotates label so it can be read with multiple boxplots in same chart
+    fig.autofmt_xdate(bottom=DefaultBottom) # Automatically rotates label so it can be read with multiple boxplots in same chart
     fig.savefig(lag_path)
     plt.close()
     
@@ -247,7 +262,7 @@ def make_completion_time_bar(completionTimes, nameArray, expectedFinishTime, out
         fileName = chartName + "_time.pdf"
     lag_path = os.path.join(outputPath, fileName)
 
-    fig.autofmt_xdate() # Automatically rotates label so it can be read with multiple boxplots in same chart
+    fig.autofmt_xdate(bottom=DefaultBottom) # Automatically rotates label so it can be read with multiple boxplots in same chart
     fig.savefig(lag_path)
     plt.close()
     

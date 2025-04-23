@@ -19,7 +19,7 @@ class LatexWriter:
         table_tex = StringIO()
         for data_store in data_stores:
             table_tex.write(self.table_line_template.substitute(
-                data_store=data_store[0],
+                data_store=data_store[0].replace(" day", "~day").replace(" hour", "~hour"),
                 recalc=round_if_not_str(data_store[1]),
                 weather_lag=round_if_not_str(data_store[2]),
                 flight_lag=round_if_not_str(data_store[3]),
