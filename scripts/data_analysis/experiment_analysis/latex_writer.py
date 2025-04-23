@@ -1,10 +1,18 @@
 from io import StringIO
 from string import Template
+import pandas as pd
 
 def round_if_not_str(input):
     if not isinstance(input, float):
         return input
     return f"{input:_.2f}".replace("_", "~")
+
+def handle_data_point(frame: pd.DataFrame | pd.Series):
+    if not isinstance(frame, pd.DataFrame) and not isinstance(frame, pd.Series):
+        return round_if_not_str(frame)
+    # \\textbf{{\\footnotesize Mean}}: {round_if_not_str(float(frame.mean()))}\\\\
+    return f"""\n{{\n    \\textbf{{\\footnotesize Median}}: {round_if_not_str(float(frame.median()))}\\\\
+    \\textbf{{\\footnotesize Max}}: {round_if_not_str(float(frame.max()))}\n}}"""
 
 class LatexWriter:
     def __init__(self):
@@ -20,11 +28,11 @@ class LatexWriter:
         for data_store in data_stores:
             table_tex.write(self.table_line_template.substitute(
                 data_store=data_store[0].replace(" day", "~day").replace(" hour", "~hour"),
-                recalc=round_if_not_str(data_store[1]),
-                weather_lag=round_if_not_str(data_store[2]),
-                flight_lag=round_if_not_str(data_store[3]),
-                weather_rate=round_if_not_str(data_store[4]),
-                flight_rate=round_if_not_str(data_store[5]),
+                recalc=handle_data_point(data_store[1]),
+                weather_lag=handle_data_point(data_store[2]),
+                flight_lag=handle_data_point(data_store[3]),
+                weather_rate=handle_data_point(data_store[4]),
+                flight_rate=handle_data_point(data_store[5]),
             ))
             table_tex.write("\n")
 

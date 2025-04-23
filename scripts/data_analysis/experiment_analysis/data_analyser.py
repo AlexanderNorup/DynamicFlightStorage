@@ -6,7 +6,6 @@ import plot_maker
 import json
 import re
 import pandas as pd
-import matplotlib.pyplot as plt
 import time
 
 data_dir=os.path.join(os.path.dirname(__file__),"experiment_data")
@@ -220,11 +219,11 @@ def analyze_data(experiments):
                     
                     latex_data_stores.append([
                         experiment_names[i], # name
-                        recalcs_for_filter[experiment_names[i]]["LagMs"].median(), #recalc
-                        lag_for_filter[experiment_names[i]]["WeatherLag"].median(),#weather_lag
-                        "N/A" if flights_na else lag_for_filter[experiment_names[i]]["FlightLag"].median(),#flight_lag
-                        float(pd.DataFrame(removeZeroEntries(consumption_for_filter[experiment_names[i]])).median()),#weather_rate
-                        "N/A" if flights_na else float(pd.DataFrame(removeZeroEntries(flight_consumption_for_filter[experiment_names[i]])).median()),#flight_rate
+                        recalcs_for_filter[experiment_names[i]]["LagMs"], #recalc
+                        lag_for_filter[experiment_names[i]]["WeatherLag"],#weather_lag
+                        "N/A" if flights_na else lag_for_filter[experiment_names[i]]["FlightLag"],#flight_lag
+                        pd.DataFrame(removeZeroEntries(consumption_for_filter[experiment_names[i]])),#weather_rate
+                        "N/A" if flights_na else pd.DataFrame(removeZeroEntries(flight_consumption_for_filter[experiment_names[i]])).median(),#flight_rate
                     ])
                     
                 latex_writer.add_experiment(os.path.basename(filter_item), latex_data_stores)
