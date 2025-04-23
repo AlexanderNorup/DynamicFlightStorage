@@ -8,10 +8,11 @@ namespace GPUAcceleratedEventDataStore
     {
         public static readonly MessagePackSerializerOptions MessagePackOptions = MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4BlockArray);
         public static readonly string PersistPath = Path.Combine(AppContext.BaseDirectory, "CudaDataStorePersist", "CudaFlights.bin");
-        private static readonly TimeSpan PersistInterval = TimeSpan.FromSeconds(5);
+        private static readonly TimeSpan PersistInterval = TimeSpan.FromMinutes(15);
         private SemaphoreSlim _persistSemaphore;
         private System.Timers.Timer _persistTimer;
         private ConcurrentBag<Flight> _persistBag;
+        private bool _persistBagDirty = false;
 
         private bool disposedValue;
         private CudaFlightSystem? _cudaFlightSystem;
@@ -124,13 +125,14 @@ namespace GPUAcceleratedEventDataStore
             _flightIdToIdentMap.Add(id, flight.FlightIdentification);
             _flightIdentToIdMap.Add(flight.FlightIdentification, id);
             _persistBag.Add(flight);
+            _persistBagDirty = true;
 
             return id;
         }
 
         private async Task PersistToDisk()
         {
-            if (_persistBag.IsEmpty)
+            if (_persistBag.IsEmpty || !_persistBagDirty)
             {
                 return;
             }
@@ -138,7 +140,12 @@ namespace GPUAcceleratedEventDataStore
             await _persistSemaphore.WaitAsync().ConfigureAwait(false);
             try
             {
+                if (!_persistBagDirty)
+                {
+                    return;
+                }
                 var flights = _persistBag.ToArray();
+                _persistBagDirty = false;
                 Directory.CreateDirectory(Path.GetDirectoryName(PersistPath)!);
                 using var f = File.Open(PersistPath, FileMode.Create); // Will override the current file
                 await MessagePackSerializer.SerializeAsync<Flight[]>(f, flights, MessagePackOptions).ConfigureAwait(false);
