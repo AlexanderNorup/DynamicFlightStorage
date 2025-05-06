@@ -2,6 +2,7 @@ import os
 from datetime import datetime, timedelta
 from timedrift_adjuster import TimedriftAdjuster
 from latex_writer import LatexWriter
+import overview_maker as OverviewGenerator
 import plot_maker
 import json
 import re
@@ -28,14 +29,26 @@ custom_groupings={
 # Names in here must match excatly
 sorting_order = [
     "Realistic Case",
+    "Realistic Case (real time)",
     "Scaling 50K",
     "Scaling 100K",
-    "Scaling 260k",
+    "Scaling 260K",
     "Scaling 1M",
     "Scaling 50K w. a. flights",
     "Worst-Case",
     "Accuracy under load",
     "Stress-test with recalc",
+]
+
+# Data-store names for overview table
+data_store_names = [
+    ("BTreePostgres", "OptimizedPostgreSQLDataStore.BTreePostgreSQLDataStore"),
+    ("SpatialPostgres", "SpatialGISTPostgreSQL.SpatialPostgreSQLDatastore"),
+    ("ManyTablesPostgres", "ManyTablesPostgreSQLDataStore.ManyTablesPostgreSQLDatastore"),
+    ("RelationalNeo4j", "Neo4jDataStore.RelationalNeo4jDataStore"),
+    ("TimeBucketedNeo4j (1 hour)", "Neo4jDataStore.TimeBucketedNeo4jDataStore(60min)"),
+    ("TimeBucketedNeo4j (1 day)", "Neo4jDataStore.TimeBucketedNeo4jDataStore(1440min)"),
+    ("GPUAccelerated", "GPUAcceleratedEventDataStore.CUDAEventDataStore")
 ]
 
 def custom_experiment_sorting_order(name):
@@ -46,7 +59,12 @@ def custom_experiment_sorting_order(name):
 
 
 def fix_name(name):
-    return name.replace("Baseline", "Scaling 50K").replace(" (30258)", "").replace("while adding flights", "w. a. flights").replace("  ", " ")
+    return name.replace("Baseline", "Scaling 50K").replace(" (30258)", "").replace("while adding flights", "w. a. flights").replace("  ", " ").replace("Scaling 260k", "Scaling 260K").replace("Worst-case", "Worst-Case")
+
+def should_skip_experiment(name: str):
+    if name.lower().startswith("260k maxspeed") or name.lower().startswith("100k maxspeed"):
+        return True
+    return False
 
 def analyze_data(experiments):
     global skip_individual_analysis
@@ -91,6 +109,9 @@ def analyze_data(experiments):
         experiment_type_name = experiment_data['experiment']['name']
 
         experiment_type_name = fix_name(experiment_type_name)
+
+        if should_skip_experiment(experiment_type_name):
+            continue
 
         experiment_type_name_key = os.path.join("experiments", experiment_type_name)
         if experiment_type_name_key in experimentType_datastore_map:
@@ -144,10 +165,7 @@ def analyze_data(experiments):
         consumptionFrames[experiment_name] = weatherConsumptionRate
         flightConsumptionFrames[experiment_name] = flightConsumptionRate
 
-        # INDIVIDUAL ANALYSIS START
-        if skip_individual_analysis:
-            continue
-
+        # Experiment Time
         experimentTime = (datetime.fromisoformat(experiment_data['utcEndTime']) - datetime.fromisoformat(experiment_data['utcStartTime'])).total_seconds()
         expectedTime = (datetime.fromisoformat(experiment_data['experiment']['simulatedEndTime']) - datetime.fromisoformat(experiment_data['experiment']['simulatedStartTime'])).total_seconds()
         timeScale = int(experiment_data['experiment']['timeScale'])
@@ -159,6 +177,10 @@ def analyze_data(experiments):
         expectedTime += 15 # The orchestrator always waits 15 seconds after an experiment before concluding it's done.
                            # This is due to delays with how RabbitMQ reports the consumer-lag.
         experiment_runtime[experiment_name] = (experimentTime, expectedTime)
+
+        # INDIVIDUAL ANALYSIS START
+        if skip_individual_analysis:
+            continue
 
         analysis_path = os.path.join(summary_analysis_path, "single_experiments", experiment_name)
         if not os.path.exists(analysis_path):
@@ -183,9 +205,17 @@ def analyze_data(experiments):
 
     # INDIVIDUAL ANALYSIS DONE
 
-    global custom_groupings
+    global custom_groupings, data_store_names, sorting_order
+    OverviewGenerator.make_overview_table(data_store_names,
+                                          sorting_order,
+                                          recalculationFrames,
+                                          consumptionFrames,
+                                          flightConsumptionFrames,
+                                          lagFrames,
+                                          experiment_runtime,
+                                          os.path.join(summary_analysis_path, "overview_table.tex"))
 
-    # Start by making graphs grouped by data-store and experiment_type
+    # Make graphs grouped by data-store and experiment_type
     latex_count = 0
     for filter_map in [datastore_experiment_map, experimentType_datastore_map, custom_groupings]:
         latex_writer = LatexWriter()
@@ -276,7 +306,6 @@ def make_collective_analysis(recalcFrames, lagFrames, consumptionFrames, flightC
         expectedTime = experimentExpectedTimes[0]
 
     plot_maker.make_completion_time_bar(experimentTimes, runtimeFrames.keys(), expectedTime, output_dir, output_file)
-
     
 if __name__ == "__main__":
     start = time.time()
