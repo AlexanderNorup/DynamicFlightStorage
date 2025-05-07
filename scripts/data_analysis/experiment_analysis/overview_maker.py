@@ -72,8 +72,13 @@ def make_overview_table(data_store_names: list[tuple[str,str]],
 
         #Lag
         lag_for_datastore = get_frame_for_data_store(data_store, lag_frames)
-        # flight_lag = max(map(lambda x: float(x["FlightLag"].max()), list(lag_for_datastore.values())))
-        weather_lag = max(map(lambda x: float(x["WeatherLag"].max()), list(lag_for_datastore.values())))
+        lag_without_acc_under_load = dict()
+        for key, val in lag_for_datastore.items():
+            if not key.startswith("Accuracy under load"):
+                lag_without_acc_under_load[key] = val
+
+        # flight_lag = max(map(lambda x: float(x["FlightLag"].max()), list(lag_without_acc_under_load.values())))
+        weather_lag = max(map(lambda x: float(x["WeatherLag"].max()), list(lag_without_acc_under_load.values())))
         # max_lag_datastore = max(flight_lag, weather_lag)
         max_lag_datastore = weather_lag
 
