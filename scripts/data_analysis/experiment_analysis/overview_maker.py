@@ -5,8 +5,8 @@ import pandas as pd
 from latex_writer import round_if_not_str
 
 template_path=os.path.join(os.path.dirname(__file__),"overview_table_template.tex")
-latex_yes="\\cmark"
-latex_no="\\xmark"
+latex_yes="\\color{ForestGreen}\\cmark"
+latex_no="\\color{red}\\xmark"
 max_time_diff_for_accept_seconds=5
 
 
@@ -97,7 +97,13 @@ def make_overview_table(data_store_names: list[tuple[str,str]],
 
         # Accuracy
         # We need to manually assert this by checking accuracy under load experiment. As of writing this comment, all pass
-        accuracy = True 
+        accuracy = True
+
+        # Total
+        total = 0
+        for res in time_result_array:
+            if res == True:
+                total += 1
 
         row_writer.write(table_row_template.substitute(
             name=data_store,
@@ -113,7 +119,8 @@ def make_overview_table(data_store_names: list[tuple[str,str]],
             ex8=latex_bool(time_result_array[7]),
             ex9=latex_bool(time_result_array[8]),
             ex10=latex_bool(time_result_array[9]),
-            accurate=latex_bool(accuracy),
+            #accurate=latex_bool(accuracy),
+            accurate=f"{total}/{len(time_result_array)}",
             appendix_ref=f"results:{data_store_ref_name.lower()}"
         ))
     
