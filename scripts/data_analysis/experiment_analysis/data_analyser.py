@@ -28,16 +28,16 @@ custom_groupings={
 
 # Names in here must match excatly
 sorting_order = [
-    "Realistic Case",
     "Realistic Case (real time)",
+    "Realistic Case",
+    "Scaling 50K w. a. flights",
     "Scaling 50K",
     "Scaling 100K",
     "Scaling 260K",
     "Scaling 1M",
-    "Scaling 50K w. a. flights",
-    "Worst-Case",
     "Accuracy under load",
     "Stress-test with recalc",
+    "Worst-Case",
 ]
 
 # Data-store names for overview table
