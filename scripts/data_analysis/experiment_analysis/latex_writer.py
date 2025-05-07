@@ -1,6 +1,7 @@
 from io import StringIO
 from string import Template
 import pandas as pd
+from config import fix_name_if_datastore
 
 def round_if_not_str(input):
     if not isinstance(input, float):
@@ -37,7 +38,7 @@ class LatexWriter:
             table_tex.write("\n")
 
         self.output.write(self.template.substitute(
-            experiment_name=experiment_name,
+            experiment_name=fix_name_if_datastore(experiment_name),
             experiment_simple_name=simple_name,
             table_tex=table_tex.getvalue()
         ))
