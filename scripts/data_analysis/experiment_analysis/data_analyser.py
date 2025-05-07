@@ -253,7 +253,7 @@ def analyze_data(experiments):
                         lag_for_filter[experiment_names[i]]["WeatherLag"],#weather_lag
                         "N/A" if flights_na else lag_for_filter[experiment_names[i]]["FlightLag"],#flight_lag
                         pd.DataFrame(removeZeroEntries(consumption_for_filter[experiment_names[i]])),#weather_rate
-                        "N/A" if flights_na else pd.DataFrame(removeZeroEntries(flight_consumption_for_filter[experiment_names[i]])).median(),#flight_rate
+                        "N/A" if flights_na else pd.DataFrame(removeZeroEntries(flight_consumption_for_filter[experiment_names[i]])),#flight_rate
                     ])
                     
                 latex_writer.add_experiment(os.path.basename(filter_item), latex_data_stores)
