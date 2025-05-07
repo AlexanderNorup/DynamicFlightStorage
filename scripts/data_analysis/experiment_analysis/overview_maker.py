@@ -64,16 +64,18 @@ def make_overview_table(data_store_names: list[tuple[str,str]],
 
         #Consumption
         weather_consumptions = get_frame_for_data_store(data_store, weather_consumption_frames)
-        max_weather_consumption = max(map(lambda x: float(x.max()), list(weather_consumptions.values())))
-        flight_consumptions = remove_none_values(get_frame_for_data_store(data_store, flight_consumption_frames))
-        max_flight_consumption = max(map(lambda x: float(x.max()), list(flight_consumptions.values())))
-        max_consumption_datastore = max(max_weather_consumption, max_flight_consumption)
+        max_weather_consumption = max(map(lambda x: float(x.median()), list(weather_consumptions.values())))
+        max_consumption_datastore = max_weather_consumption
+        # flight_consumptions = remove_none_values(get_frame_for_data_store(data_store, flight_consumption_frames))
+        # max_flight_consumption = max(map(lambda x: float(x.max()), list(flight_consumptions.values())))
+        # max_consumption_datastore = max(max_weather_consumption, max_flight_consumption)
 
         #Lag
         lag_for_datastore = get_frame_for_data_store(data_store, lag_frames)
-        flight_lag = max(map(lambda x: float(x["FlightLag"].max()), list(lag_for_datastore.values())))
+        # flight_lag = max(map(lambda x: float(x["FlightLag"].max()), list(lag_for_datastore.values())))
         weather_lag = max(map(lambda x: float(x["WeatherLag"].max()), list(lag_for_datastore.values())))
-        max_lag_datastore = max(flight_lag, weather_lag)
+        # max_lag_datastore = max(flight_lag, weather_lag)
+        max_lag_datastore = weather_lag
 
         # Time
         time_for_datastore = get_frame_for_data_store(data_store, time_frames)
