@@ -13,7 +13,7 @@ import time
 data_dir=os.path.join(os.path.dirname(__file__),"experiment_data")
 
 # Set to TRUE for faster collective analysis
-skip_individual_analysis = True
+skip_individual_analysis = False
 
 # Use this dictionary if we want to make charts of special groupings
 # Simply specify the name of your grouping as the dictionary-key and let the value be a list of names referring to experiments
@@ -81,7 +81,7 @@ def analyze_data(experiments):
             experimentType_datastore_map[experiment_type_name_key] = [experiment_name]
 
         weatherDf = pd.read_csv(os.path.join(dataset_path, "weatherLog.csv"), parse_dates=['SentTimestamp', 'ReceivedTimestamp'])
-        flightDf = pd.read_csv(os.path.join(dataset_path, "flightLog.csv"), parse_dates=['SentTimestamp', 'ReceivedTimestamp'])
+        flightDf = pd.read_csv(os.path.join(dataset_path, "flightlog.csv"), parse_dates=['SentTimestamp', 'ReceivedTimestamp'])
         recalculationDf = pd.read_csv(os.path.join(dataset_path, "recalculationLog.csv"), parse_dates=['UtcTimeStamp'])
         lagDf = pd.read_csv(os.path.join(dataset_path, "lagLog.csv"), parse_dates=['Timestamp'])
         
