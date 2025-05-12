@@ -167,6 +167,9 @@ def analyze_data(experiments):
     # INDIVIDUAL ANALYSIS DONE
 
     global custom_groupings, data_store_names, sorting_order
+
+    OverviewGenerator.make_recalc_table(data_store_names, recalculationFrames)
+
     OverviewGenerator.make_overview_table(data_store_names,
                                           sorting_order,
                                           recalculationFrames,

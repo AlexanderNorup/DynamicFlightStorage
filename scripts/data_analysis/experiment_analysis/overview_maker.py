@@ -36,6 +36,24 @@ def latex_bool(input):
         return latex_no
     else:
         return "?"
+    
+
+def make_recalc_table(data_store_names: list[tuple[str,str]],
+                        recalc_frames: dict[str,list[pd.DataFrame]]):
+    order = ["Scaling 50K with ", "Scaling 100K with ", "Scaling 260K with ", "Scaling 1M with "]
+    recalc_medians = {}
+    print("\nChanges in recalculation lag for scaling experiments:")
+    for data_store, _ in data_store_names:
+        #recalc_Frames = get_frame_for_data_store(data_store, recalc_frames)
+        recalc_medians[data_store] = [round(float(recalc_frames[exp_name + data_store]["LagMs"].median()), 2) for exp_name in order]
+        percentage_changes = [0]
+        for i in range(1, len(recalc_medians[data_store])):
+            prev = recalc_medians[data_store][i - 1]
+            curr = recalc_medians[data_store][i]
+            percentage_change = round(float(((curr - prev) / prev) * 100 if prev != 0 else 0), 2)
+            percentage_changes.append(percentage_change)
+        print(f"{data_store}: {recalc_medians[data_store]} in relative percentages {percentage_changes}")
+
 
 
 def make_overview_table(data_store_names: list[tuple[str,str]],
