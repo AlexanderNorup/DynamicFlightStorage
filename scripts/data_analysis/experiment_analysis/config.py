@@ -36,8 +36,8 @@ name_replacements = [
     ("while adding flights", "w. a. flights"),
     ("Scaling 260k", "Scaling 260K"),
     ("Worst-case", "Worst-Case"),
-    ("Realistic Case (real time)", "Baseline 2x"),
-    ("Realistic Case", "Baseline"),
+    ("Realistic Case (real time)", "Baseline"),
+    ("Realistic Case", "Baseline 2x"),
     ("  ", " ")
 ]
 
