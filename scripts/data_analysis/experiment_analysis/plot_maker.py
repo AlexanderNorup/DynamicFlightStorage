@@ -118,7 +118,7 @@ def make_lag_chart(time,weatherLag, flightLag, name, finishTime, outputPath, cha
     ax.xaxis.set_major_formatter(formatter)
     ax.plot(time, weatherLag, label="Weather")
     ax.plot(time, flightLag, label="Flight")
-    fig.suptitle(f"Consumer lag for {name}", y=0.96, fontsize=16)
+    fig.suptitle(f"Consumer lag for {name}", y=0.96, fontsize=12)
     ax.set_ylabel("# of messages waiting")
     ax.set_xlabel("Time after experiment start")
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
@@ -148,7 +148,7 @@ def make_consumption_chart(time, weatherConsumption, f_time, flightConsumption, 
     if not flightConsumption is None:
         ax.plot(f_time, flightConsumption, label="Flight")
     ax.legend()
-    fig.suptitle(f"Consumption rate for {name}", y=0.96, fontsize=16)
+    fig.suptitle(f"Consumption rate for {name}", y=0.96, fontsize=12)
     ax.set_ylabel("# of events per second")
     ax.set_xlabel("Time after experiment start")
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
