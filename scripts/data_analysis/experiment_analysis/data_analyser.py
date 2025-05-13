@@ -60,19 +60,19 @@ def analyze_data(experiments):
 
         print(f"\n\nAnalyzing {experiment_name} with client-id: {experiment_data['clientId']}")
 
+        experiment_type_name = experiment_data['experiment']['name']
+
+        experiment_type_name = fix_name(experiment_type_name)
+
+        if should_skip_experiment(experiment_type_name) or "NO-TMPFS" in experiment_name:
+            continue
+
         experiment_data_store = experiment_data['dataStoreType']
         experiment_data_store_key = os.path.join("data-stores", experiment_data_store)
         if experiment_data_store_key in datastore_experiment_map:
             datastore_experiment_map[experiment_data_store_key].append(experiment_name)
         else:
             datastore_experiment_map[experiment_data_store_key] = [experiment_name]
-
-        experiment_type_name = experiment_data['experiment']['name']
-
-        experiment_type_name = fix_name(experiment_type_name)
-
-        if should_skip_experiment(experiment_type_name):
-            continue
 
         experiment_type_name_key = os.path.join("experiments", experiment_type_name)
         if experiment_type_name_key in experimentType_datastore_map:
