@@ -1,8 +1,8 @@
 import os
 # Names in here must match excatly
 sorting_order = [
-    "Realistic Case (real time)",
-    "Realistic Case",
+    "Baseline",
+    "Baseline 2x",
     "Scaling 50K w. a. flights",
     "Scaling 50K",
     "Scaling 100K",
@@ -30,9 +30,23 @@ def custom_experiment_sorting_order(name):
     except:
         return 9999999 
 
+name_replacements = [
+    ("Baseline", "Scaling 50K"),
+    (" (30258)", ""),
+    ("while adding flights", "w. a. flights"),
+    ("Scaling 260k", "Scaling 260K"),
+    ("Worst-case", "Worst-Case"),
+    ("Realistic Case (real time)", "Baseline 2x"),
+    ("Realistic Case", "Baseline"),
+    ("  ", " ")
+]
 
-def fix_name(name):
-    return name.replace("Baseline", "Scaling 50K").replace(" (30258)", "").replace("while adding flights", "w. a. flights").replace("  ", " ").replace("Scaling 260k", "Scaling 260K").replace("Worst-case", "Worst-Case")
+def fix_name(name: str):
+    global name_replacements
+    out = name
+    for (search, replace) in name_replacements:
+        out = out.replace(search, replace)
+    return out
 
 def should_skip_experiment(name: str):
     if name.lower().startswith("260k maxspeed") or name.lower().startswith("100k maxspeed"):
