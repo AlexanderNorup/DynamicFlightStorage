@@ -15,16 +15,66 @@ def timedelta_formatter(x, pos=None):
     td = timedelta(milliseconds=ms)
     return str(td)
 
-def breakArrayName(nameArray):
-    return list(map(lambda x: x.replace("with ", "\n").replace(" (", "\n("), nameArray))
+def format_name_array(names: list[str]) -> tuple[str, list[str]]:
+    # Old behaviour
+    default_bahavior = lambda _names: (None, list(map(lambda x: x.replace("with ", "\n").replace(" (", "\n("), _names)))
+    
+    single_datastore_name = None
+    single_experiment_name = None
+    detected_datastores = []
+    detected_experiments = []
+    for name in names:
+        if " with " in name:
+            split_name = name.split(" with ")
+            found_experiment = " ".join(split_name[0:len(split_name) -1 ]).strip()
+            found_datastore = split_name[len(split_name) - 1].replace(" (", "\n(").strip()
+            detected_experiments.append(found_experiment)
+            detected_datastores.append(found_datastore)
+
+            if single_datastore_name is None:
+                single_datastore_name = found_datastore
+            elif single_datastore_name != found_datastore:
+                single_datastore_name = False
+
+            if single_experiment_name is None:
+                single_experiment_name = found_experiment
+            elif single_experiment_name != found_experiment:
+                single_experiment_name = False
+            
+            if single_experiment_name is False and single_datastore_name is False:
+                # This grouping contains mixed data_stores and experiments. We must show the entire name
+                return default_bahavior(names)
+        else:
+            # This does not follow the "[Experiment] with [data-store]" naming convension
+            return default_bahavior(names)
+    
+    if len(detected_datastores) != len(names):
+        # This shouldn't happen.
+        print("Unexpected state when formatting name array for plots. Output array different length than input array")
+        return default_bahavior(names)
+    
+    if single_datastore_name is not False:
+        return (single_datastore_name, detected_experiments)
+    elif single_experiment_name is not False:
+        return (single_experiment_name, detected_datastores)
+    
+    print("Unexpected state when formatting name array for plots. Detected mixed types, but did not exit early.")
+    print("Detected datastores:", detected_datastores)
+    print("Detected experiments:", detected_experiments)
+    return default_bahavior(names)
 
 def make_recalculation_boxplot(dataArray, nameArray, outputPath, chartName=None):
     fig, ax = plt.subplots()
     ax.boxplot(dataArray)
-    ax.set_xticklabels(breakArrayName(nameArray), fontsize=8)
+    grouping, xticks = format_name_array(nameArray)
+    if grouping is not None:
+        fig.text(0.5, 0.9, grouping, horizontalalignment="center")
+    ax.set_xticklabels(xticks, fontsize=8)
+
     ax.tick_params(axis='x', which='major', pad=-3)
     fig.subplots_adjust(bottom=0.65)
-    ax.set_title("Recalculation lag")
+    fig.suptitle("Recalculation lag", y=0.98, fontsize=16)
+    
     ax.set_ylabel("Time to respond (ms)")
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
 
@@ -42,10 +92,13 @@ def make_recalculation_boxplot(dataArray, nameArray, outputPath, chartName=None)
 def make_weather_lag_boxplot(dataArray, nameArray, outputPath, chartName=None):
     fig, ax = plt.subplots()
     ax.boxplot(dataArray)
-    ax.set_xticklabels(breakArrayName(nameArray), fontsize=8)
+    grouping, xticks = format_name_array(nameArray)
+    if grouping is not None:
+        fig.text(0.5, 0.9, grouping, horizontalalignment="center")
+    ax.set_xticklabels(xticks, fontsize=8)
     ax.tick_params(axis='x', which='major', pad=-3)
     fig.subplots_adjust(bottom=0.65)
-    ax.set_title("Weather lag")
+    fig.suptitle("Weather lag", y=0.98, fontsize=16)
     ax.set_ylabel("# of weather events waiting")
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
 
@@ -65,7 +118,7 @@ def make_lag_chart(time,weatherLag, flightLag, name, finishTime, outputPath, cha
     ax.xaxis.set_major_formatter(formatter)
     ax.plot(time, weatherLag, label="Weather")
     ax.plot(time, flightLag, label="Flight")
-    ax.set_title(f"Consumer lag for {name}")
+    fig.suptitle(f"Consumer lag for {name}", y=0.96, fontsize=16)
     ax.set_ylabel("# of messages waiting")
     ax.set_xlabel("Time after experiment start")
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
@@ -95,7 +148,7 @@ def make_consumption_chart(time, weatherConsumption, f_time, flightConsumption, 
     if not flightConsumption is None:
         ax.plot(f_time, flightConsumption, label="Flight")
     ax.legend()
-    ax.set_title(f"Consumption rate for {name}")
+    fig.suptitle(f"Consumption rate for {name}", y=0.96, fontsize=16)
     ax.set_ylabel("# of events per second")
     ax.set_xlabel("Time after experiment start")
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
@@ -116,7 +169,7 @@ def make_overlapping_consumption_chart(times, weatherConsumptions, names, output
     for i in range(len(times)):
         ax.plot(times[i], weatherConsumptions[i], label=names[i])
     ax.legend()
-    ax.set_title(f"Weather Consumption rate")
+    fig.suptitle(f"Weather Consumption rate", y=0.96, fontsize=16)
     ax.set_ylabel("# of weather events per second")
     ax.set_xlabel("Time after experiment start")
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
@@ -134,10 +187,13 @@ def make_overlapping_consumption_chart(times, weatherConsumptions, names, output
 def make_consumption_boxplot(dataArray, nameArray, outputPath, chartName=None):
     fig, ax = plt.subplots()
     ax.boxplot(dataArray)
-    ax.set_xticklabels(breakArrayName(nameArray), fontsize=8)
+    grouping, xticks = format_name_array(nameArray)
+    if grouping is not None:
+        fig.text(0.5, 0.9, grouping, horizontalalignment="center")
+    ax.set_xticklabels(xticks, fontsize=8)
     ax.tick_params(axis='x', which='major', pad=-3)
     fig.subplots_adjust(bottom=0.65)
-    ax.set_title("Weather Consumption rate")
+    fig.suptitle("Weather Consumption rate", y=0.98, fontsize=16)
     ax.set_ylabel("# of weather events consumed per second")
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
 
@@ -146,7 +202,7 @@ def make_consumption_boxplot(dataArray, nameArray, outputPath, chartName=None):
         fileName = chartName + "_consumption_rates_box.pdf"
     lag_path = os.path.join(outputPath, fileName)
 
-    fig.text(1,1.02, "0-values when no weather\nwas injected removed", fontsize=9,
+    fig.text(1,1.02, "0-values when no weather\nwas injected removed", fontsize=8,
             horizontalalignment='right',
             verticalalignment='bottom',
             transform=ax.transAxes)
@@ -160,10 +216,13 @@ def make_consumption_boxplot(dataArray, nameArray, outputPath, chartName=None):
 def make_flight_consumption_boxplot(dataArray, nameArray, outputPath, chartName=None):
     fig, ax = plt.subplots()
     ax.boxplot(dataArray)
-    ax.set_xticklabels(breakArrayName(nameArray), fontsize=8)
+    grouping, xticks = format_name_array(nameArray)
+    if grouping is not None:
+        fig.text(0.5, 0.9, grouping, horizontalalignment="center")
+    ax.set_xticklabels(xticks, fontsize=8)
     ax.tick_params(axis='x', which='major', pad=-3)
     fig.subplots_adjust(bottom=0.65)
-    ax.set_title("Flight Consumption rate")
+    fig.suptitle("Flight Consumption rate", y=0.98, fontsize=16)
     ax.set_ylabel("# of flight events consumed per second")
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
 
@@ -172,7 +231,7 @@ def make_flight_consumption_boxplot(dataArray, nameArray, outputPath, chartName=
         fileName = chartName + "_flight_consumption_rates_box.pdf"
     lag_path = os.path.join(outputPath, fileName)
     
-    fig.text(1,1.02, "0-values when no flights\nwere injected removed", fontsize=9,
+    fig.text(1,1.02, "0-values when no flights\nwere injected removed", fontsize=8,
             horizontalalignment='right',
             verticalalignment='bottom',
             transform=ax.transAxes)
@@ -193,9 +252,12 @@ def make_max_lag_chart(maxWeatherLag, maxFlightLag, nameArray, outputPath, chart
     ax.bar_label(bar, padding=3)
 
     ax.legend(loc='upper left', ncols=2)
-    ax.set_title("Maximum Consumer lag")
+    fig.suptitle("Maximum Consumer lag", y=0.98, fontsize=16)
     ax.set_ylabel("max # of messages waiting")
-    ax.set_xticks(x + width/2, labels=breakArrayName(nameArray), fontsize=8)
+    grouping, xticks = format_name_array(nameArray)
+    if grouping is not None:
+        fig.text(0.5, 0.9, grouping, horizontalalignment="center")
+    ax.set_xticks(x + width/2, labels=xticks, fontsize=8)
     ax.tick_params(axis='x', which='major', pad=-3)
     fig.subplots_adjust(bottom=0.65)
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
@@ -220,10 +282,13 @@ def make_max_lag_chart_weather(maxWeatherLag, nameArray, outputPath, chartName=N
     ax.bar_label(bar, padding=3)
 
     ax.legend(loc='upper left', ncols=2)
-    ax.set_title("Maximum Consumer lag")
+    fig.suptitle("Maximum Consumer lag", y=0.98, fontsize=16)
     ax.set_ylabel("max # of weather events waiting")
     ax.tick_params(axis='x', which='major', pad=-3)
-    ax.set_xticks(x, labels=breakArrayName(nameArray), fontsize=8)
+    grouping, xticks = format_name_array(nameArray)
+    if grouping is not None:
+        fig.text(0.5, 0.9, grouping, horizontalalignment="center")
+    ax.set_xticks(x, labels=xticks, fontsize=8)
     fig.subplots_adjust(bottom=0.65)
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
     
@@ -247,10 +312,13 @@ def make_completion_time_bar(completionTimes, nameArray, expectedFinishTime, out
     bar = ax.bar(x, completionTimes, width=width)
     ax.bar_label(bar, padding=3, fmt=lambda x: f"{round(x)} s.")
 
-    ax.set_title("Experiment time")
+    fig.suptitle("Experiment time", y=0.98, fontsize=16)
     ax.set_ylabel("total time to run experiment in seconds")
     ax.tick_params(axis='x', which='major', pad=-3)
-    ax.set_xticks(x, labels=breakArrayName(nameArray), fontsize=8)
+    grouping, xticks = format_name_array(nameArray)
+    if grouping is not None:
+        fig.text(0.5, 0.9, grouping, horizontalalignment="center")
+    ax.set_xticks(x, labels=xticks, fontsize=8)
     fig.subplots_adjust(bottom=0.65)
     ax.grid(True,axis="y",linestyle='-', which='major', color='lightgrey',alpha=0.5)
     if not expectedFinishTime == None:
