@@ -83,8 +83,13 @@ def analyze_data(experiments):
         weatherDf = pd.read_csv(os.path.join(dataset_path, "weatherLog.csv"), parse_dates=['SentTimestamp', 'ReceivedTimestamp'])
         flightDf = pd.read_csv(os.path.join(dataset_path, "flightlog.csv"), parse_dates=['SentTimestamp', 'ReceivedTimestamp'])
         recalculationDf = pd.read_csv(os.path.join(dataset_path, "recalculationLog.csv"), parse_dates=['UtcTimeStamp'])
-        lagDf = pd.read_csv(os.path.join(dataset_path, "lagLog.csv"), parse_dates=['Timestamp'])
         
+        lag_file = "lagLog.calculated.csv"
+        if not os.path.exists(os.path.join(dataset_path, lag_file)):
+            print(f"Experiment {experiment_name} does not have calculated lag? Using RabbitMQ provided lag")
+            lag_file = "lagLog.csv"
+
+        lagDf = pd.read_csv(os.path.join(dataset_path, lag_file), parse_dates=['Timestamp']) 
         #Start by finding time-drift
         baseTime = weatherDf["SentTimestamp"][0]
         consumerTime = weatherDf["ReceivedTimestamp"][0]

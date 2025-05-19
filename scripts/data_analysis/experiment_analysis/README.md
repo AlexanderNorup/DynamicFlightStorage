@@ -7,7 +7,8 @@ The scripts are tested using `Python 3.11.0` and with the packages and their spe
 ## Usage
 
 1. Start by running `data_downloader.py`, possibly changing the `all_experiments_api` variable in the top of the file to point to your own instance.
-2. Then run the `data_analyser.py` script
-3. Look at the pretty charts and LaTeX files in the new `analysis_summary/` directory.
+2. Make a pot of coffee and run `lag_calculator.py`. This is technically optional, but will generate more accurate consumer-lag data.
+3. Then run the `data_analyser.py` script
+4. Look at the pretty charts and LaTeX files in the new `analysis_summary/` directory.
 
 If you create your own experiments and/or data-stores, add them to the lists in `config.py` to have them included in a sensible manner in the exported LaTeX files.
