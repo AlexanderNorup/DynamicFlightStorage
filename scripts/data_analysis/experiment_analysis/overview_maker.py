@@ -21,9 +21,14 @@ def remove_none_values(input: dict):
 
     return filtered
 
-def get_experiment_index_from_name(experiment_name: str, experiment_order: list[str]) -> int:
+def get_experiment_index_from_name(experiment_name: str, experiment_order: list[str]) -> int:    
+    searching_for = experiment_name.lower()
+    if " with " in experiment_name:
+        split_name = experiment_name.split(" with ")
+        searching_for = " with ".join(split_name[0:len(split_name) -1 ]).strip().lower()
+
     for known_name in experiment_order:
-        if experiment_name.lower().startswith(known_name.lower()): # Could realisticly be a contains instead
+        if searching_for == known_name.strip().lower():
             return experiment_order.index(known_name)
     
     return -1
