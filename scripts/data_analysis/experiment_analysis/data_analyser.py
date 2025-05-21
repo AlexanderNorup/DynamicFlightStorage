@@ -224,7 +224,8 @@ def analyze_data(experiments):
                         pd.DataFrame(removeZeroEntries(consumption_for_filter[experiment_names[i]])),#weather_rate
                         "N/A" if flights_na else pd.DataFrame(removeZeroEntries(flight_consumption_for_filter[experiment_names[i]])),#flight_rate
                     ])
-                    
+                sorting_key_list = plot_maker.format_name_array(list(map(lambda x: x[0], latex_data_stores)))[1]
+                latex_data_stores = sorted(latex_data_stores, key=lambda x: chart_sorting_order(sorting_key_list[latex_data_stores.index(x)]))    
                 latex_writer.add_experiment(os.path.basename(filter_item), latex_data_stores)
         
         latex_writer.write_file(os.path.join(summary_analysis_path, f"report_{latex_count}.tex"))
