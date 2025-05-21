@@ -24,6 +24,21 @@ data_store_names = [
     ("GPUAccelerated", "GPUAcceleratedEventDataStore.CUDAEventDataStore")
 ]
 
+chart_sort_order = [] # Dynamic array containing first all data store names in order then experiments in order
+for data_store, _ in data_store_names:
+    chart_sort_order.append(data_store)
+
+for experiment in sorting_order:
+    chart_sort_order.append(experiment)
+
+def chart_sorting_order(name: str):
+    global chart_sort_order
+    l_name = name.lower().replace("\n", " ").strip()
+    for i in reversed(range(len(chart_sort_order))): # Reverse order due to baseline 2x
+        if l_name.startswith(chart_sort_order[i].lower()):
+            return i
+    return 9999999
+
 def custom_experiment_sorting_order(name):
     try:
         return sorting_order.index(os.path.basename(name))

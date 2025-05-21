@@ -1,8 +1,8 @@
 import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 import numpy as np
 from datetime import timedelta
+from config import chart_sorting_order
 import os
 
 plt.rcParams["figure.subplot.left"] = 0.15
@@ -15,6 +15,31 @@ def timedelta_formatter(x, pos=None):
     td = timedelta(milliseconds=ms)
     return str(td)
 
+def sort_arrays_by_base(base_array, arr1, arr2=None):
+    if arr2 is None:
+        arr2 = [None] * len(base_array)
+    
+    if len(base_array) != len(arr1):
+        raise Exception("Base_array is not same length as array 1")
+    
+    combined = []
+    
+    for i in range(len(base_array)):
+        combined.append((base_array[i],arr1[i],arr2[i]))
+    
+    combined_sorted = sorted(combined, key=lambda x: chart_sorting_order(x[0]))
+    
+    sorted_base, sorted_arr1, sorted_arr2 = [], [], []
+
+    for base, a1, a2 in combined_sorted:
+        sorted_base.append(base)
+        sorted_arr1.append(a1)
+        sorted_arr2.append(a2)
+
+    return (sorted_base, sorted_arr1, sorted_arr2)
+
+
+
 def format_name_array(names: list[str]) -> tuple[str, list[str]]:
     # Old behaviour
     default_bahavior = lambda _names: (None, list(map(lambda x: x.replace("with ", "\n").replace(" (", "\n("), _names)))
@@ -26,7 +51,7 @@ def format_name_array(names: list[str]) -> tuple[str, list[str]]:
     for name in names:
         if " with " in name:
             split_name = name.split(" with ")
-            found_experiment = " ".join(split_name[0:len(split_name) -1 ]).strip()
+            found_experiment = " with ".join(split_name[0:len(split_name) -1 ]).strip()
             found_datastore = split_name[len(split_name) - 1].replace(" (", "\n(").strip()
             detected_experiments.append(found_experiment)
             detected_datastores.append(found_datastore)
@@ -63,10 +88,11 @@ def format_name_array(names: list[str]) -> tuple[str, list[str]]:
     print("Detected experiments:", detected_experiments)
     return default_bahavior(names)
 
-def make_recalculation_boxplot(dataArray, nameArray, outputPath, chartName=None):
+def make_recalculation_boxplot(dataArray_, nameArray, outputPath, chartName=None):
     fig, ax = plt.subplots()
+    grouping, xticks_ = format_name_array(nameArray)
+    xticks, dataArray, _ = sort_arrays_by_base(xticks_, dataArray_)
     ax.boxplot(dataArray)
-    grouping, xticks = format_name_array(nameArray)
     if grouping is not None:
         fig.text(0.5, 0.9, grouping, horizontalalignment="center")
     ax.set_xticklabels(xticks, fontsize=8)
@@ -89,10 +115,11 @@ def make_recalculation_boxplot(dataArray, nameArray, outputPath, chartName=None)
     plt.close()
     print(f"Wrote {lag_path}")
 
-def make_weather_lag_boxplot(dataArray, nameArray, outputPath, chartName=None):
+def make_weather_lag_boxplot(dataArray_, nameArray, outputPath, chartName=None):
     fig, ax = plt.subplots()
+    grouping, xticks_ = format_name_array(nameArray)
+    xticks, dataArray, _ = sort_arrays_by_base(xticks_, dataArray_)
     ax.boxplot(dataArray)
-    grouping, xticks = format_name_array(nameArray)
     if grouping is not None:
         fig.text(0.5, 0.9, grouping, horizontalalignment="center")
     ax.set_xticklabels(xticks, fontsize=8)
@@ -184,10 +211,11 @@ def make_overlapping_consumption_chart(times, weatherConsumptions, names, output
     print(f"Wrote {lag_path}")
 
 
-def make_consumption_boxplot(dataArray, nameArray, outputPath, chartName=None):
+def make_consumption_boxplot(dataArray_, nameArray, outputPath, chartName=None):
     fig, ax = plt.subplots()
+    grouping, xticks_ = format_name_array(nameArray)
+    xticks, dataArray, _ = sort_arrays_by_base(xticks_, dataArray_)
     ax.boxplot(dataArray)
-    grouping, xticks = format_name_array(nameArray)
     if grouping is not None:
         fig.text(0.5, 0.9, grouping, horizontalalignment="center")
     ax.set_xticklabels(xticks, fontsize=8)
@@ -213,10 +241,11 @@ def make_consumption_boxplot(dataArray, nameArray, outputPath, chartName=None):
     print(f"Wrote {lag_path}")
 
 
-def make_flight_consumption_boxplot(dataArray, nameArray, outputPath, chartName=None):
+def make_flight_consumption_boxplot(dataArray_, nameArray, outputPath, chartName=None):
     fig, ax = plt.subplots()
+    grouping, xticks_ = format_name_array(nameArray)
+    xticks, dataArray, _ = sort_arrays_by_base(xticks_, dataArray_)
     ax.boxplot(dataArray)
-    grouping, xticks = format_name_array(nameArray)
     if grouping is not None:
         fig.text(0.5, 0.9, grouping, horizontalalignment="center")
     ax.set_xticklabels(xticks, fontsize=8)
@@ -241,10 +270,13 @@ def make_flight_consumption_boxplot(dataArray, nameArray, outputPath, chartName=
     plt.close()
     print(f"Wrote {lag_path}")
 
-def make_max_lag_chart(maxWeatherLag, maxFlightLag, nameArray, outputPath, chartName=None):
+def make_max_lag_chart(maxWeatherLag_, maxFlightLag_, nameArray, outputPath, chartName=None):
     fig, ax = plt.subplots()
     x = np.arange(len(nameArray))  # the label locations
     width = 0.33  # the width of the bars
+
+    grouping, xticks_ = format_name_array(nameArray)
+    xticks, maxWeatherLag, maxFlightLag = sort_arrays_by_base(xticks_, maxWeatherLag_, maxFlightLag_)
 
     bar = ax.bar(x, maxWeatherLag, width=width, label="Weather")
     ax.bar_label(bar, padding=3)
@@ -254,7 +286,6 @@ def make_max_lag_chart(maxWeatherLag, maxFlightLag, nameArray, outputPath, chart
     ax.legend(loc='upper left', ncols=2)
     fig.suptitle("Maximum Consumer lag", y=0.98, fontsize=16)
     ax.set_ylabel("max # of messages waiting")
-    grouping, xticks = format_name_array(nameArray)
     if grouping is not None:
         fig.text(0.5, 0.9, grouping, horizontalalignment="center")
     ax.set_xticks(x + width/2, labels=xticks, fontsize=8)
@@ -273,10 +304,13 @@ def make_max_lag_chart(maxWeatherLag, maxFlightLag, nameArray, outputPath, chart
     
     print(f"Wrote {lag_path}")
 
-def make_max_lag_chart_weather(maxWeatherLag, nameArray, outputPath, chartName=None):
+def make_max_lag_chart_weather(maxWeatherLag_, nameArray, outputPath, chartName=None):
     fig, ax = plt.subplots()
     x = np.arange(len(nameArray))  # the label locations
     width = .5  # the width of the bars
+
+    grouping, xticks_ = format_name_array(nameArray)
+    xticks, maxWeatherLag, _ = sort_arrays_by_base(xticks_, maxWeatherLag_)
 
     bar = ax.bar(x, maxWeatherLag, width=width, label="Weather")
     ax.bar_label(bar, padding=3)
@@ -285,7 +319,6 @@ def make_max_lag_chart_weather(maxWeatherLag, nameArray, outputPath, chartName=N
     fig.suptitle("Maximum Consumer lag", y=0.98, fontsize=16)
     ax.set_ylabel("max # of weather events waiting")
     ax.tick_params(axis='x', which='major', pad=-3)
-    grouping, xticks = format_name_array(nameArray)
     if grouping is not None:
         fig.text(0.5, 0.9, grouping, horizontalalignment="center")
     ax.set_xticks(x, labels=xticks, fontsize=8)
@@ -304,10 +337,13 @@ def make_max_lag_chart_weather(maxWeatherLag, nameArray, outputPath, chartName=N
     print(f"Wrote {lag_path}")
 
 
-def make_completion_time_bar(completionTimes, nameArray, expectedFinishTime, outputPath, chartName=None):
+def make_completion_time_bar(completionTimes_, nameArray, expectedFinishTime, outputPath, chartName=None):
     fig, ax = plt.subplots()
     x = np.arange(len(nameArray))  # the label locations
     width = .5  # the width of the bars
+
+    grouping, xticks_ = format_name_array(nameArray)
+    xticks, completionTimes, _ = sort_arrays_by_base(xticks_, completionTimes_)
 
     bar = ax.bar(x, completionTimes, width=width)
     ax.bar_label(bar, padding=3, fmt=lambda x: f"{round(x)} s.")
@@ -315,7 +351,6 @@ def make_completion_time_bar(completionTimes, nameArray, expectedFinishTime, out
     fig.suptitle("Experiment time", y=0.98, fontsize=16)
     ax.set_ylabel("total time to run experiment in seconds")
     ax.tick_params(axis='x', which='major', pad=-3)
-    grouping, xticks = format_name_array(nameArray)
     if grouping is not None:
         fig.text(0.5, 0.9, grouping, horizontalalignment="center")
     ax.set_xticks(x, labels=xticks, fontsize=8)
